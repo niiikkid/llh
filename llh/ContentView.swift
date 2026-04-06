@@ -359,28 +359,23 @@ struct ContentView: View {
     private func wordsView(_ payload: WordStudyPayload?) -> some View {
         if let payload, !payload.entries.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array(payload.entries.enumerated()), id: \.offset) { index, entry in
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(alignment: .firstTextBaseline, spacing: 10) {
-                            Text("\(index + 1).")
-                                .font(.caption)
+                ForEach(Array(payload.entries.enumerated()), id: \.offset) { _, entry in
+                    VStack(alignment: .leading, spacing: 6) {
+                        (
+                            Text(entry.termPinyin)
+                                .font(.system(size: 19, weight: .semibold, design: .rounded))
+                            + Text(" - ")
+                                .font(.system(size: 17, weight: .regular, design: .default))
+                            + Text(entry.termTranslation)
+                                .font(.system(size: 15))
                                 .foregroundStyle(.secondary)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(entry.termPinyin)
-                                    .font(.system(size: 19, weight: .semibold, design: .rounded))
-                                    .textSelection(.enabled)
-                                Text(entry.termTranslation)
-                                    .font(.system(size: 15))
-                                    .foregroundStyle(.secondary)
-                                    .textSelection(.enabled)
-                            }
-                        }
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
 
                         if !entry.characterBreakdown.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Разбор")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
                                 ForEach(Array(entry.characterBreakdown.enumerated()), id: \.offset) { _, part in
                                     HStack(alignment: .top, spacing: 8) {
                                         Text(part.pinyinText)
@@ -399,8 +394,13 @@ struct ContentView: View {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(.background)
                             )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(.quaternary, lineWidth: 1)
+                            )
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
