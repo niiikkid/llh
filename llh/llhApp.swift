@@ -6,27 +6,19 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct llhApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @StateObject private var viewModel = MainViewModel()
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        WindowGroup(id: "main-window") {
+            ContentView(viewModel: viewModel)
         }
-        .modelContainer(sharedModelContainer)
+
+        MenuBarExtra("LLH OCR", systemImage: "text.viewfinder") {
+            MenuBarPanelView(viewModel: viewModel)
+        }
+        .menuBarExtraStyle(.window)
     }
 }
