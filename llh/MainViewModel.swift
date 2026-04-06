@@ -11,12 +11,23 @@ import KeyboardShortcuts
 struct CapturedTextEntry: Identifiable, Equatable, Codable {
     let id: UUID
     var text: String
+    var formattedText: String?
+    var formattingStatus: FormattingStatus
     let createdAt: Date
     let image: NSImage?
 
-    init(id: UUID = UUID(), text: String, createdAt: Date = Date(), image: NSImage? = nil) {
+    init(
+        id: UUID = UUID(),
+        text: String,
+        formattedText: String? = nil,
+        formattingStatus: FormattingStatus = .notRequested,
+        createdAt: Date = Date(),
+        image: NSImage? = nil
+    ) {
         self.id = id
         self.text = text
+        self.formattedText = formattedText
+        self.formattingStatus = formattingStatus
         self.createdAt = createdAt
         self.image = image
     }
@@ -43,6 +54,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case text
+        case formattedText
+        case formattingStatus
         case createdAt
     }
 
@@ -50,6 +63,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         text = try container.decode(String.self, forKey: .text)
+        formattedText = try container.decodeIfPresent(String.self, forKey: .formattedText)
+        formattingStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .formattingStatus) ?? .notRequested
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         image = nil
     }
@@ -58,7 +73,51 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(text, forKey: .text)
+        try container.encodeIfPresent(formattedText, forKey: .formattedText)
+        try container.encode(formattingStatus, forKey: .formattingStatus)
         try container.encode(createdAt, forKey: .createdAt)
+    }
+}
+
+enum FormattingStatus: String, Codable {
+    case notRequested
+    case processing
+    case succeeded
+    case failed
+}
+
+enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
+    case english
+    case spanish
+    case chinese
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .english: return "Английский"
+        case .spanish: return "Испанский"
+        case .chinese: return "Китайский"
+        }
+    }
+
+    var openAIInstructionName: String {
+        switch self {
+        case .english: return "English"
+        case .spanish: return "Spanish"
+        case .chinese: return "Chinese"
+        }
+    }
+
+    var formattingRules: String {
+        switch self {
+        case .english:
+            return "Keep only English text and punctuation from the source. Remove words in other languages."
+        case .spanish:
+            return "Keep only Spanish text and punctuation from the source. Remove words in other languages."
+        case .chinese:
+            return "Keep only Chinese characters and relevant punctuation from the source. Remove pinyin, latin text, and words in other languages."
+        }
     }
 }
 
@@ -96,6 +155,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
 @MainActor
 final class MainViewModel: ObservableObject {
     @Published var recognizedText = ""
+    @Published var formattedRecognizedText = ""
     @Published var capturedImage: NSImage?
     @Published var statusMessage = "Нажмите shortcut и выделите область."
     @Published var showPermissionHelp = false
@@ -105,7 +165,9 @@ final class MainViewModel: ObservableObject {
     @Published var selectedEntryID: CapturedTextEntry.ID?
     @Published private(set) var availableOpenAIModels: [OpenAIModel] = []
     @Published var selectedOpenAIModelID: String?
+    @Published var selectedLearningLanguage: LearningLanguage = .english
     @Published private(set) var isLoadingOpenAIModels = false
+    @Published private(set) var isFormattingRecognizedText = false
 
     private let permissionService = ScreenRecordingPermissionService()
     private let regionSelectionService = RegionSelectionService()
@@ -124,6 +186,7 @@ final class MainViewModel: ObservableObject {
         }
         loadHistory()
         selectedOpenAIModelID = openAISettingsStore.selectedModelID
+        selectedLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
         refreshPermissionState()
     }
 
@@ -174,6 +237,12 @@ final class MainViewModel: ObservableObject {
         if let id {
             statusMessage = "Выбрана модель OpenAI: \(id)"
         }
+    }
+
+    func selectLearningLanguage(_ language: LearningLanguage) {
+        selectedLearningLanguage = language
+        openAISettingsStore.selectedLearningLanguageRawValue = language.rawValue
+        statusMessage = "Язык изучения: \(language.title)"
     }
 
     func triggerCapture() {
@@ -266,8 +335,18 @@ final class MainViewModel: ObservableObject {
         recognizedText = newText
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return }
         profiles[profileIndex].history[entryIndex].text = newText
+        profiles[profileIndex].history[entryIndex].formattedText = nil
+        profiles[profileIndex].history[entryIndex].formattingStatus = .notRequested
+        formattedRecognizedText = ""
         profiles[profileIndex].selectedEntryID = selectedEntryID
         persistHistory()
+    }
+
+    func retryFormattingForSelectedEntry() {
+        guard let selectedEntryID else { return }
+        Task {
+            await formatEntryText(entryID: selectedEntryID, forceRetry: true)
+        }
     }
 
     func formattedDate(for date: Date) -> String {
@@ -319,7 +398,8 @@ final class MainViewModel: ObservableObject {
             selectedEntryID = entry.id
             syncSelectionToEditor()
             persistHistory()
-            statusMessage = "Готово. Запись добавлена в историю."
+            statusMessage = "Готово. Запись добавлена в историю. Форматирую текст..."
+            await formatEntryText(entryID: entry.id, forceRetry: false)
         } catch RegionSelectionService.SelectionError.cancelled {
             statusMessage = "Выделение отменено."
         } catch {
@@ -346,10 +426,12 @@ final class MainViewModel: ObservableObject {
     private func syncSelectionToEditor() {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else {
             recognizedText = ""
+            formattedRecognizedText = ""
             capturedImage = nil
             return
         }
         recognizedText = profiles[profileIndex].history[entryIndex].text
+        formattedRecognizedText = profiles[profileIndex].history[entryIndex].formattedText ?? ""
         capturedImage = profiles[profileIndex].history[entryIndex].image
     }
 
@@ -357,6 +439,7 @@ final class MainViewModel: ObservableObject {
         guard let selectedProfileIndex else {
             selectedEntryID = nil
             recognizedText = ""
+            formattedRecognizedText = ""
             capturedImage = nil
             return
         }
@@ -373,7 +456,24 @@ final class MainViewModel: ObservableObject {
 
     private func loadHistory() {
         do {
-            let store = try historyPersistenceService.loadStore()
+            var store = try historyPersistenceService.loadStore()
+            store.profiles = store.profiles.map { profile in
+                var mutableProfile = profile
+                mutableProfile.history = mutableProfile.history.map { entry in
+                    var mutableEntry = entry
+                    if mutableEntry.formattedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true {
+                        mutableEntry.formattedText = nil
+                    }
+                    if mutableEntry.formattedText == nil, mutableEntry.formattingStatus == .processing {
+                        mutableEntry.formattingStatus = .failed
+                    }
+                    if mutableEntry.formattedText != nil {
+                        mutableEntry.formattingStatus = .succeeded
+                    }
+                    return mutableEntry
+                }
+                return mutableProfile
+            }
             profiles = store.profiles
             selectedProfileID = store.selectedProfileID
             if selectedProfileIndex == nil {
@@ -392,5 +492,84 @@ final class MainViewModel: ObservableObject {
         } catch {
             statusMessage = "Не удалось сохранить историю: \(error.localizedDescription)"
         }
+    }
+
+    private func formatEntryText(entryID: CapturedTextEntry.ID, forceRetry: Bool) async {
+        guard !isFormattingRecognizedText else { return }
+        guard let token = openAITokenStore.loadToken() else {
+            statusMessage = "Сначала сохраните OpenAI token."
+            return
+        }
+        guard let modelID = selectedOpenAIModelID else {
+            statusMessage = "Выберите модель OpenAI."
+            return
+        }
+        guard let profileIndex = selectedProfileIndex else { return }
+        guard let entryIndex = profiles[profileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
+
+        let currentStatus = profiles[profileIndex].history[entryIndex].formattingStatus
+        let currentFormattedText = profiles[profileIndex].history[entryIndex].formattedText
+        if !forceRetry, currentStatus == .succeeded, currentFormattedText?.isEmpty == false {
+            return
+        }
+        if !forceRetry, currentStatus == .processing {
+            return
+        }
+
+        let rawText = profiles[profileIndex].history[entryIndex].text
+        guard !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        isFormattingRecognizedText = true
+        profiles[profileIndex].history[entryIndex].formattingStatus = .processing
+        persistHistory()
+
+        defer {
+            isFormattingRecognizedText = false
+        }
+
+        do {
+            let formatted = try await openAIService.formatRecognizedText(
+                apiKey: token,
+                modelID: modelID,
+                targetLanguage: selectedLearningLanguage,
+                rawText: rawText
+            )
+
+            guard let latestProfileIndex = selectedProfileIndex,
+                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
+                return
+            }
+
+            profiles[latestProfileIndex].history[latestEntryIndex].formattedText = formatted
+            profiles[latestProfileIndex].history[latestEntryIndex].formattingStatus = .succeeded
+            if selectedEntryID == entryID {
+                formattedRecognizedText = formatted
+            }
+            persistHistory()
+            statusMessage = "Форматирование завершено."
+        } catch {
+            guard let latestProfileIndex = selectedProfileIndex,
+                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
+                return
+            }
+            profiles[latestProfileIndex].history[latestEntryIndex].formattedText = nil
+            profiles[latestProfileIndex].history[latestEntryIndex].formattingStatus = .failed
+            if selectedEntryID == entryID {
+                formattedRecognizedText = ""
+            }
+            persistHistory()
+            statusMessage = "Не удалось отформатировать текст: \(error.localizedDescription)"
+        }
+    }
+
+    var canRetryFormatting: Bool {
+        guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return false }
+        let entry = profiles[profileIndex].history[entryIndex]
+        return entry.formattingStatus == .failed && (entry.formattedText?.isEmpty ?? true)
+    }
+
+    var selectedEntryFormattingStatus: FormattingStatus? {
+        guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return nil }
+        return profiles[profileIndex].history[entryIndex].formattingStatus
     }
 }

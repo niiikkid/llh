@@ -98,5 +98,25 @@ struct llhTests {
         #expect(store.selectedModelID == nil)
         store.selectedModelID = "gpt-4.1-mini"
         #expect(store.selectedModelID == "gpt-4.1-mini")
+
+        #expect(store.selectedLearningLanguageRawValue == LearningLanguage.english.rawValue)
+        store.selectedLearningLanguageRawValue = LearningLanguage.chinese.rawValue
+        #expect(store.selectedLearningLanguageRawValue == LearningLanguage.chinese.rawValue)
+    }
+
+    @Test
+    func capturedTextEntry_codableIncludesFormattingFields() throws {
+        let entry = CapturedTextEntry(
+            text: "ni hao 你好",
+            formattedText: "你好",
+            formattingStatus: .succeeded
+        )
+
+        let data = try JSONEncoder().encode(entry)
+        let decoded = try JSONDecoder().decode(CapturedTextEntry.self, from: data)
+
+        #expect(decoded.text == "ni hao 你好")
+        #expect(decoded.formattedText == "你好")
+        #expect(decoded.formattingStatus == .succeeded)
     }
 }

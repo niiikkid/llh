@@ -10,10 +10,16 @@ import KeyboardShortcuts
 
 struct ContentView: View {
     @ObservedObject var viewModel: MainViewModel
+    @State private var selectedTextTab: TextTab = .raw
     @State private var newProfileName = ""
     @State private var isCreateProfilePresented = false
     @State private var isDeleteProfileConfirmationPresented = false
     @State private var isOpenAISettingsPresented = false
+
+    private enum TextTab: String, Hashable {
+        case raw
+        case formatted
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -105,6 +111,19 @@ struct ContentView: View {
                             .disabled(!viewModel.canDeleteSelectedEntry)
                         }
 
+                        Picker(
+                            "Язык изучения",
+                            selection: Binding(
+                                get: { viewModel.selectedLearningLanguage },
+                                set: { viewModel.selectLearningLanguage($0) }
+                            )
+                        ) {
+                            ForEach(LearningLanguage.allCases) { language in
+                                Text(language.title).tag(language)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
                         if viewModel.history.isEmpty {
                             ContentUnavailableView(
                                 "Пока пусто",
@@ -151,13 +170,25 @@ struct ContentView: View {
                             description: Text("Слева выберите элемент истории, чтобы открыть полный текст.")
                         )
                     } else {
-                        TextEditor(
-                            text: Binding(
-                                get: { viewModel.recognizedText },
-                                set: { viewModel.updateSelectedText($0) }
-                            )
-                        )
-                        .font(.system(.body, design: .monospaced))
+                        VStack(alignment: .leading, spacing: 10) {
+                            Picker("Режим текста", selection: $selectedTextTab) {
+                                Text("Сырой текст").tag(TextTab.raw)
+                                Text("Форматированный").tag(TextTab.formatted)
+                            }
+                            .pickerStyle(.segmented)
+
+                            if selectedTextTab == .raw {
+                                TextEditor(
+                                    text: Binding(
+                                        get: { viewModel.recognizedText },
+                                        set: { viewModel.updateSelectedText($0) }
+                                    )
+                                )
+                                .font(.system(.body, design: .monospaced))
+                            } else {
+                                formattedTextContent
+                            }
+                        }
                     }
                 }
                 .frame(minWidth: 480)
@@ -201,6 +232,43 @@ struct ContentView: View {
             Button("Отмена", role: .cancel) {}
         } message: {
             Text("Профиль \"\(viewModel.selectedProfileName)\" будет удален вместе со всей историей внутри него.")
+        }
+    }
+
+    @ViewBuilder
+    private var formattedTextContent: some View {
+        if !viewModel.formattedRecognizedText.isEmpty {
+            ScrollView {
+                Text(viewModel.formattedRecognizedText)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .padding(8)
+            }
+        } else if viewModel.isFormattingRecognizedText || viewModel.selectedEntryFormattingStatus == .processing {
+            ContentUnavailableView(
+                "Форматирую текст",
+                systemImage: "wand.and.stars",
+                description: Text("Подождите, запрос в OpenAI выполняется.")
+            )
+        } else if viewModel.canRetryFormatting {
+            VStack(alignment: .leading, spacing: 10) {
+                ContentUnavailableView(
+                    "Форматирование не удалось",
+                    systemImage: "exclamationmark.arrow.trianglehead.counterclockwise",
+                    description: Text("Можно отправить запрос в OpenAI повторно.")
+                )
+                Button("Попробовать еще раз") {
+                    viewModel.retryFormattingForSelectedEntry()
+                }
+                .disabled(viewModel.isFormattingRecognizedText)
+            }
+        } else {
+            ContentUnavailableView(
+                "Форматированного текста пока нет",
+                systemImage: "doc.text",
+                description: Text("Сырой текст сохранен, форматирование недоступно для этой записи.")
+            )
         }
     }
 }

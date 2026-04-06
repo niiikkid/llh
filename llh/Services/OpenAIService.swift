@@ -12,6 +12,12 @@ struct OpenAIModel: Identifiable, Equatable {
 
 protocol OpenAIServing {
     func fetchModels(apiKey: String) async throws -> [OpenAIModel]
+    func formatRecognizedText(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        rawText: String
+    ) async throws -> String
 }
 
 enum OpenAIServiceError: LocalizedError {
@@ -22,6 +28,7 @@ enum OpenAIServiceError: LocalizedError {
     case noModelsFound
     case hostNotFound
     case networkUnavailable
+    case emptyFormattedText
 
     var errorDescription: String? {
         switch self {
@@ -39,6 +46,8 @@ enum OpenAIServiceError: LocalizedError {
             return "Не удается найти сервер OpenAI (DNS). Проверьте интернет, VPN/прокси и сетевые права приложения."
         case .networkUnavailable:
             return "Нет сетевого подключения. Проверьте интернет и повторите попытку."
+        case .emptyFormattedText:
+            return "OpenAI вернул пустой форматированный текст."
         }
     }
 }
@@ -100,6 +109,93 @@ struct OpenAIService: OpenAIServing {
             throw OpenAIServiceError.noModelsFound
         }
         return models
+    }
+
+    func formatRecognizedText(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        rawText: String
+    ) async throws -> String {
+        let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty, token.hasPrefix("sk-") else {
+            throw OpenAIServiceError.invalidTokenFormat
+        }
+        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+
+        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+            throw OpenAIServiceError.invalidResponse
+        }
+
+        let requestBody = ChatCompletionsRequest(
+            model: modelID,
+            temperature: 0,
+            messages: [
+                .init(
+                    role: "system",
+                    content: """
+                    You clean OCR text for language learning.
+                    Do not add any new words, symbols, or explanations.
+                    Keep only the content that belongs to the requested target language.
+                    Preserve original symbols for kept content exactly as in source.
+                    Remove foreign words, transliteration, pinyin, and other noise.
+                    Return ONLY cleaned text without markdown, quotes, or comments.
+                    """
+                ),
+                .init(
+                    role: "user",
+                    content: """
+                    Target language: \(targetLanguage.openAIInstructionName)
+                    Rules:
+                    \(targetLanguage.formattingRules)
+
+                    Raw OCR text:
+                    \(rawText)
+                    """
+                )
+            ]
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError {
+            switch error.code {
+            case .cannotFindHost, .dnsLookupFailed:
+                throw OpenAIServiceError.hostNotFound
+            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
+                throw OpenAIServiceError.networkUnavailable
+            default:
+                throw error
+            }
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        if httpResponse.statusCode == 401 {
+            throw OpenAIServiceError.unauthorized
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
+        }
+
+        let decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: data)
+        let content = decoded.choices.first?.message.content
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !content.isEmpty else {
+            throw OpenAIServiceError.emptyFormattedText
+        }
+        return content
     }
 }
 
@@ -179,15 +275,26 @@ protocol OpenAISettingsStoring {
 struct OpenAISettingsStore: OpenAISettingsStoring {
     private let userDefaults: UserDefaults
     private let selectedModelKey: String
+    private let selectedLearningLanguageKey: String
 
-    init(userDefaults: UserDefaults = .standard, selectedModelKey: String = "openai.selected.model.id") {
+    init(
+        userDefaults: UserDefaults = .standard,
+        selectedModelKey: String = "openai.selected.model.id",
+        selectedLearningLanguageKey: String = "openai.selected.learning.language"
+    ) {
         self.userDefaults = userDefaults
         self.selectedModelKey = selectedModelKey
+        self.selectedLearningLanguageKey = selectedLearningLanguageKey
     }
 
     var selectedModelID: String? {
         get { userDefaults.string(forKey: selectedModelKey) }
         set { userDefaults.set(newValue, forKey: selectedModelKey) }
+    }
+
+    var selectedLearningLanguageRawValue: String {
+        get { userDefaults.string(forKey: selectedLearningLanguageKey) ?? LearningLanguage.english.rawValue }
+        set { userDefaults.set(newValue, forKey: selectedLearningLanguageKey) }
     }
 }
 
@@ -197,4 +304,27 @@ private struct OpenAIModelsResponse: Decodable {
 
 private struct OpenAIModelPayload: Decodable {
     let id: String
+}
+
+private struct ChatCompletionsRequest: Encodable {
+    let model: String
+    let temperature: Double
+    let messages: [ChatMessage]
+}
+
+private struct ChatMessage: Encodable {
+    let role: String
+    let content: String
+}
+
+private struct ChatCompletionsResponse: Decodable {
+    let choices: [ChatChoice]
+}
+
+private struct ChatChoice: Decodable {
+    let message: ChatCompletionMessage
+}
+
+private struct ChatCompletionMessage: Decodable {
+    let content: String
 }
