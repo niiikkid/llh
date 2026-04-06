@@ -132,6 +132,12 @@ struct llhTests {
         #expect(store.selectedLearningLanguageRawValue == LearningLanguage.english.rawValue)
         store.selectedLearningLanguageRawValue = LearningLanguage.chinese.rawValue
         #expect(store.selectedLearningLanguageRawValue == LearningLanguage.chinese.rawValue)
+
+        #expect(store.translationOverlayDuration == 5)
+        store.translationOverlayDuration = 7
+        #expect(store.translationOverlayDuration == 7)
+        store.translationOverlayDuration = 100
+        #expect(store.translationOverlayDuration == 15)
     }
 
     @Test

@@ -368,6 +368,11 @@ struct LearningProfile: Identifiable, Equatable, Codable {
 
 @MainActor
 final class MainViewModel: ObservableObject {
+    private enum CaptureTriggerSource {
+        case interface
+        case hotkey
+    }
+
     @Published var recognizedText = ""
     @Published var formattedRecognizedText: StructuredFormattedText?
     @Published var studyMaterials = StudyMaterials()
@@ -383,6 +388,7 @@ final class MainViewModel: ObservableObject {
     @Published var selectedOpenAIModelID: String?
     @Published var selectedOCREngine: OCREngine = .local
     @Published var defaultNewProfileLearningLanguage: LearningLanguage = .english
+    @Published var translationOverlayDuration: Double = 5
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
 
@@ -392,18 +398,20 @@ final class MainViewModel: ObservableObject {
     private let ocrService = OCRService()
     private let historyPersistenceService = HistoryPersistenceService()
     private let openAIService = OpenAIService()
+    private let translationOverlayService = TranslationOverlayService()
     private var openAISettingsStore = OpenAISettingsStore()
     private let openAITokenStore = KeychainOpenAITokenStore()
+    private var overlayEntryAwaitingFormattedResult: CapturedTextEntry.ID?
 
     init() {
         KeyboardShortcuts.onKeyUp(for: .captureArea) { [weak self] in
             Task { @MainActor [weak self] in
-                await self?.startCaptureFlow()
+                await self?.startCaptureFlow(triggeredBy: .hotkey)
             }
         }
         KeyboardShortcuts.onKeyUp(for: .switchOCREngine) { [weak self] in
             Task { @MainActor [weak self] in
-                self?.switchToNextOCREngine()
+                self?.switchToNextOCREngine(triggeredByHotkey: true)
             }
         }
         loadHistory()
@@ -414,6 +422,7 @@ final class MainViewModel: ObservableObject {
             selectedOpenAIModelID = availableOpenAIModels.first?.id
         }
         defaultNewProfileLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
+        translationOverlayDuration = openAISettingsStore.translationOverlayDuration
         refreshPermissionState()
     }
 
@@ -476,25 +485,38 @@ final class MainViewModel: ObservableObject {
         }
     }
 
-    func selectOCREngine(_ engine: OCREngine) {
+    func selectOCREngine(_ engine: OCREngine, showOverlay: Bool = false) {
+        let previousEngine = selectedOCREngine
         selectedOCREngine = engine
         openAISettingsStore.selectedOCREngineRawValue = engine.rawValue
         statusMessage = "Движок распознавания: \(engine.title)."
+        guard showOverlay, shouldUseCompactOverlay else { return }
+        translationOverlayService.showMessage(
+            title: "Движок OCR переключен",
+            subtitle: "\(previousEngine.title) -> \(engine.title)",
+            duration: 3
+        )
     }
 
-    func switchToNextOCREngine() {
+    func switchToNextOCREngine(triggeredByHotkey: Bool = false) {
         guard let currentIndex = OCREngine.allCases.firstIndex(of: selectedOCREngine) else {
-            selectOCREngine(.local)
+            selectOCREngine(.local, showOverlay: triggeredByHotkey)
             return
         }
         let nextIndex = OCREngine.allCases.index(after: currentIndex)
         let wrappedIndex = nextIndex == OCREngine.allCases.endIndex ? OCREngine.allCases.startIndex : nextIndex
-        selectOCREngine(OCREngine.allCases[wrappedIndex])
+        selectOCREngine(OCREngine.allCases[wrappedIndex], showOverlay: triggeredByHotkey)
     }
 
     func setDefaultNewProfileLearningLanguage(_ language: LearningLanguage) {
         defaultNewProfileLearningLanguage = language
         openAISettingsStore.selectedLearningLanguageRawValue = language.rawValue
+    }
+
+    func setTranslationOverlayDuration(_ duration: Double) {
+        let clampedDuration = min(max(duration, 1), 15)
+        translationOverlayDuration = clampedDuration
+        openAISettingsStore.translationOverlayDuration = clampedDuration
     }
 
     var currentProfileLearningLanguage: LearningLanguage {
@@ -503,7 +525,7 @@ final class MainViewModel: ObservableObject {
 
     func triggerCapture() {
         Task {
-            await startCaptureFlow()
+            await startCaptureFlow(triggeredBy: .interface)
         }
     }
 
@@ -642,7 +664,11 @@ final class MainViewModel: ObservableObject {
         return false
     }
 
-    private func startCaptureFlow() async {
+    private var shouldUseCompactOverlay: Bool {
+        !NSApp.isActive
+    }
+
+    private func startCaptureFlow(triggeredBy source: CaptureTriggerSource) async {
         guard !isProcessing else { return }
         guard ensureScreenRecordingPermission() else { return }
 
@@ -665,6 +691,10 @@ final class MainViewModel: ObservableObject {
             guard !text.isEmpty else {
                 recognizedText = ""
                 statusMessage = "Текст не найден."
+                overlayEntryAwaitingFormattedResult = nil
+                if source == .hotkey, shouldUseCompactOverlay {
+                    translationOverlayService.showMessage(title: "Текст не найден", duration: 3)
+                }
                 return
             }
 
@@ -677,11 +707,23 @@ final class MainViewModel: ObservableObject {
             syncSelectionToEditor()
             persistHistory()
             statusMessage = "Готово. Запись добавлена в историю. Форматирую текст..."
+            if source == .hotkey, shouldUseCompactOverlay {
+                overlayEntryAwaitingFormattedResult = entry.id
+                translationOverlayService.showLoading()
+            }
             await formatEntryText(entryID: entry.id, forceRetry: false)
         } catch RegionSelectionService.SelectionError.cancelled {
             statusMessage = "Выделение отменено."
+            overlayEntryAwaitingFormattedResult = nil
+            if source == .hotkey, shouldUseCompactOverlay {
+                translationOverlayService.hide()
+            }
         } catch {
             statusMessage = "Ошибка: \(error.localizedDescription)"
+            overlayEntryAwaitingFormattedResult = nil
+            if source == .hotkey, shouldUseCompactOverlay {
+                translationOverlayService.showMessage(title: "Ошибка обработки", subtitle: error.localizedDescription, duration: 3)
+            }
         }
     }
 
@@ -810,10 +852,18 @@ final class MainViewModel: ObservableObject {
         guard !isFormattingRecognizedText else { return }
         guard let token = openAITokenStore.loadToken() else {
             statusMessage = "Сначала сохраните OpenAI token."
+            if overlayEntryAwaitingFormattedResult == entryID {
+                translationOverlayService.showMessage(title: "Сначала сохраните OpenAI token", duration: 3)
+                overlayEntryAwaitingFormattedResult = nil
+            }
             return
         }
         guard let modelID = selectedOpenAIModelID else {
             statusMessage = "Выберите модель OpenAI."
+            if overlayEntryAwaitingFormattedResult == entryID {
+                translationOverlayService.showMessage(title: "Выберите модель OpenAI", duration: 3)
+                overlayEntryAwaitingFormattedResult = nil
+            }
             return
         }
         guard let profileIndex = selectedProfileIndex else { return }
@@ -859,6 +909,14 @@ final class MainViewModel: ObservableObject {
             }
             persistHistory()
             statusMessage = "Форматирование завершено."
+            if overlayEntryAwaitingFormattedResult == entryID {
+                if shouldUseCompactOverlay {
+                    translationOverlayService.showTranslation(formatted, duration: translationOverlayDuration)
+                } else {
+                    translationOverlayService.hide()
+                }
+                overlayEntryAwaitingFormattedResult = nil
+            }
         } catch {
             guard let latestProfileIndex = selectedProfileIndex,
                   let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
@@ -871,6 +929,18 @@ final class MainViewModel: ObservableObject {
             }
             persistHistory()
             statusMessage = "Не удалось отформатировать текст: \(error.localizedDescription)"
+            if overlayEntryAwaitingFormattedResult == entryID {
+                if shouldUseCompactOverlay {
+                    translationOverlayService.showMessage(
+                        title: "Не удалось получить перевод",
+                        subtitle: error.localizedDescription,
+                        duration: 3
+                    )
+                } else {
+                    translationOverlayService.hide()
+                }
+                overlayEntryAwaitingFormattedResult = nil
+            }
         }
     }
 

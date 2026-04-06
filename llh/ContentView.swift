@@ -552,7 +552,7 @@ private struct AppSettingsSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             TabView(selection: $selectedTab) {
-                GeneralSettingsTab()
+                GeneralSettingsTab(viewModel: viewModel)
                     .tabItem {
                         Label("Общие", systemImage: "keyboard")
                     }
@@ -581,6 +581,8 @@ private struct AppSettingsSheet: View {
 }
 
 private struct GeneralSettingsTab: View {
+    @ObservedObject var viewModel: MainViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Горячая клавиша")
@@ -592,6 +594,37 @@ private struct GeneralSettingsTab: View {
 
             KeyboardShortcuts.Recorder("Захват области:", name: .captureArea)
             KeyboardShortcuts.Recorder("Переключить движок OCR:", name: .switchOCREngine)
+
+            Divider()
+
+            Text("Компактное окно перевода")
+                .font(.headline)
+
+            Text("Когда приложение неактивно и перевод запущен через shortcut, снизу по центру появится маленькое окно. После завершения перевода результат держится выбранное количество секунд.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            HStack(alignment: .center, spacing: 12) {
+                Stepper(
+                    value: Binding(
+                        get: { Int(viewModel.translationOverlayDuration.rounded()) },
+                        set: { viewModel.setTranslationOverlayDuration(Double($0)) }
+                    ),
+                    in: 1...15
+                ) {
+                    Text("Показывать перевод: \(Int(viewModel.translationOverlayDuration.rounded())) сек.")
+                }
+                .frame(maxWidth: 280, alignment: .leading)
+
+                Slider(
+                    value: Binding(
+                        get: { viewModel.translationOverlayDuration },
+                        set: { viewModel.setTranslationOverlayDuration($0) }
+                    ),
+                    in: 1...15,
+                    step: 1
+                )
+            }
 
             Spacer()
         }
