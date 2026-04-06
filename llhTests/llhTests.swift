@@ -198,4 +198,26 @@ struct llhTests {
         #expect(decoded.studyMaterials.grammar?.structures.first?.examples.count == 1)
         #expect(decoded.studyMaterials.grammarStatus == .succeeded)
     }
+
+    @Test
+    func openAIService_wordsAnalysisPrompt_keepsChineseBreakdownRules() {
+        let prompt = OpenAIService.wordsAnalysisPrompt(for: .chinese)
+        let userPrompt = prompt.user("你好", "ni hao", "привет")
+
+        #expect(prompt.system.contains("Never use hieroglyphs or source script in the response."))
+        #expect(userPrompt.contains("Pronunciation:"))
+        #expect(userPrompt.contains("explain each part separately in `character_breakdown`"))
+    }
+
+    @Test
+    func openAIService_wordsAnalysisPrompt_usesSimplerRulesForNonChineseLanguages() {
+        let prompt = OpenAIService.wordsAnalysisPrompt(for: .english)
+        let userPrompt = prompt.user("hello world", "hello world", "привет мир")
+
+        #expect(prompt.system.contains("Keep the target-language words in their original writing."))
+        #expect(prompt.system.contains("always return an empty array in `character_breakdown`"))
+        #expect(!userPrompt.contains("Pronunciation:"))
+        #expect(userPrompt.contains("keep the original word exactly as it appears in the target language text"))
+        #expect(userPrompt.contains("return `character_breakdown` as an empty array"))
+    }
 }

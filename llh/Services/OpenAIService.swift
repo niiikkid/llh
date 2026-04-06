@@ -247,41 +247,17 @@ struct OpenAIService: OpenAIServing {
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
     ) async throws -> WordStudyPayload {
+        let prompt = Self.wordsAnalysisPrompt(for: targetLanguage)
         let dto: WordsResponseDTO = try await performStructuredRequest(
             apiKey: apiKey,
             modelID: modelID,
             temperature: 0.2,
-            systemPrompt: """
-            You produce JSON only for language-learning word analysis.
-            Never use hieroglyphs or source script in the response.
-            Use only pinyin/transliteration and Russian.
-            Return JSON object with key `entries`.
-            Each entry has:
-            term_pinyin
-            term_translation
-            character_breakdown
-            `character_breakdown` is an array of objects with:
-            pinyin_text
-            russian_translation
-            No markdown. No extra keys.
-            """,
-            userPrompt: """
-            Target language: \(targetLanguage.openAIInstructionName)
-            Cleaned text:
-            \(formattedText.cleanedText)
-
-            Pronunciation:
-            \(formattedText.pinyinText)
-
-            Translation:
-            \(formattedText.russianTranslation)
-
-            Extract only useful study words.
-            For each word:
-            1) give the full word in pinyin/transliteration and its Russian meaning
-            2) if the word consists of multiple characters or meaningful parts, explain each part separately in `character_breakdown`
-            3) keep the result compact and readable
-            """
+            systemPrompt: prompt.system,
+            userPrompt: prompt.user(
+                formattedText.cleanedText,
+                formattedText.pinyinText,
+                formattedText.russianTranslation
+            )
         )
         let result = WordStudyPayload(
             entries: dto.entries.map {
@@ -296,6 +272,82 @@ struct OpenAIService: OpenAIServing {
         )
         guard result.hasContent else { throw OpenAIServiceError.invalidStructuredResponse }
         return result
+    }
+
+    static func wordsAnalysisPrompt(for targetLanguage: LearningLanguage) -> (system: String, user: (String, String, String) -> String) {
+        if targetLanguage == .chinese {
+            return (
+                system: """
+                You produce JSON only for language-learning word analysis.
+                Never use hieroglyphs or source script in the response.
+                Use only pinyin/transliteration and Russian.
+                Return JSON object with key `entries`.
+                Each entry has:
+                term_pinyin
+                term_translation
+                character_breakdown
+                `character_breakdown` is an array of objects with:
+                pinyin_text
+                russian_translation
+                No markdown. No extra keys.
+                """,
+                user: { cleanedText, pinyinText, russianTranslation in
+                    """
+                    Target language: \(targetLanguage.openAIInstructionName)
+                    Cleaned text:
+                    \(cleanedText)
+
+                    Pronunciation:
+                    \(pinyinText)
+
+                    Translation:
+                    \(russianTranslation)
+
+                    Extract only useful study words.
+                    For each word:
+                    1) give the full word in pinyin/transliteration and its Russian meaning
+                    2) if the word consists of multiple characters or meaningful parts, explain each part separately in `character_breakdown`
+                    3) keep the result compact and readable
+                    """
+                }
+            )
+        }
+
+        return (
+            system: """
+            You produce JSON only for language-learning word analysis.
+            Keep the target-language words in their original writing.
+            Use Russian only for translations.
+            Return JSON object with key `entries`.
+            Each entry has:
+            term_pinyin
+            term_translation
+            character_breakdown
+            For non-Chinese languages:
+            - put the original word or expression into `term_pinyin`
+            - put the Russian translation into `term_translation`
+            - always return an empty array in `character_breakdown`
+            No markdown. No extra keys.
+            """,
+            user: { cleanedText, _, russianTranslation in
+                """
+                Target language: \(targetLanguage.openAIInstructionName)
+                Cleaned text:
+                \(cleanedText)
+
+                Translation:
+                \(russianTranslation)
+
+                Extract only useful study words.
+                For each word:
+                1) keep the original word exactly as it appears in the target language text
+                2) provide a concise Russian translation
+                3) do not split the word into parts
+                4) return `character_breakdown` as an empty array
+                5) keep the result compact and readable
+                """
+            }
+        )
     }
 
     func buildPhrasesStudyData(
