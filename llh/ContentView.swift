@@ -15,7 +15,7 @@ struct ContentView: View {
     @State private var newProfileLearningLanguage: LearningLanguage = .english
     @State private var isCreateProfilePresented = false
     @State private var isDeleteProfileConfirmationPresented = false
-    @State private var isOpenAISettingsPresented = false
+    @State private var isSettingsPresented = false
 
     private enum TextTab: String, Hashable {
         case raw
@@ -24,25 +24,16 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Language Learning Helper")
-                .font(.title3.weight(.semibold))
-
-            Text("Все данные обрабатываются локально на устройстве.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            GroupBox("Shortcut") {
-                HStack {
-                    KeyboardShortcuts.Recorder("Capture area:", name: .captureArea)
-                    Spacer()
-                    Button("OpenAI Settings") {
-                        isOpenAISettingsPresented = true
-                    }
-                    Button("Capture now") {
-                        viewModel.triggerCapture()
-                    }
-                    .disabled(viewModel.isProcessing)
+            HStack {
+                Text("Language Learning Helper")
+                    .font(.title3.weight(.semibold))
+                Spacer()
+                Button {
+                    isSettingsPresented = true
+                } label: {
+                    Label("Настройки", systemImage: "gearshape")
                 }
+                .buttonStyle(.bordered)
             }
 
             if viewModel.showPermissionHelp {
@@ -63,106 +54,89 @@ struct ContentView: View {
                 }
             }
 
-            HStack {
-                Text(viewModel.statusMessage)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-
             GeometryReader { geometry in
                 HSplitView {
-                    GroupBox("История") {
+                    GroupBox("Сессии") {
                         VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 8) {
-                            Picker(
-                                "Профиль",
-                                selection: Binding(
-                                    get: { viewModel.selectedProfileID },
-                                    set: { viewModel.selectProfile($0) }
-                                )
-                            ) {
-                                ForEach(viewModel.profiles) { profile in
-                                    Text(profile.name).tag(Optional(profile.id))
-                                }
-                            }
-                            .labelsHidden()
-
-                            Button {
-                                newProfileName = ""
-                                newProfileLearningLanguage = viewModel.defaultNewProfileLearningLanguage
-                                isCreateProfilePresented = true
-                            } label: {
-                                Image(systemName: "plus")
-                            }
-                            .help("Создать профиль")
-
-                            Button(role: .destructive) {
-                                isDeleteProfileConfirmationPresented = true
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .help("Удалить текущий профиль")
-                            .disabled(!viewModel.canDeleteSelectedProfile)
-
-                            Button(role: .destructive) {
-                                viewModel.deleteSelectedEntry()
-                            } label: {
-                                Image(systemName: "trash.slash")
-                            }
-                            .help("Удалить выбранный перевод")
-                            .disabled(!viewModel.canDeleteSelectedEntry)
-                        }
-
-                        HStack(spacing: 8) {
-                            Text("Язык истории:")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                            Text(viewModel.currentProfileLearningLanguage.title)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(.background.secondary)
-                                )
-                            Spacer()
-                        }
-
-                        if viewModel.history.isEmpty {
-                            ContentUnavailableView(
-                                "Пока пусто",
-                                systemImage: "clock.arrow.circlepath",
-                                description: Text("После захвата текста записи появятся здесь.")
-                            )
-                        } else {
-                            List(
-                                viewModel.history,
-                                selection: Binding(
-                                    get: { viewModel.selectedEntryID },
-                                    set: { viewModel.selectEntry($0) }
-                                )
-                            ) { item in
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack(alignment: .firstTextBaseline) {
-                                        Text(item.title)
-                                            .font(.subheadline.weight(.semibold))
-                                            .lineLimit(1)
-                                        Spacer(minLength: 8)
-                                        Text(viewModel.formattedDate(for: item.createdAt))
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
+                            HStack(spacing: 8) {
+                                Picker(
+                                    "Сессия",
+                                    selection: Binding(
+                                        get: { viewModel.selectedProfileID },
+                                        set: { viewModel.selectProfile($0) }
+                                    )
+                                ) {
+                                    ForEach(viewModel.profiles) { profile in
+                                        Text(profile.name).tag(Optional(profile.id))
                                     }
-                                    Text(item.preview)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
                                 }
-                                .padding(.vertical, 4)
-                                .tag(item.id)
+                                .labelsHidden()
+
+                                sidebarActionButton(systemName: "plus", helpText: "Создать сессию") {
+                                    newProfileName = ""
+                                    newProfileLearningLanguage = viewModel.defaultNewProfileLearningLanguage
+                                    isCreateProfilePresented = true
+                                }
+
+                                sidebarActionButton(
+                                    systemName: "trash",
+                                    helpText: "Удалить текущую сессию",
+                                    role: .destructive
+                                ) {
+                                    isDeleteProfileConfirmationPresented = true
+                                }
+                                .disabled(!viewModel.canDeleteSelectedProfile)
                             }
-                            .listStyle(.sidebar)
-                        }
+
+                            HStack(spacing: 8) {
+                                Text("Язык сессии:")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                Text(viewModel.currentProfileLearningLanguage.title)
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(.background.secondary)
+                                    )
+                                Spacer()
+                            }
+
+                            if viewModel.history.isEmpty {
+                                ContentUnavailableView(
+                                    "Пока пусто",
+                                    systemImage: "clock.arrow.circlepath",
+                                    description: Text("После захвата текста переводы появятся здесь.")
+                                )
+                            } else {
+                                List(
+                                    viewModel.history,
+                                    selection: Binding(
+                                        get: { viewModel.selectedEntryID },
+                                        set: { viewModel.selectEntry($0) }
+                                    )
+                                ) { item in
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        HStack(alignment: .firstTextBaseline) {
+                                            Text(item.title)
+                                                .font(.subheadline.weight(.semibold))
+                                                .lineLimit(1)
+                                            Spacer(minLength: 8)
+                                            Text(viewModel.formattedDate(for: item.createdAt))
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Text(item.preview)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                    }
+                                    .padding(.vertical, 4)
+                                    .tag(item.id)
+                                }
+                                .listStyle(.sidebar)
+                            }
                         }
                     }
                     .frame(
@@ -171,12 +145,12 @@ struct ContentView: View {
                         maxWidth: max(280, geometry.size.width * 0.25)
                     )
 
-                    GroupBox("Текст записи") {
+                    GroupBox("Перевод") {
                         if viewModel.selectedEntryID == nil {
                             ContentUnavailableView(
-                                "Выберите запись",
+                                "Выберите перевод",
                                 systemImage: "doc.text.magnifyingglass",
-                                description: Text("Слева выберите элемент истории, чтобы открыть полный текст.")
+                                description: Text("Слева выберите перевод из сессии, чтобы открыть полный текст.")
                             )
                         } else {
                             VStack(alignment: .leading, spacing: 10) {
@@ -186,16 +160,30 @@ struct ContentView: View {
                                 }
                                 .pickerStyle(.segmented)
 
-                                if selectedTextTab == .raw {
-                                    TextEditor(
-                                        text: Binding(
-                                            get: { viewModel.recognizedText },
-                                            set: { viewModel.updateSelectedText($0) }
+                                Group {
+                                    if selectedTextTab == .raw {
+                                        TextEditor(
+                                            text: Binding(
+                                                get: { viewModel.recognizedText },
+                                                set: { viewModel.updateSelectedText($0) }
+                                            )
                                         )
-                                    )
-                                    .font(.system(.body, design: .monospaced))
-                                } else {
-                                    formattedTextContent
+                                        .font(.system(.body, design: .monospaced))
+                                    } else {
+                                        formattedTextContent
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                                HStack {
+                                    Spacer()
+                                    Button(role: .destructive) {
+                                        viewModel.deleteSelectedEntry()
+                                    } label: {
+                                        Label("Удалить перевод", systemImage: "trash")
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .disabled(!viewModel.canDeleteSelectedEntry)
                                 }
                             }
                         }
@@ -217,9 +205,9 @@ struct ContentView: View {
         .frame(minWidth: 860, minHeight: 500)
         .sheet(isPresented: $isCreateProfilePresented) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Новый профиль")
+                Text("Новая сессия")
                     .font(.headline)
-                TextField("Название профиля", text: $newProfileName)
+                TextField("Название сессии", text: $newProfileName)
                 Picker("Язык изучения", selection: $newProfileLearningLanguage) {
                     ForEach(LearningLanguage.allCases) { language in
                         Text(language.title).tag(language)
@@ -244,16 +232,16 @@ struct ContentView: View {
             .padding(16)
             .frame(width: 360)
         }
-        .sheet(isPresented: $isOpenAISettingsPresented) {
-            OpenAISettingsSheet(viewModel: viewModel)
+        .sheet(isPresented: $isSettingsPresented) {
+            AppSettingsSheet(viewModel: viewModel)
         }
-        .alert("Удалить профиль?", isPresented: $isDeleteProfileConfirmationPresented) {
+        .alert("Удалить сессию?", isPresented: $isDeleteProfileConfirmationPresented) {
             Button("Удалить", role: .destructive) {
                 viewModel.deleteSelectedProfile()
             }
             Button("Отмена", role: .cancel) {}
         } message: {
-            Text("Профиль \"\(viewModel.selectedProfileName)\" будет удален вместе со всей историей внутри него.")
+            Text("Сессия \"\(viewModel.selectedProfileName)\" будет удалена вместе со всеми переводами внутри нее.")
         }
     }
 
@@ -457,11 +445,85 @@ struct ContentView: View {
         }
         return formatted.cleanedText
     }
+
+    private func sidebarActionButton(
+        systemName: String,
+        helpText: String,
+        role: ButtonRole? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(role: role, action: action) {
+            Image(systemName: systemName)
+                .frame(width: 14, height: 14)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .frame(width: 32, height: 30)
+        .help(helpText)
+    }
 }
 
-private struct OpenAISettingsSheet: View {
+private struct AppSettingsSheet: View {
     @ObservedObject var viewModel: MainViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedTab: SettingsTab = .general
+
+    private enum SettingsTab: Hashable {
+        case general
+        case openAI
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TabView(selection: $selectedTab) {
+                GeneralSettingsTab()
+                    .tabItem {
+                        Label("Общие", systemImage: "keyboard")
+                    }
+                    .tag(SettingsTab.general)
+
+                OpenAISettingsTab(viewModel: viewModel)
+                    .tabItem {
+                        Label("OpenAI", systemImage: "brain.head.profile")
+                    }
+                    .tag(SettingsTab.openAI)
+            }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Закрыть") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(16)
+        }
+        .frame(width: 620, height: 420)
+    }
+}
+
+private struct GeneralSettingsTab: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Горячая клавиша")
+                .font(.headline)
+
+            Text("Настройте shortcut для выбора области экрана.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            KeyboardShortcuts.Recorder("Захват области:", name: .captureArea)
+
+            Spacer()
+        }
+        .padding(16)
+    }
+}
+
+private struct OpenAISettingsTab: View {
+    @ObservedObject var viewModel: MainViewModel
     @State private var tokenInput = ""
 
     var body: some View {
@@ -520,16 +582,9 @@ private struct OpenAISettingsSheet: View {
             .pickerStyle(.menu)
             .disabled(viewModel.availableOpenAIModels.isEmpty)
 
-            HStack {
-                Spacer()
-                Button("Закрыть") {
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
+            Spacer()
         }
         .padding(16)
-        .frame(width: 520)
     }
 }
 
