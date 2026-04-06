@@ -27,6 +27,7 @@ struct MenuBarPanelView: View {
 
                 Button("Open Window") {
                     openWindow(id: "main-window")
+                    NSApp.activate(ignoringOtherApps: true)
                 }
             }
         }

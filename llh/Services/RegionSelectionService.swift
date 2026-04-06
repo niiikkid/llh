@@ -37,9 +37,9 @@ final class RegionSelectionService {
 
     private func showOverlayWindows() {
         windows = NSScreen.screens.map { screen in
-            let window = NSWindow(
+            let window = SelectionOverlayPanel(
                 contentRect: screen.frame,
-                styleMask: .borderless,
+                styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
             )
@@ -48,6 +48,7 @@ final class RegionSelectionService {
             window.level = .screenSaver
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             window.ignoresMouseEvents = false
+            window.hidesOnDeactivate = false
 
             let overlayView = SelectionOverlayView { [weak self, weak window] rect in
                 guard let self, let window else { return }
@@ -78,6 +79,11 @@ final class RegionSelectionService {
             continuation?.resume(throwing: error)
         }
     }
+}
+
+private final class SelectionOverlayPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
 }
 
 private final class SelectionOverlayView: NSView {
