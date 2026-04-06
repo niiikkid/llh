@@ -10,7 +10,7 @@ import KeyboardShortcuts
 
 struct ContentView: View {
     @ObservedObject var viewModel: MainViewModel
-    @State private var selectedTextTab: TextTab = .raw
+    @State private var selectedTextTab: TextTab = .formatted
     @State private var isSessionsPanelCollapsed = false
     @State private var newProfileName = ""
     @State private var newProfileLearningLanguage: LearningLanguage = .english
