@@ -17,7 +17,7 @@ protocol OpenAIServing {
         modelID: String,
         targetLanguage: LearningLanguage,
         rawText: String
-    ) async throws -> String
+    ) async throws -> StructuredFormattedText
 }
 
 enum OpenAIServiceError: LocalizedError {
@@ -29,6 +29,7 @@ enum OpenAIServiceError: LocalizedError {
     case hostNotFound
     case networkUnavailable
     case emptyFormattedText
+    case invalidStructuredResponse
 
     var errorDescription: String? {
         switch self {
@@ -48,6 +49,8 @@ enum OpenAIServiceError: LocalizedError {
             return "Нет сетевого подключения. Проверьте интернет и повторите попытку."
         case .emptyFormattedText:
             return "OpenAI вернул пустой форматированный текст."
+        case .invalidStructuredResponse:
+            return "OpenAI вернул некорректную структуру форматированного текста."
         }
     }
 }
@@ -116,7 +119,7 @@ struct OpenAIService: OpenAIServing {
         modelID: String,
         targetLanguage: LearningLanguage,
         rawText: String
-    ) async throws -> String {
+    ) async throws -> StructuredFormattedText {
         let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty, token.hasPrefix("sk-") else {
             throw OpenAIServiceError.invalidTokenFormat
@@ -136,12 +139,15 @@ struct OpenAIService: OpenAIServing {
                 .init(
                     role: "system",
                     content: """
-                    You clean OCR text for language learning.
-                    Do not add any new words, symbols, or explanations.
-                    Keep only the content that belongs to the requested target language.
-                    Preserve original symbols for kept content exactly as in source.
-                    Remove foreign words, transliteration, pinyin, and other noise.
-                    Return ONLY cleaned text without markdown, quotes, or comments.
+                    You clean OCR text for language learning and return JSON only.
+                    Do not add any content that is absent in source except Russian translation.
+                    Keep original symbols exactly for kept source fragments.
+                    Remove noise and foreign language fragments.
+                    Output strict JSON object with exactly 3 string fields:
+                    cleaned_text
+                    pinyin_text
+                    russian_translation
+                    No markdown, no code fences, no extra keys.
                     """
                 ),
                 .init(
@@ -150,6 +156,11 @@ struct OpenAIService: OpenAIServing {
                     Target language: \(targetLanguage.openAIInstructionName)
                     Rules:
                     \(targetLanguage.formattingRules)
+
+                    Additional rules:
+                    1) cleaned_text: cleaned source text in target language only.
+                    2) pinyin_text: for Chinese provide pinyin for cleaned_text; for non-Chinese return empty string.
+                    3) russian_translation: concise Russian translation of cleaned_text.
 
                     Raw OCR text:
                     \(rawText)
@@ -195,7 +206,27 @@ struct OpenAIService: OpenAIServing {
         guard !content.isEmpty else {
             throw OpenAIServiceError.emptyFormattedText
         }
-        return content
+
+        let jsonString = Self.extractJSONObjectString(from: content) ?? content
+        guard let jsonData = jsonString.data(using: .utf8) else {
+            throw OpenAIServiceError.invalidStructuredResponse
+        }
+        let structured = try JSONDecoder().decode(StructuredResponseDTO.self, from: jsonData)
+        let result = StructuredFormattedText(
+            cleanedText: structured.cleanedText.trimmingCharacters(in: .whitespacesAndNewlines),
+            pinyinText: structured.pinyinText.trimmingCharacters(in: .whitespacesAndNewlines),
+            russianTranslation: structured.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        guard result.hasContent else {
+            throw OpenAIServiceError.emptyFormattedText
+        }
+        return result
+    }
+
+    private static func extractJSONObjectString(from content: String) -> String? {
+        guard let start = content.firstIndex(of: "{"),
+              let end = content.lastIndex(of: "}") else { return nil }
+        return String(content[start...end])
     }
 }
 
@@ -327,4 +358,16 @@ private struct ChatChoice: Decodable {
 
 private struct ChatCompletionMessage: Decodable {
     let content: String
+}
+
+private struct StructuredResponseDTO: Decodable {
+    let cleanedText: String
+    let pinyinText: String
+    let russianTranslation: String
+
+    enum CodingKeys: String, CodingKey {
+        case cleanedText = "cleaned_text"
+        case pinyinText = "pinyin_text"
+        case russianTranslation = "russian_translation"
+    }
 }

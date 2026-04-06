@@ -108,7 +108,11 @@ struct llhTests {
     func capturedTextEntry_codableIncludesFormattingFields() throws {
         let entry = CapturedTextEntry(
             text: "ni hao 你好",
-            formattedText: "你好",
+            formattedText: StructuredFormattedText(
+                cleanedText: "你好",
+                pinyinText: "ni hao",
+                russianTranslation: "привет"
+            ),
             formattingStatus: .succeeded
         )
 
@@ -116,7 +120,9 @@ struct llhTests {
         let decoded = try JSONDecoder().decode(CapturedTextEntry.self, from: data)
 
         #expect(decoded.text == "ni hao 你好")
-        #expect(decoded.formattedText == "你好")
+        #expect(decoded.formattedText?.cleanedText == "你好")
+        #expect(decoded.formattedText?.pinyinText == "ni hao")
+        #expect(decoded.formattedText?.russianTranslation == "привет")
         #expect(decoded.formattingStatus == .succeeded)
     }
 }

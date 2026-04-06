@@ -237,13 +237,30 @@ struct ContentView: View {
 
     @ViewBuilder
     private var formattedTextContent: some View {
-        if !viewModel.formattedRecognizedText.isEmpty {
+        if let formatted = viewModel.formattedRecognizedText, formatted.hasContent {
             ScrollView {
-                Text(viewModel.formattedRecognizedText)
-                    .font(.system(.body, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
-                    .padding(8)
+                VStack(spacing: 18) {
+                    Text(formatted.cleanedText)
+                        .font(.system(size: 26, weight: .medium, design: .default))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
+
+                    Text(formatted.pinyinText.isEmpty ? "—" : formatted.pinyinText)
+                        .font(.system(size: 44, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
+
+                    Text(formatted.russianTranslation)
+                        .font(.system(size: 26, weight: .regular, design: .default))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 24)
             }
         } else if viewModel.isFormattingRecognizedText || viewModel.selectedEntryFormattingStatus == .processing {
             ContentUnavailableView(

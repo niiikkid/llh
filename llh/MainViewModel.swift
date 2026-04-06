@@ -11,7 +11,7 @@ import KeyboardShortcuts
 struct CapturedTextEntry: Identifiable, Equatable, Codable {
     let id: UUID
     var text: String
-    var formattedText: String?
+    var formattedText: StructuredFormattedText?
     var formattingStatus: FormattingStatus
     let createdAt: Date
     let image: NSImage?
@@ -19,7 +19,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
     init(
         id: UUID = UUID(),
         text: String,
-        formattedText: String? = nil,
+        formattedText: StructuredFormattedText? = nil,
         formattingStatus: FormattingStatus = .notRequested,
         createdAt: Date = Date(),
         image: NSImage? = nil
@@ -63,7 +63,16 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         text = try container.decode(String.self, forKey: .text)
-        formattedText = try container.decodeIfPresent(String.self, forKey: .formattedText)
+        if let structured = try container.decodeIfPresent(StructuredFormattedText.self, forKey: .formattedText) {
+            formattedText = structured
+        } else if let legacyFormatted = try container.decodeIfPresent(String.self, forKey: .formattedText) {
+            let trimmed = legacyFormatted.trimmingCharacters(in: .whitespacesAndNewlines)
+            formattedText = trimmed.isEmpty
+                ? nil
+                : StructuredFormattedText(cleanedText: trimmed, pinyinText: "", russianTranslation: "")
+        } else {
+            formattedText = nil
+        }
         formattingStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .formattingStatus) ?? .notRequested
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         image = nil
@@ -121,6 +130,16 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+struct StructuredFormattedText: Equatable, Codable {
+    let cleanedText: String
+    let pinyinText: String
+    let russianTranslation: String
+
+    var hasContent: Bool {
+        !cleanedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
 struct LearningProfile: Identifiable, Equatable, Codable {
     let id: UUID
     var name: String
@@ -155,7 +174,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
 @MainActor
 final class MainViewModel: ObservableObject {
     @Published var recognizedText = ""
-    @Published var formattedRecognizedText = ""
+    @Published var formattedRecognizedText: StructuredFormattedText?
     @Published var capturedImage: NSImage?
     @Published var statusMessage = "Нажмите shortcut и выделите область."
     @Published var showPermissionHelp = false
@@ -337,7 +356,7 @@ final class MainViewModel: ObservableObject {
         profiles[profileIndex].history[entryIndex].text = newText
         profiles[profileIndex].history[entryIndex].formattedText = nil
         profiles[profileIndex].history[entryIndex].formattingStatus = .notRequested
-        formattedRecognizedText = ""
+        formattedRecognizedText = nil
         profiles[profileIndex].selectedEntryID = selectedEntryID
         persistHistory()
     }
@@ -426,12 +445,12 @@ final class MainViewModel: ObservableObject {
     private func syncSelectionToEditor() {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else {
             recognizedText = ""
-            formattedRecognizedText = ""
+            formattedRecognizedText = nil
             capturedImage = nil
             return
         }
         recognizedText = profiles[profileIndex].history[entryIndex].text
-        formattedRecognizedText = profiles[profileIndex].history[entryIndex].formattedText ?? ""
+        formattedRecognizedText = profiles[profileIndex].history[entryIndex].formattedText
         capturedImage = profiles[profileIndex].history[entryIndex].image
     }
 
@@ -439,7 +458,7 @@ final class MainViewModel: ObservableObject {
         guard let selectedProfileIndex else {
             selectedEntryID = nil
             recognizedText = ""
-            formattedRecognizedText = ""
+            formattedRecognizedText = nil
             capturedImage = nil
             return
         }
@@ -461,7 +480,7 @@ final class MainViewModel: ObservableObject {
                 var mutableProfile = profile
                 mutableProfile.history = mutableProfile.history.map { entry in
                     var mutableEntry = entry
-                    if mutableEntry.formattedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true {
+                    if mutableEntry.formattedText?.hasContent == false {
                         mutableEntry.formattedText = nil
                     }
                     if mutableEntry.formattedText == nil, mutableEntry.formattingStatus == .processing {
@@ -509,7 +528,7 @@ final class MainViewModel: ObservableObject {
 
         let currentStatus = profiles[profileIndex].history[entryIndex].formattingStatus
         let currentFormattedText = profiles[profileIndex].history[entryIndex].formattedText
-        if !forceRetry, currentStatus == .succeeded, currentFormattedText?.isEmpty == false {
+        if !forceRetry, currentStatus == .succeeded, currentFormattedText?.hasContent == true {
             return
         }
         if !forceRetry, currentStatus == .processing {
@@ -555,7 +574,7 @@ final class MainViewModel: ObservableObject {
             profiles[latestProfileIndex].history[latestEntryIndex].formattedText = nil
             profiles[latestProfileIndex].history[latestEntryIndex].formattingStatus = .failed
             if selectedEntryID == entryID {
-                formattedRecognizedText = ""
+                formattedRecognizedText = nil
             }
             persistHistory()
             statusMessage = "Не удалось отформатировать текст: \(error.localizedDescription)"
@@ -565,7 +584,7 @@ final class MainViewModel: ObservableObject {
     var canRetryFormatting: Bool {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return false }
         let entry = profiles[profileIndex].history[entryIndex]
-        return entry.formattingStatus == .failed && (entry.formattedText?.isEmpty ?? true)
+        return entry.formattingStatus == .failed && (entry.formattedText?.hasContent ?? false) == false
     }
 
     var selectedEntryFormattingStatus: FormattingStatus? {
