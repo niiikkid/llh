@@ -82,6 +82,15 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         self.history = history
         self.selectedEntryID = selectedEntryID
     }
+
+    mutating func deleteEntry(with id: CapturedTextEntry.ID) -> Bool {
+        guard let index = history.firstIndex(where: { $0.id == id }) else {
+            return false
+        }
+        history.remove(at: index)
+        selectedEntryID = history.first?.id
+        return true
+    }
 }
 
 @MainActor
@@ -129,20 +138,13 @@ final class MainViewModel: ObservableObject {
         permissionService.openSystemSettings()
     }
 
-    func copyRecognizedText() {
-        guard !recognizedText.isEmpty else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(recognizedText, forType: .string)
-        statusMessage = "Текст скопирован в буфер обмена."
-    }
-
-    func clearText() {
-        guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return }
-        profiles[profileIndex].history[entryIndex].text = ""
-        recognizedText = ""
-        profiles[profileIndex].selectedEntryID = selectedEntryID
+    func deleteSelectedEntry() {
+        guard let profileIndex = selectedProfileIndex, let selectedEntryID else { return }
+        guard profiles[profileIndex].deleteEntry(with: selectedEntryID) else { return }
+        self.selectedEntryID = profiles[profileIndex].selectedEntryID
+        syncSelectionToEditor()
         persistHistory()
-        statusMessage = "Текст текущей записи очищен."
+        statusMessage = "Перевод удален."
     }
 
     func createProfile(named rawName: String) {
@@ -190,6 +192,10 @@ final class MainViewModel: ObservableObject {
 
     var selectedProfileName: String {
         activeProfile?.name ?? "Профиль"
+    }
+
+    var canDeleteSelectedEntry: Bool {
+        selectedEntryIndex != nil
     }
 
     func selectEntry(_ id: CapturedTextEntry.ID?) {

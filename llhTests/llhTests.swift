@@ -64,4 +64,22 @@ struct llhTests {
         #expect(loaded.profiles[0].history.map(\.text) == ["Hello", "World"])
         #expect(loaded.profiles[0].history[0].id == sourceProfile.history[0].id)
     }
+
+    @Test
+    func learningProfile_deleteEntry_removesSelectedAndRepointsSelection() {
+        let first = CapturedTextEntry(text: "First")
+        let second = CapturedTextEntry(text: "Second")
+        var profile = LearningProfile(
+            name: "English",
+            history: [first, second],
+            selectedEntryID: first.id
+        )
+
+        let removed = profile.deleteEntry(with: first.id)
+
+        #expect(removed == true)
+        #expect(profile.history.count == 1)
+        #expect(profile.history.first?.id == second.id)
+        #expect(profile.selectedEntryID == second.id)
+    }
 }

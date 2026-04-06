@@ -11,7 +11,7 @@ struct MenuBarPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("LLH OCR")
+            Text("Language Learning Helper")
                 .font(.headline)
 
             Text(viewModel.statusMessage)

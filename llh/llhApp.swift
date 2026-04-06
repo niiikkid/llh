@@ -16,7 +16,7 @@ struct llhApp: App {
             ContentView(viewModel: viewModel)
         }
 
-        MenuBarExtra("LLH OCR", systemImage: "text.viewfinder") {
+        MenuBarExtra("Language Learning Helper", systemImage: "text.viewfinder") {
             MenuBarPanelView(viewModel: viewModel)
         }
         .menuBarExtraStyle(.window)

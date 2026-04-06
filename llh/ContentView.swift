@@ -16,7 +16,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Local Screen OCR")
+            Text("Language Learning Helper")
                 .font(.title3.weight(.semibold))
 
             Text("Все данные обрабатываются локально на устройстве.")
@@ -57,14 +57,6 @@ struct ContentView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Copy") {
-                    viewModel.copyRecognizedText()
-                }
-                .disabled(viewModel.recognizedText.isEmpty)
-                Button("Clear") {
-                    viewModel.clearText()
-                }
-                .disabled(viewModel.recognizedText.isEmpty)
             }
 
             HSplitView {
@@ -99,6 +91,14 @@ struct ContentView: View {
                             }
                             .help("Удалить текущий профиль")
                             .disabled(!viewModel.canDeleteSelectedProfile)
+
+                            Button(role: .destructive) {
+                                viewModel.deleteSelectedEntry()
+                            } label: {
+                                Image(systemName: "trash.slash")
+                            }
+                            .help("Удалить выбранный перевод")
+                            .disabled(!viewModel.canDeleteSelectedEntry)
                         }
 
                         if viewModel.history.isEmpty {
