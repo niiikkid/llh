@@ -8,6 +8,11 @@ import SwiftUI
 
 @MainActor
 final class TranslationOverlayService {
+    enum DisplayMode: Equatable {
+        case temporary
+        case persistentLastTranslation
+    }
+
     private let panel = OverlayPanel(
         contentRect: .zero,
         styleMask: [.borderless, .nonactivatingPanel],
@@ -16,6 +21,7 @@ final class TranslationOverlayService {
     )
     private let hostingView = NSHostingView(rootView: CompactOverlayView(content: .loading("Обрабатываю перевод...")))
     private var dismissTask: Task<Void, Never>?
+    private(set) var displayMode: DisplayMode?
 
     init() {
         panel.isFloatingPanel = true
@@ -30,7 +36,7 @@ final class TranslationOverlayService {
     }
 
     func showLoading(_ text: String = "Обрабатываю перевод...") {
-        present(content: .loading(text), dismissAfter: nil)
+        present(content: .loading(text), dismissAfter: nil, displayMode: .temporary)
     }
 
     func showTranslation(_ formattedText: StructuredFormattedText, duration: TimeInterval) {
@@ -39,22 +45,44 @@ final class TranslationOverlayService {
                 primaryText: overlayPrimaryText(for: formattedText),
                 secondaryText: formattedText.russianTranslation
             ),
-            dismissAfter: duration
+            dismissAfter: duration,
+            displayMode: .temporary
+        )
+    }
+
+    func showPersistentLastTranslation(_ formattedText: StructuredFormattedText) {
+        present(
+            content: .translation(
+                primaryText: overlayPrimaryText(for: formattedText),
+                secondaryText: formattedText.russianTranslation
+            ),
+            dismissAfter: nil,
+            displayMode: .persistentLastTranslation
         )
     }
 
     func showMessage(title: String, subtitle: String? = nil, duration: TimeInterval) {
-        present(content: .message(title: title, subtitle: subtitle), dismissAfter: duration)
+        present(content: .message(title: title, subtitle: subtitle), dismissAfter: duration, displayMode: .temporary)
     }
 
     func hide() {
         dismissTask?.cancel()
         dismissTask = nil
+        displayMode = nil
         panel.orderOut(nil)
     }
 
-    private func present(content: CompactOverlayContent, dismissAfter: TimeInterval?) {
+    var isVisible: Bool {
+        panel.isVisible
+    }
+
+    var isShowingPersistentLastTranslation: Bool {
+        panel.isVisible && displayMode == .persistentLastTranslation
+    }
+
+    private func present(content: CompactOverlayContent, dismissAfter: TimeInterval?, displayMode: DisplayMode) {
         dismissTask?.cancel()
+        self.displayMode = displayMode
         hostingView.rootView = CompactOverlayView(content: content)
 
         let targetSize = hostingView.fittingSize

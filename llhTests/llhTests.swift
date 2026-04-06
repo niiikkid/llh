@@ -215,6 +215,52 @@ struct llhTests {
     }
 
     @Test
+    func latestTranslationLookup_returnsNewestFormattedTranslationAcrossProfiles() {
+        let older = StructuredFormattedText(
+            cleanedText: "hello",
+            pinyinText: "",
+            russianTranslation: "привет"
+        )
+        let newer = StructuredFormattedText(
+            cleanedText: "good evening",
+            pinyinText: "",
+            russianTranslation: "добрый вечер"
+        )
+
+        let firstProfile = LearningProfile(
+            name: "English",
+            history: [
+                CapturedTextEntry(
+                    text: "hello",
+                    formattedText: older,
+                    formattingStatus: .succeeded,
+                    createdAt: Date(timeIntervalSince1970: 100)
+                )
+            ]
+        )
+        let secondProfile = LearningProfile(
+            name: "Spanish",
+            learningLanguage: .spanish,
+            history: [
+                CapturedTextEntry(
+                    text: "ignored",
+                    formattedText: nil,
+                    formattingStatus: .failed,
+                    createdAt: Date(timeIntervalSince1970: 200)
+                ),
+                CapturedTextEntry(
+                    text: "good evening",
+                    formattedText: newer,
+                    formattingStatus: .succeeded,
+                    createdAt: Date(timeIntervalSince1970: 300)
+                )
+            ]
+        )
+
+        #expect(LatestTranslationLookup.latestFormattedText(in: [firstProfile, secondProfile]) == newer)
+    }
+
+    @Test
     func capturedTextEntry_codableIncludesFormattingFields() throws {
         let entry = CapturedTextEntry(
             text: "ni hao 你好",

@@ -448,12 +448,24 @@ final class MainViewModel: ObservableObject {
     init() {
         KeyboardShortcuts.onKeyUp(for: .captureArea) { [weak self] in
             Task { @MainActor [weak self] in
+                self?.closeTranslationOverlay()
                 await self?.startCaptureFlow(triggeredBy: .hotkey)
             }
         }
         KeyboardShortcuts.onKeyUp(for: .switchOCREngine) { [weak self] in
             Task { @MainActor [weak self] in
+                self?.closeTranslationOverlay(cancelPendingResult: false)
                 self?.switchToNextOCREngine(triggeredByHotkey: true)
+            }
+        }
+        KeyboardShortcuts.onKeyUp(for: .closeTranslationOverlay) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.closeTranslationOverlay()
+            }
+        }
+        KeyboardShortcuts.onKeyUp(for: .toggleLastTranslationOverlay) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.toggleLastTranslationOverlay()
             }
         }
         loadHistory()
@@ -586,8 +598,32 @@ final class MainViewModel: ObservableObject {
 
     func triggerCapture() {
         Task {
+            closeTranslationOverlay()
             await startCaptureFlow(triggeredBy: .interface)
         }
+    }
+
+    func closeTranslationOverlay(cancelPendingResult: Bool = true) {
+        if cancelPendingResult {
+            overlayEntryAwaitingFormattedResult = nil
+        }
+        translationOverlayService.hide()
+    }
+
+    func toggleLastTranslationOverlay() {
+        if translationOverlayService.isShowingPersistentLastTranslation {
+            closeTranslationOverlay()
+            return
+        }
+
+        overlayEntryAwaitingFormattedResult = nil
+
+        guard let formattedText = LatestTranslationLookup.latestFormattedText(in: profiles) else {
+            translationOverlayService.showMessage(title: "Пока нет готового перевода", duration: 2)
+            return
+        }
+
+        translationOverlayService.showPersistentLastTranslation(formattedText)
     }
 
     func refreshPermissionState() {
@@ -1104,6 +1140,19 @@ final class MainViewModel: ObservableObject {
         switch selectedStudyAssistantTab {
         case .words: return materials.wordsStatus == .failed && (materials.words?.hasContent ?? false) == false
         }
+    }
+}
+
+struct LatestTranslationLookup {
+    static func latestFormattedText(in profiles: [LearningProfile]) -> StructuredFormattedText? {
+        profiles
+            .flatMap(\.history)
+            .compactMap { entry -> (Date, StructuredFormattedText)? in
+                guard let formattedText = entry.formattedText, formattedText.hasContent else { return nil }
+                return (entry.createdAt, formattedText)
+            }
+            .max(by: { $0.0 < $1.0 })?
+            .1
     }
 }
 
