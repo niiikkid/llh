@@ -320,7 +320,7 @@ struct ContentView: View {
                 Text("Перевод слов")
                     .font(.headline)
                 Spacer()
-                Button(hasSelectedStudyMaterialContent ? "Обновить" : "Загрузить") {
+                Button(hasSelectedStudyMaterialContent ? "Обновить перевод" : "Перевести слова") {
                     viewModel.retryStudyAssistantDataForSelectedEntry()
                 }
                 .disabled(viewModel.selectedEntryStudyAssistantStatus == .processing)
@@ -349,37 +349,33 @@ struct ContentView: View {
     @ViewBuilder
     private var studyAssistantContent: some View {
         if viewModel.selectedEntryStudyAssistantStatus == .processing {
-            ContentUnavailableView(
-                "Готовлю перевод слов",
-                systemImage: "books.vertical",
-                description: Text("Запрашиваю слова для текущего текста.")
-            )
+            centeredContent {
+                ContentUnavailableView(
+                    "Готовлю перевод слов",
+                    systemImage: "books.vertical",
+                    description: Text("Запрашиваю слова для текущего текста.")
+                )
+            }
         } else if hasSelectedStudyMaterialContent {
             switch viewModel.selectedStudyAssistantTab {
             case .words:
                 wordsView(viewModel.studyMaterials.words)
             }
         } else if viewModel.canRetryStudyAssistantData {
-            VStack(alignment: .leading, spacing: 10) {
+            centeredContent {
                 ContentUnavailableView(
                     "Слова не загрузились",
                     systemImage: "arrow.clockwise.circle",
                     description: Text("Можно запросить перевод слов еще раз.")
                 )
-                Button("Попробовать еще раз") {
-                    viewModel.retryStudyAssistantDataForSelectedEntry()
-                }
             }
         } else {
-            VStack(alignment: .leading, spacing: 10) {
+            centeredContent {
                 ContentUnavailableView(
                     "Загрузить перевод слов",
                     systemImage: "hand.tap",
                     description: Text("Материал загружается только по запросу.")
                 )
-                Button("Загрузить слова") {
-                    viewModel.retryStudyAssistantDataForSelectedEntry()
-                }
             }
         }
     }
