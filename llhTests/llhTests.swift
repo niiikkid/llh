@@ -113,7 +113,25 @@ struct llhTests {
                 pinyinText: "ni hao",
                 russianTranslation: "привет"
             ),
-            formattingStatus: .succeeded
+            formattingStatus: .succeeded,
+            studyAssistantData: StudyAssistantData(
+                words: [
+                    StudyListItem(pinyinText: "ni hao", russianTranslation: "привет")
+                ],
+                phrases: [
+                    StudyListItem(pinyinText: "ni hao ma", russianTranslation: "как дела")
+                ],
+                grammar: GrammarExplanation(
+                    summary: "Короткое приветствие и вопрос о состоянии.",
+                    examples: [
+                        GrammarExample(
+                            pinyinText: "ni hao ma",
+                            russianTranslation: "как дела"
+                        )
+                    ]
+                )
+            ),
+            studyAssistantStatus: .succeeded
         )
 
         let data = try JSONEncoder().encode(entry)
@@ -124,5 +142,9 @@ struct llhTests {
         #expect(decoded.formattedText?.pinyinText == "ni hao")
         #expect(decoded.formattedText?.russianTranslation == "привет")
         #expect(decoded.formattingStatus == .succeeded)
+        #expect(decoded.studyAssistantData?.words.first?.pinyinText == "ni hao")
+        #expect(decoded.studyAssistantData?.phrases.first?.russianTranslation == "как дела")
+        #expect(decoded.studyAssistantData?.grammar.examples.count == 1)
+        #expect(decoded.studyAssistantStatus == .succeeded)
     }
 }

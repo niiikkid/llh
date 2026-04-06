@@ -13,6 +13,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
     var text: String
     var formattedText: StructuredFormattedText?
     var formattingStatus: FormattingStatus
+    var studyAssistantData: StudyAssistantData?
+    var studyAssistantStatus: FormattingStatus
     let createdAt: Date
     let image: NSImage?
 
@@ -21,6 +23,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         text: String,
         formattedText: StructuredFormattedText? = nil,
         formattingStatus: FormattingStatus = .notRequested,
+        studyAssistantData: StudyAssistantData? = nil,
+        studyAssistantStatus: FormattingStatus = .notRequested,
         createdAt: Date = Date(),
         image: NSImage? = nil
     ) {
@@ -28,6 +32,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         self.text = text
         self.formattedText = formattedText
         self.formattingStatus = formattingStatus
+        self.studyAssistantData = studyAssistantData
+        self.studyAssistantStatus = studyAssistantStatus
         self.createdAt = createdAt
         self.image = image
     }
@@ -56,6 +62,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         case text
         case formattedText
         case formattingStatus
+        case studyAssistantData
+        case studyAssistantStatus
         case createdAt
     }
 
@@ -74,6 +82,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
             formattedText = nil
         }
         formattingStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .formattingStatus) ?? .notRequested
+        studyAssistantData = try container.decodeIfPresent(StudyAssistantData.self, forKey: .studyAssistantData)
+        studyAssistantStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .studyAssistantStatus) ?? .notRequested
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         image = nil
     }
@@ -84,6 +94,8 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         try container.encode(text, forKey: .text)
         try container.encodeIfPresent(formattedText, forKey: .formattedText)
         try container.encode(formattingStatus, forKey: .formattingStatus)
+        try container.encodeIfPresent(studyAssistantData, forKey: .studyAssistantData)
+        try container.encode(studyAssistantStatus, forKey: .studyAssistantStatus)
         try container.encode(createdAt, forKey: .createdAt)
     }
 }
@@ -140,6 +152,47 @@ struct StructuredFormattedText: Equatable, Codable {
     }
 }
 
+struct StudyListItem: Equatable, Codable {
+    let pinyinText: String
+    let russianTranslation: String
+}
+
+struct GrammarExample: Equatable, Codable {
+    let pinyinText: String
+    let russianTranslation: String
+}
+
+struct GrammarExplanation: Equatable, Codable {
+    let summary: String
+    let examples: [GrammarExample]
+}
+
+struct StudyAssistantData: Equatable, Codable {
+    let words: [StudyListItem]
+    let phrases: [StudyListItem]
+    let grammar: GrammarExplanation
+
+    var hasContent: Bool {
+        !words.isEmpty || !phrases.isEmpty || !grammar.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
+enum StudyAssistantTab: String, CaseIterable, Identifiable {
+    case words
+    case phrases
+    case grammar
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .words: return "Слова"
+        case .phrases: return "Устойчивые фразы"
+        case .grammar: return "Грамматика"
+        }
+    }
+}
+
 struct LearningProfile: Identifiable, Equatable, Codable {
     let id: UUID
     var name: String
@@ -175,6 +228,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
 final class MainViewModel: ObservableObject {
     @Published var recognizedText = ""
     @Published var formattedRecognizedText: StructuredFormattedText?
+    @Published var studyAssistantData: StudyAssistantData?
+    @Published var selectedStudyAssistantTab: StudyAssistantTab = .words
     @Published var capturedImage: NSImage?
     @Published var statusMessage = "Нажмите shortcut и выделите область."
     @Published var showPermissionHelp = false
@@ -187,6 +242,7 @@ final class MainViewModel: ObservableObject {
     @Published var selectedLearningLanguage: LearningLanguage = .english
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
+    @Published private(set) var isLoadingStudyAssistantData = false
 
     private let permissionService = ScreenRecordingPermissionService()
     private let regionSelectionService = RegionSelectionService()
@@ -347,6 +403,7 @@ final class MainViewModel: ObservableObject {
         if let selectedProfileIndex {
             profiles[selectedProfileIndex].selectedEntryID = id
         }
+        selectedStudyAssistantTab = .words
         syncSelectionToEditor()
     }
 
@@ -356,7 +413,10 @@ final class MainViewModel: ObservableObject {
         profiles[profileIndex].history[entryIndex].text = newText
         profiles[profileIndex].history[entryIndex].formattedText = nil
         profiles[profileIndex].history[entryIndex].formattingStatus = .notRequested
+        profiles[profileIndex].history[entryIndex].studyAssistantData = nil
+        profiles[profileIndex].history[entryIndex].studyAssistantStatus = .notRequested
         formattedRecognizedText = nil
+        studyAssistantData = nil
         profiles[profileIndex].selectedEntryID = selectedEntryID
         persistHistory()
     }
@@ -370,6 +430,21 @@ final class MainViewModel: ObservableObject {
 
     func formattedDate(for date: Date) -> String {
         date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    func selectStudyAssistantTab(_ tab: StudyAssistantTab) {
+        selectedStudyAssistantTab = tab
+        guard let selectedEntryID else { return }
+        Task {
+            await loadStudyAssistantDataIfNeeded(for: selectedEntryID, forceReload: false)
+        }
+    }
+
+    func retryStudyAssistantDataForSelectedEntry() {
+        guard let selectedEntryID else { return }
+        Task {
+            await loadStudyAssistantDataIfNeeded(for: selectedEntryID, forceReload: true)
+        }
     }
 
     private func ensureScreenRecordingPermission() -> Bool {
@@ -446,11 +521,13 @@ final class MainViewModel: ObservableObject {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else {
             recognizedText = ""
             formattedRecognizedText = nil
+            studyAssistantData = nil
             capturedImage = nil
             return
         }
         recognizedText = profiles[profileIndex].history[entryIndex].text
         formattedRecognizedText = profiles[profileIndex].history[entryIndex].formattedText
+        studyAssistantData = profiles[profileIndex].history[entryIndex].studyAssistantData
         capturedImage = profiles[profileIndex].history[entryIndex].image
     }
 
@@ -459,6 +536,7 @@ final class MainViewModel: ObservableObject {
             selectedEntryID = nil
             recognizedText = ""
             formattedRecognizedText = nil
+            studyAssistantData = nil
             capturedImage = nil
             return
         }
@@ -488,6 +566,15 @@ final class MainViewModel: ObservableObject {
                     }
                     if mutableEntry.formattedText != nil {
                         mutableEntry.formattingStatus = .succeeded
+                    }
+                    if mutableEntry.studyAssistantData?.hasContent == false {
+                        mutableEntry.studyAssistantData = nil
+                    }
+                    if mutableEntry.studyAssistantData == nil, mutableEntry.studyAssistantStatus == .processing {
+                        mutableEntry.studyAssistantStatus = .failed
+                    }
+                    if mutableEntry.studyAssistantData != nil {
+                        mutableEntry.studyAssistantStatus = .succeeded
                     }
                     return mutableEntry
                 }
@@ -566,6 +653,7 @@ final class MainViewModel: ObservableObject {
             }
             persistHistory()
             statusMessage = "Форматирование завершено."
+            await loadStudyAssistantDataIfNeeded(for: entryID, forceReload: false)
         } catch {
             guard let latestProfileIndex = selectedProfileIndex,
                   let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
@@ -581,6 +669,77 @@ final class MainViewModel: ObservableObject {
         }
     }
 
+    private func loadStudyAssistantDataIfNeeded(for entryID: CapturedTextEntry.ID, forceReload: Bool) async {
+        guard !isLoadingStudyAssistantData else { return }
+        guard let token = openAITokenStore.loadToken() else {
+            statusMessage = "Сначала сохраните OpenAI token."
+            return
+        }
+        guard let modelID = selectedOpenAIModelID else {
+            statusMessage = "Выберите модель OpenAI."
+            return
+        }
+        guard let profileIndex = selectedProfileIndex,
+              let entryIndex = profiles[profileIndex].history.firstIndex(where: { $0.id == entryID }) else {
+            return
+        }
+
+        let entry = profiles[profileIndex].history[entryIndex]
+        guard let formattedText = entry.formattedText, formattedText.hasContent else { return }
+        if !forceReload, entry.studyAssistantStatus == .succeeded, entry.studyAssistantData?.hasContent == true {
+            if selectedEntryID == entryID {
+                studyAssistantData = entry.studyAssistantData
+            }
+            return
+        }
+        if !forceReload, entry.studyAssistantStatus == .processing {
+            return
+        }
+
+        isLoadingStudyAssistantData = true
+        profiles[profileIndex].history[entryIndex].studyAssistantStatus = .processing
+        persistHistory()
+
+        defer {
+            isLoadingStudyAssistantData = false
+        }
+
+        do {
+            let result = try await openAIService.buildStudyAssistantData(
+                apiKey: token,
+                modelID: modelID,
+                targetLanguage: selectedLearningLanguage,
+                formattedText: formattedText
+            )
+
+            guard let latestProfileIndex = selectedProfileIndex,
+                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
+                return
+            }
+
+            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantData = result
+            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantStatus = .succeeded
+            if selectedEntryID == entryID {
+                studyAssistantData = result
+            }
+            persistHistory()
+            statusMessage = "Дополнительные материалы готовы."
+        } catch {
+            guard let latestProfileIndex = selectedProfileIndex,
+                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
+                return
+            }
+
+            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantData = nil
+            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantStatus = .failed
+            if selectedEntryID == entryID {
+                studyAssistantData = nil
+            }
+            persistHistory()
+            statusMessage = "Не удалось получить материалы: \(error.localizedDescription)"
+        }
+    }
+
     var canRetryFormatting: Bool {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return false }
         let entry = profiles[profileIndex].history[entryIndex]
@@ -590,5 +749,16 @@ final class MainViewModel: ObservableObject {
     var selectedEntryFormattingStatus: FormattingStatus? {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return nil }
         return profiles[profileIndex].history[entryIndex].formattingStatus
+    }
+
+    var selectedEntryStudyAssistantStatus: FormattingStatus? {
+        guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return nil }
+        return profiles[profileIndex].history[entryIndex].studyAssistantStatus
+    }
+
+    var canRetryStudyAssistantData: Bool {
+        guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return false }
+        let entry = profiles[profileIndex].history[entryIndex]
+        return entry.studyAssistantStatus == .failed && (entry.studyAssistantData?.hasContent ?? false) == false
     }
 }

@@ -239,28 +239,37 @@ struct ContentView: View {
     private var formattedTextContent: some View {
         if let formatted = viewModel.formattedRecognizedText, formatted.hasContent {
             ScrollView {
-                VStack(spacing: 18) {
-                    Text(formatted.cleanedText)
-                        .font(.system(size: 26, weight: .medium, design: .default))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .textSelection(.enabled)
+                VStack(spacing: 16) {
+                    VStack(spacing: 18) {
+                        Text(formatted.cleanedText)
+                            .font(.system(size: 26, weight: .medium, design: .default))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .textSelection(.enabled)
 
-                    Text(formatted.pinyinText.isEmpty ? "—" : formatted.pinyinText)
-                        .font(.system(size: 44, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.center)
-                        .textSelection(.enabled)
+                        Text(formatted.pinyinText.isEmpty ? "—" : formatted.pinyinText)
+                            .font(.system(size: 44, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.center)
+                            .textSelection(.enabled)
 
-                    Text(formatted.russianTranslation)
-                        .font(.system(size: 26, weight: .regular, design: .default))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .textSelection(.enabled)
+                        Text(formatted.russianTranslation)
+                            .font(.system(size: 26, weight: .regular, design: .default))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(.background.secondary)
+                    )
+
+                    studyAssistantBlock
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 24)
+                .padding(12)
             }
         } else if viewModel.isFormattingRecognizedText || viewModel.selectedEntryFormattingStatus == .processing {
             ContentUnavailableView(
@@ -286,6 +295,130 @@ struct ContentView: View {
                 systemImage: "doc.text",
                 description: Text("Сырой текст сохранен, форматирование недоступно для этой записи.")
             )
+        }
+    }
+
+    @ViewBuilder
+    private var studyAssistantBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Picker(
+                "Дополнительные материалы",
+                selection: Binding(
+                    get: { viewModel.selectedStudyAssistantTab },
+                    set: { viewModel.selectStudyAssistantTab($0) }
+                )
+            ) {
+                ForEach(StudyAssistantTab.allCases) { tab in
+                    Text(tab.title).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            studyAssistantContent
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.background.secondary)
+        )
+    }
+
+    @ViewBuilder
+    private var studyAssistantContent: some View {
+        if viewModel.isLoadingStudyAssistantData || viewModel.selectedEntryStudyAssistantStatus == .processing {
+            ContentUnavailableView(
+                "Готовлю материалы",
+                systemImage: "books.vertical",
+                description: Text("Запрашиваю слова, фразы и объяснение грамматики.")
+            )
+        } else if let data = viewModel.studyAssistantData, data.hasContent {
+            switch viewModel.selectedStudyAssistantTab {
+            case .words:
+                studyListView(data.words, emptyTitle: "Слова не найдены")
+            case .phrases:
+                studyListView(data.phrases, emptyTitle: "Устойчивые фразы не найдены")
+            case .grammar:
+                grammarView(data.grammar)
+            }
+        } else if viewModel.canRetryStudyAssistantData {
+            VStack(alignment: .leading, spacing: 10) {
+                ContentUnavailableView(
+                    "Материалы не загрузились",
+                    systemImage: "arrow.clockwise.circle",
+                    description: Text("Можно запросить слова, фразы и грамматику еще раз.")
+                )
+                Button("Попробовать еще раз") {
+                    viewModel.retryStudyAssistantDataForSelectedEntry()
+                }
+                .disabled(viewModel.isLoadingStudyAssistantData)
+            }
+        } else {
+            ContentUnavailableView(
+                "Материалы еще не готовы",
+                systemImage: "text.book.closed",
+                description: Text("Откройте вкладку повторно после завершения форматирования.")
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func studyListView(_ items: [StudyListItem], emptyTitle: String) -> some View {
+        if items.isEmpty {
+            ContentUnavailableView(
+                emptyTitle,
+                systemImage: "list.bullet.rectangle",
+                description: Text("Для этой записи AI не выделил элементов.")
+            )
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.pinyinText)
+                            .font(.system(size: 20, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .textSelection(.enabled)
+                        Text(item.russianTranslation)
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Divider()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func grammarView(_ grammar: GrammarExplanation) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if !grammar.summary.isEmpty {
+                Text(grammar.summary)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.primary)
+                    .textSelection(.enabled)
+            }
+
+            if !grammar.examples.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Примеры")
+                        .font(.headline)
+                    ForEach(Array(grammar.examples.enumerated()), id: \.offset) { _, example in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(example.pinyinText)
+                                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .textSelection(.enabled)
+                            Text(example.russianTranslation)
+                                .font(.system(size: 16, weight: .regular))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        }
+                        Divider()
+                    }
+                }
+            }
         }
     }
 }
