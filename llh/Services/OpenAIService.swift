@@ -3,7 +3,9 @@
 //  llh
 //
 
+import CoreGraphics
 import Foundation
+import ImageIO
 import Security
 
 struct OpenAIModel: Identifiable, Equatable {
@@ -12,6 +14,11 @@ struct OpenAIModel: Identifiable, Equatable {
 
 protocol OpenAIServing {
     func fetchModels(apiKey: String) async throws -> [OpenAIModel]
+    func recognizeTextInImage(
+        apiKey: String,
+        modelID: String,
+        image: CGImage
+    ) async throws -> String
     func formatRecognizedText(
         apiKey: String,
         modelID: String,
@@ -48,6 +55,8 @@ enum OpenAIServiceError: LocalizedError {
     case networkUnavailable
     case emptyFormattedText
     case invalidStructuredResponse
+    case invalidImageData
+    case emptyRecognizedText
 
     var errorDescription: String? {
         switch self {
@@ -69,6 +78,10 @@ enum OpenAIServiceError: LocalizedError {
             return "OpenAI вернул пустой форматированный текст."
         case .invalidStructuredResponse:
             return "OpenAI вернул некорректную структуру форматированного текста."
+        case .invalidImageData:
+            return "Не удалось подготовить изображение для распознавания."
+        case .emptyRecognizedText:
+            return "OpenAI не вернул распознанный текст."
         }
     }
 }
@@ -78,6 +91,83 @@ struct OpenAIService: OpenAIServing {
 
     init(session: URLSession = .shared) {
         self.session = session
+    }
+
+    func recognizeTextInImage(
+        apiKey: String,
+        modelID: String,
+        image: CGImage
+    ) async throws -> String {
+        let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty, token.hasPrefix("sk-") else {
+            throw OpenAIServiceError.invalidTokenFormat
+        }
+        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        guard let imageData = Self.jpegData(from: image),
+              !imageData.isEmpty else {
+            throw OpenAIServiceError.invalidImageData
+        }
+        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+            throw OpenAIServiceError.invalidResponse
+        }
+
+        let imageBase64 = imageData.base64EncodedString()
+        let requestBody = VisionChatCompletionsRequest(
+            model: modelID,
+            temperature: 0,
+            messages: [
+                VisionChatMessage(
+                    role: "user",
+                    content: [
+                        .init(type: "text", text: "Распознай текст на изображении. Верни только распознанный текст без пояснений и markdown."),
+                        .init(type: "image_url", imageURL: .init(url: "data:image/jpeg;base64,\(imageBase64)"))
+                    ]
+                )
+            ]
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError {
+            switch error.code {
+            case .cannotFindHost, .dnsLookupFailed:
+                throw OpenAIServiceError.hostNotFound
+            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
+                throw OpenAIServiceError.networkUnavailable
+            default:
+                throw error
+            }
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        if httpResponse.statusCode == 401 {
+            throw OpenAIServiceError.unauthorized
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
+        }
+
+        let decoded = try JSONDecoder().decode(VisionChatCompletionsResponse.self, from: data)
+        let recognizedText = decoded.choices.first?.message.content
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !recognizedText.isEmpty else {
+            throw OpenAIServiceError.emptyRecognizedText
+        }
+        return TextFormatter.normalizeRecognizedLines(
+            recognizedText.components(separatedBy: .newlines)
+        )
     }
 
     func fetchModels(apiKey: String) async throws -> [OpenAIModel] {
@@ -616,17 +706,20 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
     private let selectedModelKey: String
     private let selectedLearningLanguageKey: String
     private let cachedModelsKey: String
+    private let selectedOCREngineKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
         selectedModelKey: String = "openai.selected.model.id",
         selectedLearningLanguageKey: String = "openai.selected.learning.language",
-        cachedModelsKey: String = "openai.cached.model.ids"
+        cachedModelsKey: String = "openai.cached.model.ids",
+        selectedOCREngineKey: String = "ocr.selected.engine"
     ) {
         self.userDefaults = userDefaults
         self.selectedModelKey = selectedModelKey
         self.selectedLearningLanguageKey = selectedLearningLanguageKey
         self.cachedModelsKey = cachedModelsKey
+        self.selectedOCREngineKey = selectedOCREngineKey
     }
 
     var selectedModelID: String? {
@@ -648,6 +741,11 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
             userDefaults.set(newValue.map(\.id), forKey: cachedModelsKey)
         }
     }
+
+    var selectedOCREngineRawValue: String {
+        get { userDefaults.string(forKey: selectedOCREngineKey) ?? "local" }
+        set { userDefaults.set(newValue, forKey: selectedOCREngineKey) }
+    }
 }
 
 private struct OpenAIModelsResponse: Decodable {
@@ -664,12 +762,49 @@ private struct ChatCompletionsRequest: Encodable {
     let messages: [ChatMessage]
 }
 
+private struct VisionChatCompletionsRequest: Encodable {
+    let model: String
+    let temperature: Double
+    let messages: [VisionChatMessage]
+}
+
+private struct VisionChatMessage: Encodable {
+    let role: String
+    let content: [VisionChatContent]
+}
+
+private struct VisionChatContent: Encodable {
+    let type: String
+    let text: String?
+    let imageURL: VisionImageURL?
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case text
+        case imageURL = "image_url"
+    }
+
+    init(type: String, text: String? = nil, imageURL: VisionImageURL? = nil) {
+        self.type = type
+        self.text = text
+        self.imageURL = imageURL
+    }
+}
+
+private struct VisionImageURL: Encodable {
+    let url: String
+}
+
 private struct ChatMessage: Encodable {
     let role: String
     let content: String
 }
 
 private struct ChatCompletionsResponse: Decodable {
+    let choices: [ChatChoice]
+}
+
+private struct VisionChatCompletionsResponse: Decodable {
     let choices: [ChatChoice]
 }
 
@@ -754,5 +889,27 @@ private struct GrammarResponseDTO: Decodable {
 private extension String {
     var trimmed: String {
         trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+private extension OpenAIService {
+    static func jpegData(from image: CGImage, compressionQuality: CGFloat = 0.9) -> Data? {
+        let mutableData = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            mutableData,
+            "public.jpeg" as CFString,
+            1,
+            nil
+        ) else {
+            return nil
+        }
+        let options: CFDictionary = [
+            kCGImageDestinationLossyCompressionQuality: compressionQuality
+        ] as CFDictionary
+        CGImageDestinationAddImage(destination, image, options)
+        guard CGImageDestinationFinalize(destination) else {
+            return nil
+        }
+        return mutableData as Data
     }
 }

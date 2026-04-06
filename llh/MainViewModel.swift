@@ -168,6 +168,20 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+enum OCREngine: String, CaseIterable, Identifiable {
+    case local
+    case ai
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .local: return "Локально"
+        case .ai: return "AI"
+        }
+    }
+}
+
 struct StructuredFormattedText: Equatable, Codable {
     let cleanedText: String
     let pinyinText: String
@@ -367,6 +381,7 @@ final class MainViewModel: ObservableObject {
     @Published var selectedEntryID: CapturedTextEntry.ID?
     @Published private(set) var availableOpenAIModels: [OpenAIModel] = []
     @Published var selectedOpenAIModelID: String?
+    @Published var selectedOCREngine: OCREngine = .local
     @Published var defaultNewProfileLearningLanguage: LearningLanguage = .english
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
@@ -386,9 +401,15 @@ final class MainViewModel: ObservableObject {
                 await self?.startCaptureFlow()
             }
         }
+        KeyboardShortcuts.onKeyUp(for: .switchOCREngine) { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.switchToNextOCREngine()
+            }
+        }
         loadHistory()
         availableOpenAIModels = openAISettingsStore.cachedModels
         selectedOpenAIModelID = openAISettingsStore.selectedModelID
+        selectedOCREngine = OCREngine(rawValue: openAISettingsStore.selectedOCREngineRawValue) ?? .local
         if selectedOpenAIModelID == nil {
             selectedOpenAIModelID = availableOpenAIModels.first?.id
         }
@@ -453,6 +474,22 @@ final class MainViewModel: ObservableObject {
         if let id {
             statusMessage = "Выбрана модель OpenAI: \(id)"
         }
+    }
+
+    func selectOCREngine(_ engine: OCREngine) {
+        selectedOCREngine = engine
+        openAISettingsStore.selectedOCREngineRawValue = engine.rawValue
+        statusMessage = "Движок распознавания: \(engine.title)."
+    }
+
+    func switchToNextOCREngine() {
+        guard let currentIndex = OCREngine.allCases.firstIndex(of: selectedOCREngine) else {
+            selectOCREngine(.local)
+            return
+        }
+        let nextIndex = OCREngine.allCases.index(after: currentIndex)
+        let wrappedIndex = nextIndex == OCREngine.allCases.endIndex ? OCREngine.allCases.startIndex : nextIndex
+        selectOCREngine(OCREngine.allCases[wrappedIndex])
     }
 
     func setDefaultNewProfileLearningLanguage(_ language: LearningLanguage) {
@@ -624,7 +661,7 @@ final class MainViewModel: ObservableObject {
             capturedImage = NSImage(cgImage: image, size: .zero)
             statusMessage = "Распознаю текст..."
 
-            let text = try await ocrService.recognizeText(in: image)
+            let text = try await recognizeText(in: image)
             guard !text.isEmpty else {
                 recognizedText = ""
                 statusMessage = "Текст не найден."
@@ -645,6 +682,25 @@ final class MainViewModel: ObservableObject {
             statusMessage = "Выделение отменено."
         } catch {
             statusMessage = "Ошибка: \(error.localizedDescription)"
+        }
+    }
+
+    private func recognizeText(in image: CGImage) async throws -> String {
+        switch selectedOCREngine {
+        case .local:
+            return try await ocrService.recognizeText(in: image)
+        case .ai:
+            guard let token = openAITokenStore.loadToken() else {
+                throw OpenAIServiceError.invalidTokenFormat
+            }
+            guard let modelID = selectedOpenAIModelID else {
+                throw OpenAIServiceError.invalidResponse
+            }
+            return try await openAIService.recognizeTextInImage(
+                apiKey: token,
+                modelID: modelID,
+                image: image
+            )
         }
     }
 

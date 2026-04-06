@@ -29,6 +29,19 @@ struct ContentView: View {
                 Text("Language Learning Helper")
                     .font(.title3.weight(.semibold))
                 Spacer()
+                Picker(
+                    "Движок OCR",
+                    selection: Binding(
+                        get: { viewModel.selectedOCREngine },
+                        set: { viewModel.selectOCREngine($0) }
+                    )
+                ) {
+                    ForEach(OCREngine.allCases) { engine in
+                        Text(engine.title).tag(engine)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 150)
                 Button {
                     isSessionsPanelCollapsed.toggle()
                 } label: {
@@ -578,6 +591,7 @@ private struct GeneralSettingsTab: View {
                 .foregroundStyle(.secondary)
 
             KeyboardShortcuts.Recorder("Захват области:", name: .captureArea)
+            KeyboardShortcuts.Recorder("Переключить движок OCR:", name: .switchOCREngine)
 
             Spacer()
         }
