@@ -122,6 +122,13 @@ struct llhTests {
         store.selectedModelID = "gpt-4.1-mini"
         #expect(store.selectedModelID == "gpt-4.1-mini")
 
+        #expect(store.cachedModels.isEmpty)
+        store.cachedModels = [
+            OpenAIModel(id: "gpt-4.1-mini"),
+            OpenAIModel(id: "gpt-4.1")
+        ]
+        #expect(store.cachedModels.map(\.id) == ["gpt-4.1-mini", "gpt-4.1"])
+
         #expect(store.selectedLearningLanguageRawValue == LearningLanguage.english.rawValue)
         store.selectedLearningLanguageRawValue = LearningLanguage.chinese.rawValue
         #expect(store.selectedLearningLanguageRawValue == LearningLanguage.chinese.rawValue)

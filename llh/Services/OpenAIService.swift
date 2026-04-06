@@ -475,6 +475,7 @@ struct OpenAIService: OpenAIServing {
 protocol OpenAITokenStoring {
     func loadToken() -> String?
     func saveToken(_ token: String) throws
+    func deleteToken() throws
 }
 
 enum OpenAITokenStoreError: LocalizedError {
@@ -539,6 +540,19 @@ struct KeychainOpenAITokenStore: OpenAITokenStoring {
             throw OpenAITokenStoreError.unhandledError(status)
         }
     }
+
+    func deleteToken() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw OpenAITokenStoreError.unhandledError(status)
+        }
+    }
 }
 
 protocol OpenAISettingsStoring {
@@ -549,15 +563,18 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
     private let userDefaults: UserDefaults
     private let selectedModelKey: String
     private let selectedLearningLanguageKey: String
+    private let cachedModelsKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
         selectedModelKey: String = "openai.selected.model.id",
-        selectedLearningLanguageKey: String = "openai.selected.learning.language"
+        selectedLearningLanguageKey: String = "openai.selected.learning.language",
+        cachedModelsKey: String = "openai.cached.model.ids"
     ) {
         self.userDefaults = userDefaults
         self.selectedModelKey = selectedModelKey
         self.selectedLearningLanguageKey = selectedLearningLanguageKey
+        self.cachedModelsKey = cachedModelsKey
     }
 
     var selectedModelID: String? {
@@ -568,6 +585,16 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
     var selectedLearningLanguageRawValue: String {
         get { userDefaults.string(forKey: selectedLearningLanguageKey) ?? LearningLanguage.english.rawValue }
         set { userDefaults.set(newValue, forKey: selectedLearningLanguageKey) }
+    }
+
+    var cachedModels: [OpenAIModel] {
+        get {
+            let ids = userDefaults.stringArray(forKey: cachedModelsKey) ?? []
+            return ids.map(OpenAIModel.init(id:))
+        }
+        set {
+            userDefaults.set(newValue.map(\.id), forKey: cachedModelsKey)
+        }
     }
 }
 

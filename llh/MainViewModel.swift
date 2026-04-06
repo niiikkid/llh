@@ -387,7 +387,11 @@ final class MainViewModel: ObservableObject {
             }
         }
         loadHistory()
+        availableOpenAIModels = openAISettingsStore.cachedModels
         selectedOpenAIModelID = openAISettingsStore.selectedModelID
+        if selectedOpenAIModelID == nil {
+            selectedOpenAIModelID = availableOpenAIModels.first?.id
+        }
         defaultNewProfileLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
         refreshPermissionState()
     }
@@ -410,14 +414,15 @@ final class MainViewModel: ObservableObject {
             let models = try await openAIService.fetchModels(apiKey: trimmedToken)
             try openAITokenStore.saveToken(trimmedToken)
             availableOpenAIModels = models
+            openAISettingsStore.cachedModels = models
 
             if let selectedOpenAIModelID,
                models.contains(where: { $0.id == selectedOpenAIModelID }) {
                 // Keep current selection.
             } else {
                 selectedOpenAIModelID = models.first?.id
-                openAISettingsStore.selectedModelID = selectedOpenAIModelID
             }
+            openAISettingsStore.selectedModelID = selectedOpenAIModelID
 
             statusMessage = "Подключение к OpenAI успешно. Моделей: \(models.count)."
         } catch {
@@ -431,6 +436,15 @@ final class MainViewModel: ObservableObject {
             return
         }
         await validateAndSaveOpenAIToken(token)
+    }
+
+    func deleteOpenAIToken() {
+        do {
+            try openAITokenStore.deleteToken()
+            statusMessage = "Токен OpenAI удален."
+        } catch {
+            statusMessage = "Не удалось удалить OpenAI token: \(error.localizedDescription)"
+        }
     }
 
     func selectOpenAIModel(_ id: String?) {
