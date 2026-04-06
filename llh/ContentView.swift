@@ -376,6 +376,9 @@ struct ContentView: View {
 
                         if !entry.characterBreakdown.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
+                                Text("Разбор")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
                                 ForEach(Array(entry.characterBreakdown.enumerated()), id: \.offset) { _, part in
                                     HStack(alignment: .top, spacing: 8) {
                                         Text(part.pinyinText)
@@ -389,15 +392,6 @@ struct ContentView: View {
                                     }
                                 }
                             }
-                            .padding(10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(.background)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(.quaternary, lineWidth: 1)
-                            )
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
