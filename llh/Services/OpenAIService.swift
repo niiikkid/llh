@@ -266,9 +266,10 @@ struct OpenAIService: OpenAIServing {
                     \(targetLanguage.formattingRules)
 
                     Additional rules:
-                    1) cleaned_text: cleaned source text in target language only.
-                    2) pinyin_text: for Chinese provide pinyin for cleaned_text; for non-Chinese return empty string.
+                    1) cleaned_text: cleaned meaningful source text after OCR cleanup.
+                    2) pinyin_text: if the cleaned_text is Chinese, provide pinyin for it; otherwise return empty string.
                     3) russian_translation: concise Russian translation of cleaned_text.
+                    4) If target language is Auto-detect, first detect the main language of the text and then apply the same rules.
 
                     Raw OCR text:
                     \(rawText)

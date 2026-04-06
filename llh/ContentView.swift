@@ -137,6 +137,12 @@ struct ContentView: View {
                                     Spacer()
                                 }
 
+                                if viewModel.currentProfileLearningLanguage == .auto {
+                                    Text("Для этой сессии язык определяется автоматически, а снизу показывается только перевод без блока слов.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
                                 if viewModel.history.isEmpty {
                                     ContentUnavailableView(
                                         "Пока пусто",
@@ -249,7 +255,7 @@ struct ContentView: View {
                     .font(.headline)
                 TextField("Название сессии", text: $newProfileName)
                 Picker("Язык изучения", selection: $newProfileLearningLanguage) {
-                    ForEach(LearningLanguage.allCases) { language in
+                    ForEach(LearningLanguage.allCases.filter(\.supportsWordStudy)) { language in
                         Text(language.title).tag(language)
                     }
                 }
@@ -290,7 +296,9 @@ struct ContentView: View {
         if let formatted = viewModel.formattedRecognizedText, formatted.hasContent {
             VStack(spacing: 12) {
                 formattedTranslationBlock(formatted)
-                studyAssistantBlock
+                if viewModel.currentProfileSupportsWordStudy {
+                    studyAssistantBlock
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         } else if viewModel.isFormattingRecognizedText || viewModel.selectedEntryFormattingStatus == .processing {
@@ -399,15 +407,15 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(Array(payload.entries.enumerated()), id: \.offset) { _, entry in
                     VStack(alignment: .leading, spacing: 6) {
-                        (
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text(entry.termPinyin)
                                 .font(.system(size: 19, weight: .semibold, design: .rounded))
-                            + Text(" - ")
+                            Text("-")
                                 .font(.system(size: 17, weight: .regular, design: .default))
-                            + Text(entry.termTranslation)
+                            Text(entry.termTranslation)
                                 .font(.system(size: 15))
                                 .foregroundStyle(.secondary)
-                        )
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
@@ -459,7 +467,7 @@ struct ContentView: View {
     @ViewBuilder
     private func formattedTranslationBlock(_ formatted: StructuredFormattedText) -> some View {
         VStack(spacing: 10) {
-            if viewModel.currentProfileLearningLanguage == .chinese {
+            if shouldShowCleanedTextAbovePrimary(for: formatted) {
                 Text(formatted.cleanedText)
                     .font(.system(size: 13, weight: .medium, design: .default))
                     .foregroundStyle(.secondary)
@@ -489,10 +497,21 @@ struct ContentView: View {
     }
 
     private func primaryFormattedLine(_ formatted: StructuredFormattedText) -> String {
-        if viewModel.currentProfileLearningLanguage == .chinese {
+        if shouldUsePinyinAsPrimary(for: formatted) {
             return formatted.pinyinText.isEmpty ? "—" : formatted.pinyinText
         }
         return formatted.cleanedText
+    }
+
+    private func shouldShowCleanedTextAbovePrimary(for formatted: StructuredFormattedText) -> Bool {
+        shouldUsePinyinAsPrimary(for: formatted)
+    }
+
+    private func shouldUsePinyinAsPrimary(for formatted: StructuredFormattedText) -> Bool {
+        if viewModel.currentProfileLearningLanguage == .chinese {
+            return true
+        }
+        return viewModel.currentProfileLearningLanguage == .auto && !formatted.pinyinText.isEmpty
     }
 
     private func sidebarActionButton(

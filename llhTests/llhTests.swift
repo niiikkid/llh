@@ -89,6 +89,41 @@ struct llhTests {
     }
 
     @Test
+    func defaultProfile_hasAutoLanguageAndSystemKind() {
+        let profile = LearningProfile.defaultProfile()
+
+        #expect(profile.name == "Default")
+        #expect(profile.learningLanguage == .auto)
+        #expect(profile.isDefaultProfile)
+    }
+
+    @Test
+    func historyPersistenceService_injectsDefaultProfileForExistingSnapshots() throws {
+        let folderURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = folderURL.appendingPathComponent("history.json", isDirectory: false)
+        let service = HistoryPersistenceService(fileURL: fileURL)
+        let sourceProfile = LearningProfile(
+            name: "Spanish",
+            learningLanguage: .spanish,
+            history: [CapturedTextEntry(text: "Hola")],
+            selectedEntryID: nil
+        )
+        let snapshot = HistoryStoreSnapshot(
+            profiles: [sourceProfile],
+            selectedProfileID: sourceProfile.id
+        )
+
+        try service.saveStore(snapshot)
+        let loaded = try service.loadStore()
+
+        #expect(loaded.profiles.count == 2)
+        #expect(loaded.profiles.first?.isDefaultProfile == true)
+        #expect(loaded.profiles.first?.learningLanguage == .auto)
+        #expect(loaded.selectedProfileID == sourceProfile.id)
+    }
+
+    @Test
     func learningProfile_deleteEntry_removesSelectedAndRepointsSelection() {
         let first = CapturedTextEntry(text: "First")
         let second = CapturedTextEntry(text: "Second")
@@ -225,5 +260,11 @@ struct llhTests {
         #expect(!userPrompt.contains("Pronunciation:"))
         #expect(userPrompt.contains("keep the original word exactly as it appears in the target language text"))
         #expect(userPrompt.contains("return `character_breakdown` as an empty array"))
+    }
+
+    @Test
+    func learningLanguage_autoDisablesWordStudy() {
+        #expect(LearningLanguage.auto.supportsWordStudy == false)
+        #expect(LearningLanguage.english.supportsWordStudy == true)
     }
 }

@@ -134,6 +134,7 @@ enum FormattingStatus: String, Codable {
 }
 
 enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
+    case auto
     case english
     case spanish
     case chinese
@@ -142,6 +143,7 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
 
     var title: String {
         switch self {
+        case .auto: return "Автоопределение"
         case .english: return "Английский"
         case .spanish: return "Испанский"
         case .chinese: return "Китайский"
@@ -150,6 +152,7 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
 
     var openAIInstructionName: String {
         switch self {
+        case .auto: return "Auto-detect"
         case .english: return "English"
         case .spanish: return "Spanish"
         case .chinese: return "Chinese"
@@ -158,6 +161,8 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
 
     var formattingRules: String {
         switch self {
+        case .auto:
+            return "Detect the main language automatically. Keep the meaningful source text, remove OCR noise, and if the text is Chinese provide pinyin."
         case .english:
             return "Keep only English text and punctuation from the source. Remove words in other languages."
         case .spanish:
@@ -166,6 +171,15 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
             return "Keep only Chinese characters and relevant punctuation from the source. Remove pinyin, latin text, and words in other languages."
         }
     }
+
+    var supportsWordStudy: Bool {
+        self != .auto
+    }
+}
+
+enum LearningProfileKind: String, Codable {
+    case custom
+    case `default`
 }
 
 enum OCREngine: String, CaseIterable, Identifiable {
@@ -300,6 +314,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
     let id: UUID
     var name: String
     var learningLanguage: LearningLanguage
+    var kind: LearningProfileKind
     let createdAt: Date
     var history: [CapturedTextEntry]
     var selectedEntryID: CapturedTextEntry.ID?
@@ -308,6 +323,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         id: UUID = UUID(),
         name: String,
         learningLanguage: LearningLanguage = .english,
+        kind: LearningProfileKind = .custom,
         createdAt: Date = Date(),
         history: [CapturedTextEntry] = [],
         selectedEntryID: CapturedTextEntry.ID? = nil
@@ -315,6 +331,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         self.id = id
         self.name = name
         self.learningLanguage = learningLanguage
+        self.kind = kind
         self.createdAt = createdAt
         self.history = history
         self.selectedEntryID = selectedEntryID
@@ -331,16 +348,39 @@ struct LearningProfile: Identifiable, Equatable, Codable {
             id: id,
             name: name,
             learningLanguage: .english,
+            kind: .custom,
             createdAt: createdAt,
             history: history,
             selectedEntryID: selectedEntryID
         )
     }
 
+    static func defaultProfile(
+        id: UUID = UUID(),
+        createdAt: Date = Date(),
+        history: [CapturedTextEntry] = [],
+        selectedEntryID: CapturedTextEntry.ID? = nil
+    ) -> LearningProfile {
+        LearningProfile(
+            id: id,
+            name: "Default",
+            learningLanguage: .auto,
+            kind: .default,
+            createdAt: createdAt,
+            history: history,
+            selectedEntryID: selectedEntryID
+        )
+    }
+
+    var isDefaultProfile: Bool {
+        kind == .default
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
         case learningLanguage
+        case kind
         case createdAt
         case history
         case selectedEntryID
@@ -351,6 +391,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         learningLanguage = try container.decodeIfPresent(LearningLanguage.self, forKey: .learningLanguage) ?? .english
+        kind = try container.decodeIfPresent(LearningProfileKind.self, forKey: .kind) ?? .custom
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         history = try container.decodeIfPresent([CapturedTextEntry].self, forKey: .history) ?? []
         selectedEntryID = try container.decodeIfPresent(CapturedTextEntry.ID.self, forKey: .selectedEntryID)
@@ -523,6 +564,10 @@ final class MainViewModel: ObservableObject {
         activeProfile?.learningLanguage ?? defaultNewProfileLearningLanguage
     }
 
+    var currentProfileSupportsWordStudy: Bool {
+        currentProfileLearningLanguage.supportsWordStudy
+    }
+
     func triggerCapture() {
         Task {
             await startCaptureFlow(triggeredBy: .interface)
@@ -572,14 +617,14 @@ final class MainViewModel: ObservableObject {
     func deleteSelectedProfile() {
         guard let currentProfileID = selectedProfileID,
               let profileIndex = profiles.firstIndex(where: { $0.id == currentProfileID }) else { return }
+        guard !profiles[profileIndex].isDefaultProfile else {
+            statusMessage = "Сессию Default удалить нельзя."
+            return
+        }
         let removedName = profiles[profileIndex].name
         profiles.remove(at: profileIndex)
 
-        if profiles.isEmpty {
-            let defaultProfile = LearningProfile(name: "Основной", learningLanguage: defaultNewProfileLearningLanguage)
-            profiles = [defaultProfile]
-            selectedProfileID = defaultProfile.id
-        } else if let firstID = profiles.first?.id {
+        if let firstID = profiles.first?.id {
             selectedProfileID = firstID
         }
 
@@ -589,7 +634,7 @@ final class MainViewModel: ObservableObject {
     }
 
     var canDeleteSelectedProfile: Bool {
-        profiles.count > 1 && selectedProfileID != nil
+        activeProfile?.isDefaultProfile == false
     }
 
     var history: [CapturedTextEntry] {
@@ -828,6 +873,13 @@ final class MainViewModel: ObservableObject {
                 }
                 return mutableProfile
             }
+            if !store.profiles.contains(where: \.isDefaultProfile) {
+                store.profiles.insert(.defaultProfile(), at: 0)
+            }
+            if let defaultIndex = store.profiles.firstIndex(where: \.isDefaultProfile), defaultIndex != 0 {
+                let defaultProfile = store.profiles.remove(at: defaultIndex)
+                store.profiles.insert(defaultProfile, at: 0)
+            }
             profiles = store.profiles
             selectedProfileID = store.selectedProfileID
             if selectedProfileIndex == nil {
@@ -945,6 +997,7 @@ final class MainViewModel: ObservableObject {
     }
 
     private func loadStudyMaterial(for entryID: CapturedTextEntry.ID, tab: StudyAssistantTab, forceReload: Bool) async {
+        guard currentProfileSupportsWordStudy else { return }
         guard let token = openAITokenStore.loadToken() else {
             statusMessage = "Сначала сохраните OpenAI token."
             return

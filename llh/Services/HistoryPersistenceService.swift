@@ -29,7 +29,7 @@ struct HistoryPersistenceService {
 
     func loadStore() throws -> HistoryStoreSnapshot {
         guard fileManager.fileExists(atPath: fileURL.path) else {
-            let defaultProfile = LearningProfile(name: "Основной")
+            let defaultProfile = LearningProfile.defaultProfile()
             return HistoryStoreSnapshot(profiles: [defaultProfile], selectedProfileID: defaultProfile.id)
         }
         let data = try Data(contentsOf: fileURL)
@@ -37,7 +37,7 @@ struct HistoryPersistenceService {
         let decoder = JSONDecoder()
         if let snapshot = try? decoder.decode(HistoryStoreSnapshot.self, from: data),
            !snapshot.profiles.isEmpty {
-            return snapshot
+            return normalized(snapshot)
         }
 
         // Backward compatibility with old history-only format.
@@ -45,12 +45,11 @@ struct HistoryPersistenceService {
         let legacyEntries = legacyRecords.map { record in
             CapturedTextEntry(id: record.id, text: record.text, createdAt: record.createdAt, image: nil)
         }
-        let migratedProfile = LearningProfile(
-            name: "Основной",
+        let migratedProfile = LearningProfile.defaultProfile(
             history: legacyEntries,
             selectedEntryID: legacyEntries.first?.id
         )
-        return HistoryStoreSnapshot(profiles: [migratedProfile], selectedProfileID: migratedProfile.id)
+        return normalized(HistoryStoreSnapshot(profiles: [migratedProfile], selectedProfileID: migratedProfile.id))
     }
 
     func saveStore(_ snapshot: HistoryStoreSnapshot) throws {
@@ -62,6 +61,27 @@ struct HistoryPersistenceService {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(snapshot)
         try data.write(to: fileURL, options: .atomic)
+    }
+
+    private func normalized(_ snapshot: HistoryStoreSnapshot) -> HistoryStoreSnapshot {
+        var profiles = snapshot.profiles
+        if !profiles.contains(where: \.isDefaultProfile) {
+            profiles.insert(.defaultProfile(), at: 0)
+        }
+        if let defaultIndex = profiles.firstIndex(where: \.isDefaultProfile), defaultIndex != 0 {
+            let defaultProfile = profiles.remove(at: defaultIndex)
+            profiles.insert(defaultProfile, at: 0)
+        }
+
+        let selectedProfileID: LearningProfile.ID?
+        if let selectedID = snapshot.selectedProfileID,
+           profiles.contains(where: { $0.id == selectedID }) {
+            selectedProfileID = selectedID
+        } else {
+            selectedProfileID = profiles.first?.id
+        }
+
+        return HistoryStoreSnapshot(profiles: profiles, selectedProfileID: selectedProfileID)
     }
 }
 
