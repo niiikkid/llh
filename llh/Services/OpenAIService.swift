@@ -708,7 +708,8 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
     private let selectedLearningLanguageKey: String
     private let cachedModelsKey: String
     private let selectedOCREngineKey: String
-    private let translationOverlayDurationKey: String
+    private let translationOverlayMinimumDurationKey: String
+    private let translationOverlaySecondsPerWordKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -716,14 +717,16 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         selectedLearningLanguageKey: String = "openai.selected.learning.language",
         cachedModelsKey: String = "openai.cached.model.ids",
         selectedOCREngineKey: String = "ocr.selected.engine",
-        translationOverlayDurationKey: String = "overlay.translation.duration"
+        translationOverlayMinimumDurationKey: String = "overlay.translation.minimum.duration",
+        translationOverlaySecondsPerWordKey: String = "overlay.translation.seconds.per.word"
     ) {
         self.userDefaults = userDefaults
         self.selectedModelKey = selectedModelKey
         self.selectedLearningLanguageKey = selectedLearningLanguageKey
         self.cachedModelsKey = cachedModelsKey
         self.selectedOCREngineKey = selectedOCREngineKey
-        self.translationOverlayDurationKey = translationOverlayDurationKey
+        self.translationOverlayMinimumDurationKey = translationOverlayMinimumDurationKey
+        self.translationOverlaySecondsPerWordKey = translationOverlaySecondsPerWordKey
     }
 
     var selectedModelID: String? {
@@ -751,16 +754,29 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         set { userDefaults.set(newValue, forKey: selectedOCREngineKey) }
     }
 
-    var translationOverlayDuration: Double {
+    var translationOverlayMinimumDuration: Double {
         get {
-            let storedValue = userDefaults.double(forKey: translationOverlayDurationKey)
+            let storedValue = userDefaults.double(forKey: translationOverlayMinimumDurationKey)
             if storedValue == 0 {
-                return 5
+                return 3
             }
             return storedValue.clamped(to: 1...15)
         }
         set {
-            userDefaults.set(newValue.clamped(to: 1...15), forKey: translationOverlayDurationKey)
+            userDefaults.set(newValue.clamped(to: 1...15), forKey: translationOverlayMinimumDurationKey)
+        }
+    }
+
+    var translationOverlaySecondsPerWord: Double {
+        get {
+            let storedValue = userDefaults.double(forKey: translationOverlaySecondsPerWordKey)
+            if storedValue == 0 {
+                return 0.33
+            }
+            return storedValue.clamped(to: 0.1...2)
+        }
+        set {
+            userDefaults.set(newValue.clamped(to: 0.1...2), forKey: translationOverlaySecondsPerWordKey)
         }
     }
 }

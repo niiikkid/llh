@@ -168,11 +168,50 @@ struct llhTests {
         store.selectedLearningLanguageRawValue = LearningLanguage.chinese.rawValue
         #expect(store.selectedLearningLanguageRawValue == LearningLanguage.chinese.rawValue)
 
-        #expect(store.translationOverlayDuration == 5)
-        store.translationOverlayDuration = 7
-        #expect(store.translationOverlayDuration == 7)
-        store.translationOverlayDuration = 100
-        #expect(store.translationOverlayDuration == 15)
+        #expect(store.translationOverlayMinimumDuration == 3)
+        store.translationOverlayMinimumDuration = 7
+        #expect(store.translationOverlayMinimumDuration == 7)
+        store.translationOverlayMinimumDuration = 100
+        #expect(store.translationOverlayMinimumDuration == 15)
+
+        #expect(store.translationOverlaySecondsPerWord == 0.33)
+        store.translationOverlaySecondsPerWord = 0.5
+        #expect(store.translationOverlaySecondsPerWord == 0.5)
+        store.translationOverlaySecondsPerWord = 10
+        #expect(store.translationOverlaySecondsPerWord == 2)
+    }
+
+    @Test
+    func translationOverlayTiming_usesWordCountWithMinimumDuration() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "ni hao ma",
+            pinyinText: "",
+            russianTranslation: "привет как дела"
+        )
+
+        #expect(TranslationOverlayTiming.wordCount(in: [formatted.cleanedText, formatted.russianTranslation]) == 6)
+        #expect(TranslationOverlayTiming.duration(for: formatted, minimumDuration: 3, secondsPerWord: 0.33) == 3)
+
+        let longerFormatted = StructuredFormattedText(
+            cleanedText: "one two three four five six seven eight nine ten",
+            pinyinText: "",
+            russianTranslation: ""
+        )
+
+        let longerDuration = TranslationOverlayTiming.duration(
+            for: longerFormatted,
+            minimumDuration: 3,
+            secondsPerWord: 0.33
+        )
+        #expect(abs(longerDuration - 3.3) < 0.0001)
+
+        let chineseFormatted = StructuredFormattedText(
+            cleanedText: "你好 世界",
+            pinyinText: "ni hao shi jie",
+            russianTranslation: "привет мир"
+        )
+        #expect(TranslationOverlayTiming.visibleTexts(for: chineseFormatted) == ["ni hao shi jie", "привет мир"])
+        #expect(TranslationOverlayTiming.wordCount(in: TranslationOverlayTiming.visibleTexts(for: chineseFormatted)) == 6)
     }
 
     @Test

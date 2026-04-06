@@ -429,7 +429,8 @@ final class MainViewModel: ObservableObject {
     @Published var selectedOpenAIModelID: String?
     @Published var selectedOCREngine: OCREngine = .local
     @Published var defaultNewProfileLearningLanguage: LearningLanguage = .english
-    @Published var translationOverlayDuration: Double = 5
+    @Published var translationOverlayMinimumDuration: Double = 3
+    @Published var translationOverlaySecondsPerWord: Double = 0.33
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
 
@@ -463,7 +464,8 @@ final class MainViewModel: ObservableObject {
             selectedOpenAIModelID = availableOpenAIModels.first?.id
         }
         defaultNewProfileLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
-        translationOverlayDuration = openAISettingsStore.translationOverlayDuration
+        translationOverlayMinimumDuration = openAISettingsStore.translationOverlayMinimumDuration
+        translationOverlaySecondsPerWord = openAISettingsStore.translationOverlaySecondsPerWord
         refreshPermissionState()
     }
 
@@ -554,10 +556,24 @@ final class MainViewModel: ObservableObject {
         openAISettingsStore.selectedLearningLanguageRawValue = language.rawValue
     }
 
-    func setTranslationOverlayDuration(_ duration: Double) {
+    func setTranslationOverlayMinimumDuration(_ duration: Double) {
         let clampedDuration = min(max(duration, 1), 15)
-        translationOverlayDuration = clampedDuration
-        openAISettingsStore.translationOverlayDuration = clampedDuration
+        translationOverlayMinimumDuration = clampedDuration
+        openAISettingsStore.translationOverlayMinimumDuration = clampedDuration
+    }
+
+    func setTranslationOverlaySecondsPerWord(_ value: Double) {
+        let clampedValue = min(max(value, 0.1), 2)
+        translationOverlaySecondsPerWord = clampedValue
+        openAISettingsStore.translationOverlaySecondsPerWord = clampedValue
+    }
+
+    func calculatedTranslationOverlayDuration(for formattedText: StructuredFormattedText) -> Double {
+        TranslationOverlayTiming.duration(
+            for: formattedText,
+            minimumDuration: translationOverlayMinimumDuration,
+            secondsPerWord: translationOverlaySecondsPerWord
+        )
     }
 
     var currentProfileLearningLanguage: LearningLanguage {
@@ -963,7 +979,10 @@ final class MainViewModel: ObservableObject {
             statusMessage = "Форматирование завершено."
             if overlayEntryAwaitingFormattedResult == entryID {
                 if shouldUseCompactOverlay {
-                    translationOverlayService.showTranslation(formatted, duration: translationOverlayDuration)
+                    translationOverlayService.showTranslation(
+                        formatted,
+                        duration: calculatedTranslationOverlayDuration(for: formatted)
+                    )
                 } else {
                     translationOverlayService.hide()
                 }
@@ -1085,5 +1104,54 @@ final class MainViewModel: ObservableObject {
         switch selectedStudyAssistantTab {
         case .words: return materials.wordsStatus == .failed && (materials.words?.hasContent ?? false) == false
         }
+    }
+}
+
+struct TranslationOverlayTiming {
+    static func duration(
+        for formattedText: StructuredFormattedText,
+        minimumDuration: Double,
+        secondsPerWord: Double
+    ) -> Double {
+        let clampedMinimumDuration = min(max(minimumDuration, 1), 15)
+        let clampedSecondsPerWord = min(max(secondsPerWord, 0.1), 2)
+        let wordCount = wordCount(in: visibleTexts(for: formattedText))
+        let calculatedDuration = Double(wordCount) * clampedSecondsPerWord
+        return max(clampedMinimumDuration, calculatedDuration)
+    }
+
+    static func visibleTexts(for formattedText: StructuredFormattedText) -> [String] {
+        let primaryText = overlayPrimaryText(for: formattedText)
+        let secondaryText = formattedText.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if secondaryText.isEmpty || primaryText == secondaryText {
+            return [primaryText]
+        }
+
+        return [primaryText, secondaryText]
+    }
+
+    static func wordCount(in texts: [String]) -> Int {
+        texts
+            .flatMap { text in
+                text
+                    .split(whereSeparator: \.isWhitespace)
+                    .map(String.init)
+            }
+            .count
+    }
+
+    private static func overlayPrimaryText(for formattedText: StructuredFormattedText) -> String {
+        let trimmedPinyin = formattedText.pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPinyin.isEmpty {
+            return trimmedPinyin
+        }
+
+        let trimmedCleaned = formattedText.cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedCleaned.isEmpty {
+            return trimmedCleaned
+        }
+
+        return formattedText.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

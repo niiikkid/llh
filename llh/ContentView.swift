@@ -619,31 +619,58 @@ private struct GeneralSettingsTab: View {
             Text("Компактное окно перевода")
                 .font(.headline)
 
-            Text("Когда приложение неактивно и перевод запущен через shortcut, снизу по центру появится маленькое окно. После завершения перевода результат держится выбранное количество секунд.")
+            Text("Когда приложение неактивно и перевод запущен через shortcut, снизу по центру появится маленькое окно. Время показа считается по формуле: максимум из минимального времени и `количество слов x секунд на слово`.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
             HStack(alignment: .center, spacing: 12) {
                 Stepper(
                     value: Binding(
-                        get: { Int(viewModel.translationOverlayDuration.rounded()) },
-                        set: { viewModel.setTranslationOverlayDuration(Double($0)) }
+                        get: { Int(viewModel.translationOverlayMinimumDuration.rounded()) },
+                        set: { viewModel.setTranslationOverlayMinimumDuration(Double($0)) }
                     ),
                     in: 1...15
                 ) {
-                    Text("Показывать перевод: \(Int(viewModel.translationOverlayDuration.rounded())) сек.")
+                    Text("Минимальное время: \(Int(viewModel.translationOverlayMinimumDuration.rounded())) сек.")
                 }
                 .frame(maxWidth: 280, alignment: .leading)
 
                 Slider(
                     value: Binding(
-                        get: { viewModel.translationOverlayDuration },
-                        set: { viewModel.setTranslationOverlayDuration($0) }
+                        get: { viewModel.translationOverlayMinimumDuration },
+                        set: { viewModel.setTranslationOverlayMinimumDuration($0) }
                     ),
                     in: 1...15,
                     step: 1
                 )
             }
+
+            HStack(alignment: .center, spacing: 12) {
+                Stepper(
+                    value: Binding(
+                        get: { viewModel.translationOverlaySecondsPerWord },
+                        set: { viewModel.setTranslationOverlaySecondsPerWord($0) }
+                    ),
+                    in: 0.1...2,
+                    step: 0.01
+                ) {
+                    Text("Секунд на слово: \(viewModel.translationOverlaySecondsPerWord, format: .number.precision(.fractionLength(2)))")
+                }
+                .frame(maxWidth: 280, alignment: .leading)
+
+                Slider(
+                    value: Binding(
+                        get: { viewModel.translationOverlaySecondsPerWord },
+                        set: { viewModel.setTranslationOverlaySecondsPerWord($0) }
+                    ),
+                    in: 0.1...2,
+                    step: 0.01
+                )
+            }
+
+            Text("Например: 10 слов x 0.33 = 3.3 сек. Если результат меньше минимума, используется минимум.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Spacer()
         }
