@@ -103,12 +103,18 @@ final class MainViewModel: ObservableObject {
     @Published private(set) var profiles: [LearningProfile] = []
     @Published var selectedProfileID: LearningProfile.ID?
     @Published var selectedEntryID: CapturedTextEntry.ID?
+    @Published private(set) var availableOpenAIModels: [OpenAIModel] = []
+    @Published var selectedOpenAIModelID: String?
+    @Published private(set) var isLoadingOpenAIModels = false
 
     private let permissionService = ScreenRecordingPermissionService()
     private let regionSelectionService = RegionSelectionService()
     private let screenshotService = ScreenshotService()
     private let ocrService = OCRService()
     private let historyPersistenceService = HistoryPersistenceService()
+    private let openAIService = OpenAIService()
+    private var openAISettingsStore = OpenAISettingsStore()
+    private let openAITokenStore = KeychainOpenAITokenStore()
 
     init() {
         KeyboardShortcuts.onKeyUp(for: .captureArea) { [weak self] in
@@ -117,7 +123,57 @@ final class MainViewModel: ObservableObject {
             }
         }
         loadHistory()
+        selectedOpenAIModelID = openAISettingsStore.selectedModelID
         refreshPermissionState()
+    }
+
+    var hasOpenAIToken: Bool {
+        openAITokenStore.loadToken() != nil
+    }
+
+    func validateAndSaveOpenAIToken(_ token: String) async {
+        let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedToken.isEmpty else {
+            statusMessage = "Введите OpenAI token."
+            return
+        }
+
+        isLoadingOpenAIModels = true
+        defer { isLoadingOpenAIModels = false }
+
+        do {
+            let models = try await openAIService.fetchModels(apiKey: trimmedToken)
+            try openAITokenStore.saveToken(trimmedToken)
+            availableOpenAIModels = models
+
+            if let selectedOpenAIModelID,
+               models.contains(where: { $0.id == selectedOpenAIModelID }) {
+                // Keep current selection.
+            } else {
+                selectedOpenAIModelID = models.first?.id
+                openAISettingsStore.selectedModelID = selectedOpenAIModelID
+            }
+
+            statusMessage = "Подключение к OpenAI успешно. Моделей: \(models.count)."
+        } catch {
+            statusMessage = "OpenAI: \(error.localizedDescription)"
+        }
+    }
+
+    func refreshOpenAIModels() async {
+        guard let token = openAITokenStore.loadToken() else {
+            statusMessage = "Сначала сохраните OpenAI token."
+            return
+        }
+        await validateAndSaveOpenAIToken(token)
+    }
+
+    func selectOpenAIModel(_ id: String?) {
+        selectedOpenAIModelID = id
+        openAISettingsStore.selectedModelID = id
+        if let id {
+            statusMessage = "Выбрана модель OpenAI: \(id)"
+        }
     }
 
     func triggerCapture() {

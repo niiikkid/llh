@@ -82,4 +82,21 @@ struct llhTests {
         #expect(profile.history.first?.id == second.id)
         #expect(profile.selectedEntryID == second.id)
     }
+
+    @Test
+    @MainActor
+    func openAISettingsStore_persistsSelectedModelID() {
+        let suiteName = "llh.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        var store = OpenAISettingsStore(
+            userDefaults: defaults,
+            selectedModelKey: "selected.model.test"
+        )
+
+        #expect(store.selectedModelID == nil)
+        store.selectedModelID = "gpt-4.1-mini"
+        #expect(store.selectedModelID == "gpt-4.1-mini")
+    }
 }

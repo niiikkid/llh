@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var newProfileName = ""
     @State private var isCreateProfilePresented = false
     @State private var isDeleteProfileConfirmationPresented = false
+    @State private var isOpenAISettingsPresented = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -27,6 +28,9 @@ struct ContentView: View {
                 HStack {
                     KeyboardShortcuts.Recorder("Capture area:", name: .captureArea)
                     Spacer()
+                    Button("OpenAI Settings") {
+                        isOpenAISettingsPresented = true
+                    }
                     Button("Capture now") {
                         viewModel.triggerCapture()
                     }
@@ -187,6 +191,9 @@ struct ContentView: View {
             .padding(16)
             .frame(width: 360)
         }
+        .sheet(isPresented: $isOpenAISettingsPresented) {
+            OpenAISettingsSheet(viewModel: viewModel)
+        }
         .alert("Удалить профиль?", isPresented: $isDeleteProfileConfirmationPresented) {
             Button("Удалить", role: .destructive) {
                 viewModel.deleteSelectedProfile()
@@ -195,6 +202,80 @@ struct ContentView: View {
         } message: {
             Text("Профиль \"\(viewModel.selectedProfileName)\" будет удален вместе со всей историей внутри него.")
         }
+    }
+}
+
+private struct OpenAISettingsSheet: View {
+    @ObservedObject var viewModel: MainViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var tokenInput = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Настройки OpenAI")
+                .font(.headline)
+
+            Text("Вставьте API token, затем проверьте подключение. Токен сохраняется безопасно в Keychain.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            SecureField("sk-...", text: $tokenInput)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 10) {
+                Button("Проверить и сохранить token") {
+                    Task {
+                        await viewModel.validateAndSaveOpenAIToken(tokenInput)
+                    }
+                }
+                .disabled(viewModel.isLoadingOpenAIModels)
+
+                Button("Обновить модели") {
+                    Task {
+                        await viewModel.refreshOpenAIModels()
+                    }
+                }
+                .disabled(viewModel.isLoadingOpenAIModels || !viewModel.hasOpenAIToken)
+            }
+
+            if viewModel.isLoadingOpenAIModels {
+                ProgressView("Проверка подключения к OpenAI...")
+            }
+
+            Divider()
+
+            Text("Модель")
+                .font(.subheadline.weight(.semibold))
+
+            Picker(
+                "Модель OpenAI",
+                selection: Binding(
+                    get: { viewModel.selectedOpenAIModelID },
+                    set: { viewModel.selectOpenAIModel($0) }
+                )
+            ) {
+                if viewModel.availableOpenAIModels.isEmpty {
+                    Text("Список моделей пуст").tag(Optional<String>.none)
+                } else {
+                    ForEach(viewModel.availableOpenAIModels) { model in
+                        Text(model.id).tag(Optional(model.id))
+                    }
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .disabled(viewModel.availableOpenAIModels.isEmpty)
+
+            HStack {
+                Spacer()
+                Button("Закрыть") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 520)
     }
 }
 
