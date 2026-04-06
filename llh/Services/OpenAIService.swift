@@ -18,12 +18,24 @@ protocol OpenAIServing {
         targetLanguage: LearningLanguage,
         rawText: String
     ) async throws -> StructuredFormattedText
-    func buildStudyAssistantData(
+    func buildWordsStudyData(
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
-    ) async throws -> StudyAssistantData
+    ) async throws -> WordStudyPayload
+    func buildPhrasesStudyData(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) async throws -> PhraseStudyPayload
+    func buildGrammarStudyData(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) async throws -> GrammarExplanationPayload
 }
 
 enum OpenAIServiceError: LocalizedError {
@@ -229,12 +241,175 @@ struct OpenAIService: OpenAIServing {
         return result
     }
 
-    func buildStudyAssistantData(
+    func buildWordsStudyData(
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
-    ) async throws -> StudyAssistantData {
+    ) async throws -> WordStudyPayload {
+        let dto: WordsResponseDTO = try await performStructuredRequest(
+            apiKey: apiKey,
+            modelID: modelID,
+            temperature: 0.2,
+            systemPrompt: """
+            You produce JSON only for language-learning word analysis.
+            Never use hieroglyphs or source script in the response.
+            Use only pinyin/transliteration and Russian.
+            Return JSON object with key `entries`.
+            Each entry has:
+            term_pinyin
+            term_translation
+            character_breakdown
+            `character_breakdown` is an array of objects with:
+            pinyin_text
+            russian_translation
+            No markdown. No extra keys.
+            """,
+            userPrompt: """
+            Target language: \(targetLanguage.openAIInstructionName)
+            Cleaned text:
+            \(formattedText.cleanedText)
+
+            Pronunciation:
+            \(formattedText.pinyinText)
+
+            Translation:
+            \(formattedText.russianTranslation)
+
+            Extract only useful study words.
+            For each word:
+            1) give the full word in pinyin/transliteration and its Russian meaning
+            2) if the word consists of multiple characters or meaningful parts, explain each part separately in `character_breakdown`
+            3) keep the result compact and readable
+            """
+        )
+        let result = WordStudyPayload(
+            entries: dto.entries.map {
+                WordStudyEntry(
+                    termPinyin: $0.termPinyin.trimmed,
+                    termTranslation: $0.termTranslation.trimmed,
+                    characterBreakdown: $0.characterBreakdown.map {
+                        CharacterMeaning(pinyinText: $0.pinyinText.trimmed, russianTranslation: $0.russianTranslation.trimmed)
+                    }
+                )
+            }
+        )
+        guard result.hasContent else { throw OpenAIServiceError.invalidStructuredResponse }
+        return result
+    }
+
+    func buildPhrasesStudyData(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) async throws -> PhraseStudyPayload {
+        let dto: PhrasesResponseDTO = try await performStructuredRequest(
+            apiKey: apiKey,
+            modelID: modelID,
+            temperature: 0.2,
+            systemPrompt: """
+            You produce JSON only for stable phrase extraction.
+            Never use hieroglyphs or source script.
+            Use only pinyin/transliteration and Russian.
+            Return JSON object with key `entries`.
+            Each item has:
+            pinyin_text
+            russian_translation
+            Keep only stable or useful phrases, not isolated words.
+            """,
+            userPrompt: """
+            Target language: \(targetLanguage.openAIInstructionName)
+            Cleaned text:
+            \(formattedText.cleanedText)
+
+            Pronunciation:
+            \(formattedText.pinyinText)
+
+            Translation:
+            \(formattedText.russianTranslation)
+
+            Extract stable phrases or reusable chunks.
+            """
+        )
+        let result = PhraseStudyPayload(entries: dto.entries.map { StudyListItem(pinyinText: $0.pinyinText.trimmed, russianTranslation: $0.russianTranslation.trimmed) })
+        guard result.hasContent else { throw OpenAIServiceError.invalidStructuredResponse }
+        return result
+    }
+
+    func buildGrammarStudyData(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) async throws -> GrammarExplanationPayload {
+        let dto: GrammarResponseDTO = try await performStructuredRequest(
+            apiKey: apiKey,
+            modelID: modelID,
+            temperature: 0.2,
+            systemPrompt: """
+            You produce JSON only for grammar explanation.
+            Never use hieroglyphs or source script.
+            Use only pinyin/transliteration and Russian.
+            Return JSON object with key `structures`.
+            Each structure has:
+            title
+            explanation
+            usage_notes
+            examples
+            `examples` is an array of objects with:
+            pinyin_text
+            russian_translation
+            Explain simply, compactly, and clearly.
+            """,
+            userPrompt: """
+            Target language: \(targetLanguage.openAIInstructionName)
+            Cleaned text:
+            \(formattedText.cleanedText)
+
+            Pronunciation:
+            \(formattedText.pinyinText)
+
+            Translation:
+            \(formattedText.russianTranslation)
+
+            Find grammar structures that may confuse a learner.
+            For each structure:
+            - explain what it means in simple Russian
+            - explain where else it can be used
+            - give short examples with transliteration only
+            If there are multiple structures, return several.
+            """
+        )
+        let result = GrammarExplanationPayload(
+            structures: dto.structures.map {
+                GrammarStructure(
+                    title: $0.title.trimmed,
+                    explanation: $0.explanation.trimmed,
+                    usageNotes: $0.usageNotes.trimmed,
+                    examples: $0.examples.map {
+                        GrammarExample(pinyinText: $0.pinyinText.trimmed, russianTranslation: $0.russianTranslation.trimmed)
+                    }
+                )
+            }
+        )
+        guard result.hasContent else { throw OpenAIServiceError.invalidStructuredResponse }
+        return result
+    }
+
+    private static func extractJSONObjectString(from content: String) -> String? {
+        guard let start = content.firstIndex(of: "{"),
+              let end = content.lastIndex(of: "}") else { return nil }
+        return String(content[start...end])
+    }
+
+    private func performStructuredRequest<Response: Decodable>(
+        apiKey: String,
+        modelID: String,
+        temperature: Double,
+        systemPrompt: String,
+        userPrompt: String
+    ) async throws -> Response {
         let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty, token.hasPrefix("sk-") else {
             throw OpenAIServiceError.invalidTokenFormat
@@ -242,61 +417,16 @@ struct OpenAIService: OpenAIServing {
         guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw OpenAIServiceError.invalidResponse
         }
-
         guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
             throw OpenAIServiceError.invalidResponse
         }
 
         let requestBody = ChatCompletionsRequest(
             model: modelID,
-            temperature: 0.2,
+            temperature: temperature,
             messages: [
-                .init(
-                    role: "system",
-                    content: """
-                    You produce language study helper JSON only.
-                    Use no Chinese characters or other source script in the response body.
-                    Use only romanized pronunciation/pinyin and Russian.
-                    Output strict JSON with keys:
-                    words
-                    phrases
-                    grammar
-                    `words` and `phrases` are arrays of objects with:
-                    pinyin_text
-                    russian_translation
-                    `grammar` is an object with:
-                    summary
-                    examples
-                    `examples` is an array of objects with:
-                    pinyin_text
-                    russian_translation
-                    No markdown, no code fences, no extra keys.
-                    """
-                ),
-                .init(
-                    role: "user",
-                    content: """
-                    Target language: \(targetLanguage.openAIInstructionName)
-                    Cleaned text:
-                    \(formattedText.cleanedText)
-
-                    Pronunciation:
-                    \(formattedText.pinyinText)
-
-                    Russian translation:
-                    \(formattedText.russianTranslation)
-
-                    Build three sections:
-                    1) words: key study units, one per line, only pronunciation/transliteration plus Russian.
-                    2) phrases: stable phrases or useful chunks, only pronunciation/transliteration plus Russian.
-                    3) grammar: explain simply in Russian, and give examples using only pronunciation/transliteration plus Russian translation.
-
-                    Important:
-                    - Do not use hieroglyphs or source script anywhere.
-                    - Keep examples short and practical.
-                    - Prefer pinyin for Chinese.
-                    """
-                )
+                .init(role: "system", content: systemPrompt),
+                .init(role: "user", content: userPrompt)
             ]
         )
 
@@ -332,40 +462,13 @@ struct OpenAIService: OpenAIServing {
         }
 
         let decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: data)
-        let content = decoded.choices.first?.message.content
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !content.isEmpty else {
-            throw OpenAIServiceError.invalidStructuredResponse
-        }
-
+        let content = decoded.choices.first?.message.content.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !content.isEmpty else { throw OpenAIServiceError.invalidStructuredResponse }
         let jsonString = Self.extractJSONObjectString(from: content) ?? content
         guard let jsonData = jsonString.data(using: .utf8) else {
             throw OpenAIServiceError.invalidStructuredResponse
         }
-        let dto = try JSONDecoder().decode(StudyAssistantResponseDTO.self, from: jsonData)
-        let result = StudyAssistantData(
-            words: dto.words.map { StudyListItem(pinyinText: $0.pinyinText.trimmed, russianTranslation: $0.russianTranslation.trimmed) },
-            phrases: dto.phrases.map { StudyListItem(pinyinText: $0.pinyinText.trimmed, russianTranslation: $0.russianTranslation.trimmed) },
-            grammar: GrammarExplanation(
-                summary: dto.grammar.summary.trimmed,
-                examples: dto.grammar.examples.map {
-                    GrammarExample(
-                        pinyinText: $0.pinyinText.trimmed,
-                        russianTranslation: $0.russianTranslation.trimmed
-                    )
-                }
-            )
-        )
-        guard result.hasContent else {
-            throw OpenAIServiceError.invalidStructuredResponse
-        }
-        return result
-    }
-
-    private static func extractJSONObjectString(from content: String) -> String? {
-        guard let start = content.firstIndex(of: "{"),
-              let end = content.lastIndex(of: "}") else { return nil }
-        return String(content[start...end])
+        return try JSONDecoder().decode(Response.self, from: jsonData)
     }
 }
 
@@ -511,12 +614,6 @@ private struct StructuredResponseDTO: Decodable {
     }
 }
 
-private struct StudyAssistantResponseDTO: Decodable {
-    let words: [StudyLineDTO]
-    let phrases: [StudyLineDTO]
-    let grammar: GrammarDTO
-}
-
 private struct StudyLineDTO: Decodable {
     let pinyinText: String
     let russianTranslation: String
@@ -527,9 +624,52 @@ private struct StudyLineDTO: Decodable {
     }
 }
 
-private struct GrammarDTO: Decodable {
-    let summary: String
+private struct WordCharacterDTO: Decodable {
+    let pinyinText: String
+    let russianTranslation: String
+
+    enum CodingKeys: String, CodingKey {
+        case pinyinText = "pinyin_text"
+        case russianTranslation = "russian_translation"
+    }
+}
+
+private struct WordEntryDTO: Decodable {
+    let termPinyin: String
+    let termTranslation: String
+    let characterBreakdown: [WordCharacterDTO]
+
+    enum CodingKeys: String, CodingKey {
+        case termPinyin = "term_pinyin"
+        case termTranslation = "term_translation"
+        case characterBreakdown = "character_breakdown"
+    }
+}
+
+private struct WordsResponseDTO: Decodable {
+    let entries: [WordEntryDTO]
+}
+
+private struct PhrasesResponseDTO: Decodable {
+    let entries: [StudyLineDTO]
+}
+
+private struct GrammarStructureDTO: Decodable {
+    let title: String
+    let explanation: String
+    let usageNotes: String
     let examples: [StudyLineDTO]
+
+    enum CodingKeys: String, CodingKey {
+        case title
+        case explanation
+        case usageNotes = "usage_notes"
+        case examples
+    }
+}
+
+private struct GrammarResponseDTO: Decodable {
+    let structures: [GrammarStructureDTO]
 }
 
 private extension String {

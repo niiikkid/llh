@@ -326,20 +326,20 @@ struct ContentView: View {
 
     @ViewBuilder
     private var studyAssistantContent: some View {
-        if viewModel.isLoadingStudyAssistantData || viewModel.selectedEntryStudyAssistantStatus == .processing {
+        if viewModel.selectedEntryStudyAssistantStatus == .processing {
             ContentUnavailableView(
                 "Готовлю материалы",
                 systemImage: "books.vertical",
-                description: Text("Запрашиваю слова, фразы и объяснение грамматики.")
+                description: Text("Запрашиваю только текущую вкладку.")
             )
-        } else if let data = viewModel.studyAssistantData, data.hasContent {
+        } else if hasSelectedStudyMaterialContent {
             switch viewModel.selectedStudyAssistantTab {
             case .words:
-                studyListView(data.words, emptyTitle: "Слова не найдены")
+                wordsView(viewModel.studyMaterials.words)
             case .phrases:
-                studyListView(data.phrases, emptyTitle: "Устойчивые фразы не найдены")
+                phrasesView(viewModel.studyMaterials.phrases)
             case .grammar:
-                grammarView(data.grammar)
+                grammarView(viewModel.studyMaterials.grammar)
             }
         } else if viewModel.canRetryStudyAssistantData {
             VStack(alignment: .leading, spacing: 10) {
@@ -351,29 +351,87 @@ struct ContentView: View {
                 Button("Попробовать еще раз") {
                     viewModel.retryStudyAssistantDataForSelectedEntry()
                 }
-                .disabled(viewModel.isLoadingStudyAssistantData)
             }
         } else {
             ContentUnavailableView(
-                "Материалы еще не готовы",
-                systemImage: "text.book.closed",
-                description: Text("Откройте вкладку повторно после завершения форматирования.")
+                "Нажмите на вкладку",
+                systemImage: "hand.tap",
+                description: Text("Материал для этой вкладки загружается только по запросу.")
             )
         }
     }
 
     @ViewBuilder
-    private func studyListView(_ items: [StudyListItem], emptyTitle: String) -> some View {
-        if items.isEmpty {
-            ContentUnavailableView(
-                emptyTitle,
-                systemImage: "list.bullet.rectangle",
-                description: Text("Для этой записи AI не выделил элементов.")
-            )
+    private func wordsView(_ payload: WordStudyPayload?) -> some View {
+        if let payload, !payload.entries.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Array(payload.entries.enumerated()), id: \.offset) { index, entry in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            Text("\(index + 1).")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(entry.termPinyin)
+                                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                                    .textSelection(.enabled)
+                                Text(entry.termTranslation)
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+
+                        if !entry.characterBreakdown.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Разбор")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                ForEach(Array(entry.characterBreakdown.enumerated()), id: \.offset) { _, part in
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Text(part.pinyinText)
+                                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                                            .frame(width: 120, alignment: .leading)
+                                            .textSelection(.enabled)
+                                        Text(part.russianTranslation)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+                                    }
+                                }
+                            }
+                            .padding(10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(.background)
+                            )
+                        }
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(.background)
+                    )
+                }
+            }
         } else {
+            ContentUnavailableView(
+                "Слова не найдены",
+                systemImage: "list.bullet.rectangle",
+                description: Text("Для этой записи AI не выделил слов для изучения.")
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func phrasesView(_ payload: PhraseStudyPayload?) -> some View {
+        if let payload, !payload.entries.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                ForEach(Array(payload.entries.enumerated()), id: \.offset) { index, item in
                     VStack(alignment: .leading, spacing: 4) {
+                        Text("Фраза \(index + 1)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
                         Text(item.pinyinText)
                             .font(.system(size: 20, weight: .semibold, design: .rounded))
                             .foregroundStyle(.primary)
@@ -384,41 +442,90 @@ struct ContentView: View {
                             .textSelection(.enabled)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    Divider()
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(.background)
+                    )
                 }
             }
+        } else {
+            ContentUnavailableView(
+                "Устойчивые фразы не найдены",
+                systemImage: "quote.bubble",
+                description: Text("AI не выделил отдельных устойчивых фраз.")
+            )
         }
     }
 
     @ViewBuilder
-    private func grammarView(_ grammar: GrammarExplanation) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if !grammar.summary.isEmpty {
-                Text(grammar.summary)
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(.primary)
-                    .textSelection(.enabled)
-            }
-
-            if !grammar.examples.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Примеры")
-                        .font(.headline)
-                    ForEach(Array(grammar.examples.enumerated()), id: \.offset) { _, example in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(example.pinyinText)
-                                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.primary)
-                                .textSelection(.enabled)
-                            Text(example.russianTranslation)
-                                .font(.system(size: 16, weight: .regular))
+    private func grammarView(_ payload: GrammarExplanationPayload?) -> some View {
+        if let payload, !payload.structures.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Array(payload.structures.enumerated()), id: \.offset) { index, structure in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Структура \(index + 1)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(structure.title)
+                            .font(.headline)
+                        Text(structure.explanation)
+                            .font(.system(size: 15))
+                            .textSelection(.enabled)
+                        if !structure.usageNotes.isEmpty {
+                            Text(structure.usageNotes)
+                                .font(.system(size: 14))
                                 .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
                         }
-                        Divider()
+                        if !structure.examples.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Примеры")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                ForEach(Array(structure.examples.enumerated()), id: \.offset) { _, example in
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(example.pinyinText)
+                                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                            .textSelection(.enabled)
+                                        Text(example.russianTranslation)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+                                    }
+                                    .padding(10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(.background)
+                                    )
+                                }
+                            }
+                        }
                     }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(.background)
+                    )
                 }
             }
+        } else {
+            ContentUnavailableView(
+                "Грамматика не найдена",
+                systemImage: "text.book.closed",
+                description: Text("AI не выделил отдельных грамматических структур.")
+            )
+        }
+    }
+
+    private var hasSelectedStudyMaterialContent: Bool {
+        switch viewModel.selectedStudyAssistantTab {
+        case .words:
+            return viewModel.studyMaterials.words?.hasContent == true
+        case .phrases:
+            return viewModel.studyMaterials.phrases?.hasContent == true
+        case .grammar:
+            return viewModel.studyMaterials.grammar?.hasContent == true
         }
     }
 }

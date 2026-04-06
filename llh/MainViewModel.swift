@@ -13,8 +13,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
     var text: String
     var formattedText: StructuredFormattedText?
     var formattingStatus: FormattingStatus
-    var studyAssistantData: StudyAssistantData?
-    var studyAssistantStatus: FormattingStatus
+    var studyMaterials: StudyMaterials
     let createdAt: Date
     let image: NSImage?
 
@@ -23,8 +22,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         text: String,
         formattedText: StructuredFormattedText? = nil,
         formattingStatus: FormattingStatus = .notRequested,
-        studyAssistantData: StudyAssistantData? = nil,
-        studyAssistantStatus: FormattingStatus = .notRequested,
+        studyMaterials: StudyMaterials = StudyMaterials(),
         createdAt: Date = Date(),
         image: NSImage? = nil
     ) {
@@ -32,8 +30,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         self.text = text
         self.formattedText = formattedText
         self.formattingStatus = formattingStatus
-        self.studyAssistantData = studyAssistantData
-        self.studyAssistantStatus = studyAssistantStatus
+        self.studyMaterials = studyMaterials
         self.createdAt = createdAt
         self.image = image
     }
@@ -62,6 +59,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         case text
         case formattedText
         case formattingStatus
+        case studyMaterials
         case studyAssistantData
         case studyAssistantStatus
         case createdAt
@@ -82,8 +80,37 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
             formattedText = nil
         }
         formattingStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .formattingStatus) ?? .notRequested
-        studyAssistantData = try container.decodeIfPresent(StudyAssistantData.self, forKey: .studyAssistantData)
-        studyAssistantStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .studyAssistantStatus) ?? .notRequested
+        if let materials = try container.decodeIfPresent(StudyMaterials.self, forKey: .studyMaterials) {
+            studyMaterials = materials
+        } else {
+            let legacyData = try container.decodeIfPresent(StudyAssistantData.self, forKey: .studyAssistantData)
+            let legacyStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .studyAssistantStatus) ?? .notRequested
+            studyMaterials = StudyMaterials(
+                words: legacyData?.words.isEmpty == false ? WordStudyPayload(entries: legacyData?.words.map { WordStudyEntry(termPinyin: $0.pinyinText, termTranslation: $0.russianTranslation, characterBreakdown: []) } ?? []) : nil,
+                wordsStatus: legacyData?.words.isEmpty == false ? .succeeded : legacyStatus,
+                phrases: legacyData?.phrases.isEmpty == false ? PhraseStudyPayload(entries: legacyData?.phrases ?? []) : nil,
+                phrasesStatus: legacyData?.phrases.isEmpty == false ? .succeeded : legacyStatus,
+                grammar: {
+                    guard let legacyData else { return nil }
+                    return GrammarExplanationPayload(
+                        structures: legacyData.grammar.summary.isEmpty && legacyData.grammar.examples.isEmpty
+                            ? []
+                            : [
+                                GrammarStructure(
+                                    title: "Грамматическая структура",
+                                    explanation: legacyData.grammar.summary,
+                                    usageNotes: "",
+                                    examples: legacyData.grammar.examples
+                                )
+                            ]
+                    )
+                }(),
+                grammarStatus: {
+                    guard let legacyData else { return legacyStatus }
+                    return legacyData.grammar.summary.isEmpty && legacyData.grammar.examples.isEmpty ? legacyStatus : .succeeded
+                }()
+            )
+        }
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         image = nil
     }
@@ -94,8 +121,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         try container.encode(text, forKey: .text)
         try container.encodeIfPresent(formattedText, forKey: .formattedText)
         try container.encode(formattingStatus, forKey: .formattingStatus)
-        try container.encodeIfPresent(studyAssistantData, forKey: .studyAssistantData)
-        try container.encode(studyAssistantStatus, forKey: .studyAssistantStatus)
+        try container.encode(studyMaterials, forKey: .studyMaterials)
         try container.encode(createdAt, forKey: .createdAt)
     }
 }
@@ -157,23 +183,90 @@ struct StudyListItem: Equatable, Codable {
     let russianTranslation: String
 }
 
+struct CharacterMeaning: Equatable, Codable {
+    let pinyinText: String
+    let russianTranslation: String
+}
+
+struct WordStudyEntry: Equatable, Codable {
+    let termPinyin: String
+    let termTranslation: String
+    let characterBreakdown: [CharacterMeaning]
+}
+
+struct WordStudyPayload: Equatable, Codable {
+    let entries: [WordStudyEntry]
+
+    var hasContent: Bool {
+        !entries.isEmpty
+    }
+}
+
+struct PhraseStudyPayload: Equatable, Codable {
+    let entries: [StudyListItem]
+
+    var hasContent: Bool {
+        !entries.isEmpty
+    }
+}
+
 struct GrammarExample: Equatable, Codable {
     let pinyinText: String
     let russianTranslation: String
 }
 
-struct GrammarExplanation: Equatable, Codable {
-    let summary: String
+struct GrammarStructure: Equatable, Codable {
+    let title: String
+    let explanation: String
+    let usageNotes: String
     let examples: [GrammarExample]
+}
+
+struct GrammarExplanationPayload: Equatable, Codable {
+    let structures: [GrammarStructure]
+
+    var hasContent: Bool {
+        !structures.isEmpty
+    }
 }
 
 struct StudyAssistantData: Equatable, Codable {
     let words: [StudyListItem]
     let phrases: [StudyListItem]
-    let grammar: GrammarExplanation
+    let grammar: LegacyGrammarExplanation
 
     var hasContent: Bool {
         !words.isEmpty || !phrases.isEmpty || !grammar.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
+struct LegacyGrammarExplanation: Equatable, Codable {
+    let summary: String
+    let examples: [GrammarExample]
+}
+
+struct StudyMaterials: Equatable, Codable {
+    var words: WordStudyPayload?
+    var wordsStatus: FormattingStatus
+    var phrases: PhraseStudyPayload?
+    var phrasesStatus: FormattingStatus
+    var grammar: GrammarExplanationPayload?
+    var grammarStatus: FormattingStatus
+
+    init(
+        words: WordStudyPayload? = nil,
+        wordsStatus: FormattingStatus = .notRequested,
+        phrases: PhraseStudyPayload? = nil,
+        phrasesStatus: FormattingStatus = .notRequested,
+        grammar: GrammarExplanationPayload? = nil,
+        grammarStatus: FormattingStatus = .notRequested
+    ) {
+        self.words = words
+        self.wordsStatus = wordsStatus
+        self.phrases = phrases
+        self.phrasesStatus = phrasesStatus
+        self.grammar = grammar
+        self.grammarStatus = grammarStatus
     }
 }
 
@@ -228,7 +321,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
 final class MainViewModel: ObservableObject {
     @Published var recognizedText = ""
     @Published var formattedRecognizedText: StructuredFormattedText?
-    @Published var studyAssistantData: StudyAssistantData?
+    @Published var studyMaterials = StudyMaterials()
     @Published var selectedStudyAssistantTab: StudyAssistantTab = .words
     @Published var capturedImage: NSImage?
     @Published var statusMessage = "Нажмите shortcut и выделите область."
@@ -242,7 +335,6 @@ final class MainViewModel: ObservableObject {
     @Published var selectedLearningLanguage: LearningLanguage = .english
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
-    @Published private(set) var isLoadingStudyAssistantData = false
 
     private let permissionService = ScreenRecordingPermissionService()
     private let regionSelectionService = RegionSelectionService()
@@ -413,10 +505,9 @@ final class MainViewModel: ObservableObject {
         profiles[profileIndex].history[entryIndex].text = newText
         profiles[profileIndex].history[entryIndex].formattedText = nil
         profiles[profileIndex].history[entryIndex].formattingStatus = .notRequested
-        profiles[profileIndex].history[entryIndex].studyAssistantData = nil
-        profiles[profileIndex].history[entryIndex].studyAssistantStatus = .notRequested
+        profiles[profileIndex].history[entryIndex].studyMaterials = StudyMaterials()
         formattedRecognizedText = nil
-        studyAssistantData = nil
+        studyMaterials = StudyMaterials()
         profiles[profileIndex].selectedEntryID = selectedEntryID
         persistHistory()
     }
@@ -436,14 +527,14 @@ final class MainViewModel: ObservableObject {
         selectedStudyAssistantTab = tab
         guard let selectedEntryID else { return }
         Task {
-            await loadStudyAssistantDataIfNeeded(for: selectedEntryID, forceReload: false)
+            await loadStudyMaterial(for: selectedEntryID, tab: tab, forceReload: false)
         }
     }
 
     func retryStudyAssistantDataForSelectedEntry() {
         guard let selectedEntryID else { return }
         Task {
-            await loadStudyAssistantDataIfNeeded(for: selectedEntryID, forceReload: true)
+            await loadStudyMaterial(for: selectedEntryID, tab: selectedStudyAssistantTab, forceReload: true)
         }
     }
 
@@ -521,13 +612,13 @@ final class MainViewModel: ObservableObject {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else {
             recognizedText = ""
             formattedRecognizedText = nil
-            studyAssistantData = nil
+            studyMaterials = StudyMaterials()
             capturedImage = nil
             return
         }
         recognizedText = profiles[profileIndex].history[entryIndex].text
         formattedRecognizedText = profiles[profileIndex].history[entryIndex].formattedText
-        studyAssistantData = profiles[profileIndex].history[entryIndex].studyAssistantData
+        studyMaterials = profiles[profileIndex].history[entryIndex].studyMaterials
         capturedImage = profiles[profileIndex].history[entryIndex].image
     }
 
@@ -536,7 +627,7 @@ final class MainViewModel: ObservableObject {
             selectedEntryID = nil
             recognizedText = ""
             formattedRecognizedText = nil
-            studyAssistantData = nil
+            studyMaterials = StudyMaterials()
             capturedImage = nil
             return
         }
@@ -567,14 +658,17 @@ final class MainViewModel: ObservableObject {
                     if mutableEntry.formattedText != nil {
                         mutableEntry.formattingStatus = .succeeded
                     }
-                    if mutableEntry.studyAssistantData?.hasContent == false {
-                        mutableEntry.studyAssistantData = nil
+                    if mutableEntry.studyMaterials.words?.hasContent == false { mutableEntry.studyMaterials.words = nil }
+                    if mutableEntry.studyMaterials.phrases?.hasContent == false { mutableEntry.studyMaterials.phrases = nil }
+                    if mutableEntry.studyMaterials.grammar?.hasContent == false { mutableEntry.studyMaterials.grammar = nil }
+                    if mutableEntry.studyMaterials.words == nil, mutableEntry.studyMaterials.wordsStatus == .processing {
+                        mutableEntry.studyMaterials.wordsStatus = .failed
                     }
-                    if mutableEntry.studyAssistantData == nil, mutableEntry.studyAssistantStatus == .processing {
-                        mutableEntry.studyAssistantStatus = .failed
+                    if mutableEntry.studyMaterials.phrases == nil, mutableEntry.studyMaterials.phrasesStatus == .processing {
+                        mutableEntry.studyMaterials.phrasesStatus = .failed
                     }
-                    if mutableEntry.studyAssistantData != nil {
-                        mutableEntry.studyAssistantStatus = .succeeded
+                    if mutableEntry.studyMaterials.grammar == nil, mutableEntry.studyMaterials.grammarStatus == .processing {
+                        mutableEntry.studyMaterials.grammarStatus = .failed
                     }
                     return mutableEntry
                 }
@@ -653,7 +747,6 @@ final class MainViewModel: ObservableObject {
             }
             persistHistory()
             statusMessage = "Форматирование завершено."
-            await loadStudyAssistantDataIfNeeded(for: entryID, forceReload: false)
         } catch {
             guard let latestProfileIndex = selectedProfileIndex,
                   let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
@@ -669,8 +762,7 @@ final class MainViewModel: ObservableObject {
         }
     }
 
-    private func loadStudyAssistantDataIfNeeded(for entryID: CapturedTextEntry.ID, forceReload: Bool) async {
-        guard !isLoadingStudyAssistantData else { return }
+    private func loadStudyMaterial(for entryID: CapturedTextEntry.ID, tab: StudyAssistantTab, forceReload: Bool) async {
         guard let token = openAITokenStore.loadToken() else {
             statusMessage = "Сначала сохраните OpenAI token."
             return
@@ -684,59 +776,73 @@ final class MainViewModel: ObservableObject {
             return
         }
 
-        let entry = profiles[profileIndex].history[entryIndex]
+        var entry = profiles[profileIndex].history[entryIndex]
         guard let formattedText = entry.formattedText, formattedText.hasContent else { return }
-        if !forceReload, entry.studyAssistantStatus == .succeeded, entry.studyAssistantData?.hasContent == true {
-            if selectedEntryID == entryID {
-                studyAssistantData = entry.studyAssistantData
-            }
-            return
+        switch tab {
+        case .words:
+            if !forceReload, entry.studyMaterials.wordsStatus == .succeeded, entry.studyMaterials.words?.hasContent == true { return }
+            if !forceReload, entry.studyMaterials.wordsStatus == .processing { return }
+            profiles[profileIndex].history[entryIndex].studyMaterials.wordsStatus = .processing
+        case .phrases:
+            if !forceReload, entry.studyMaterials.phrasesStatus == .succeeded, entry.studyMaterials.phrases?.hasContent == true { return }
+            if !forceReload, entry.studyMaterials.phrasesStatus == .processing { return }
+            profiles[profileIndex].history[entryIndex].studyMaterials.phrasesStatus = .processing
+        case .grammar:
+            if !forceReload, entry.studyMaterials.grammarStatus == .succeeded, entry.studyMaterials.grammar?.hasContent == true { return }
+            if !forceReload, entry.studyMaterials.grammarStatus == .processing { return }
+            profiles[profileIndex].history[entryIndex].studyMaterials.grammarStatus = .processing
         }
-        if !forceReload, entry.studyAssistantStatus == .processing {
-            return
-        }
-
-        isLoadingStudyAssistantData = true
-        profiles[profileIndex].history[entryIndex].studyAssistantStatus = .processing
         persistHistory()
-
-        defer {
-            isLoadingStudyAssistantData = false
-        }
+        entry = profiles[profileIndex].history[entryIndex]
 
         do {
-            let result = try await openAIService.buildStudyAssistantData(
-                apiKey: token,
-                modelID: modelID,
-                targetLanguage: selectedLearningLanguage,
-                formattedText: formattedText
-            )
-
-            guard let latestProfileIndex = selectedProfileIndex,
-                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
-                return
+            switch tab {
+            case .words:
+                let result = try await openAIService.buildWordsStudyData(apiKey: token, modelID: modelID, targetLanguage: selectedLearningLanguage, formattedText: formattedText)
+                guard let latestProfileIndex = selectedProfileIndex,
+                      let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = result
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .succeeded
+            case .phrases:
+                let result = try await openAIService.buildPhrasesStudyData(apiKey: token, modelID: modelID, targetLanguage: selectedLearningLanguage, formattedText: formattedText)
+                guard let latestProfileIndex = selectedProfileIndex,
+                      let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrases = result
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrasesStatus = .succeeded
+            case .grammar:
+                let result = try await openAIService.buildGrammarStudyData(apiKey: token, modelID: modelID, targetLanguage: selectedLearningLanguage, formattedText: formattedText)
+                guard let latestProfileIndex = selectedProfileIndex,
+                      let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammar = result
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammarStatus = .succeeded
             }
 
-            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantData = result
-            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantStatus = .succeeded
             if selectedEntryID == entryID {
-                studyAssistantData = result
+                studyMaterials = profiles[selectedProfileIndex!].history[profiles[selectedProfileIndex!].history.firstIndex(where: { $0.id == entryID })!].studyMaterials
             }
             persistHistory()
-            statusMessage = "Дополнительные материалы готовы."
+            statusMessage = "\(tab.title) готовы."
         } catch {
             guard let latestProfileIndex = selectedProfileIndex,
                   let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
                 return
             }
-
-            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantData = nil
-            profiles[latestProfileIndex].history[latestEntryIndex].studyAssistantStatus = .failed
+            switch tab {
+            case .words:
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = nil
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .failed
+            case .phrases:
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrases = nil
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrasesStatus = .failed
+            case .grammar:
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammar = nil
+                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammarStatus = .failed
+            }
             if selectedEntryID == entryID {
-                studyAssistantData = nil
+                studyMaterials = profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials
             }
             persistHistory()
-            statusMessage = "Не удалось получить материалы: \(error.localizedDescription)"
+            statusMessage = "Не удалось получить \(tab.title.lowercased()): \(error.localizedDescription)"
         }
     }
 
@@ -753,12 +859,21 @@ final class MainViewModel: ObservableObject {
 
     var selectedEntryStudyAssistantStatus: FormattingStatus? {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return nil }
-        return profiles[profileIndex].history[entryIndex].studyAssistantStatus
+        let materials = profiles[profileIndex].history[entryIndex].studyMaterials
+        switch selectedStudyAssistantTab {
+        case .words: return materials.wordsStatus
+        case .phrases: return materials.phrasesStatus
+        case .grammar: return materials.grammarStatus
+        }
     }
 
     var canRetryStudyAssistantData: Bool {
         guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return false }
-        let entry = profiles[profileIndex].history[entryIndex]
-        return entry.studyAssistantStatus == .failed && (entry.studyAssistantData?.hasContent ?? false) == false
+        let materials = profiles[profileIndex].history[entryIndex].studyMaterials
+        switch selectedStudyAssistantTab {
+        case .words: return materials.wordsStatus == .failed && (materials.words?.hasContent ?? false) == false
+        case .phrases: return materials.phrasesStatus == .failed && (materials.phrases?.hasContent ?? false) == false
+        case .grammar: return materials.grammarStatus == .failed && (materials.grammar?.hasContent ?? false) == false
+        }
     }
 }

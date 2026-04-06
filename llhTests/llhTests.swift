@@ -114,24 +114,44 @@ struct llhTests {
                 russianTranslation: "привет"
             ),
             formattingStatus: .succeeded,
-            studyAssistantData: StudyAssistantData(
-                words: [
-                    StudyListItem(pinyinText: "ni hao", russianTranslation: "привет")
-                ],
-                phrases: [
-                    StudyListItem(pinyinText: "ni hao ma", russianTranslation: "как дела")
-                ],
-                grammar: GrammarExplanation(
-                    summary: "Короткое приветствие и вопрос о состоянии.",
-                    examples: [
-                        GrammarExample(
-                            pinyinText: "ni hao ma",
-                            russianTranslation: "как дела"
+            studyMaterials: StudyMaterials(
+                words: WordStudyPayload(
+                    entries: [
+                        WordStudyEntry(
+                            termPinyin: "ni hao",
+                            termTranslation: "привет",
+                            characterBreakdown: [
+                                CharacterMeaning(pinyinText: "ni", russianTranslation: "ты"),
+                                CharacterMeaning(pinyinText: "hao", russianTranslation: "хорошо")
+                            ]
                         )
                     ]
-                )
+                ),
+                wordsStatus: .succeeded,
+                phrases: PhraseStudyPayload(
+                    entries: [
+                        StudyListItem(pinyinText: "ni hao ma", russianTranslation: "как дела")
+                    ]
+                ),
+                phrasesStatus: .succeeded,
+                grammar: GrammarExplanationPayload(
+                    structures: [
+                        GrammarStructure(
+                            title: "Вопрос с ma",
+                            explanation: "Частица ma делает фразу вопросом.",
+                            usageNotes: "Используется в простых вопросах да/нет.",
+                            examples: [
+                                GrammarExample(
+                                    pinyinText: "ni hao ma",
+                                    russianTranslation: "как дела"
+                                )
+                            ]
+                        )
+                    ]
+                ),
+                grammarStatus: .succeeded
             ),
-            studyAssistantStatus: .succeeded
+            createdAt: Date()
         )
 
         let data = try JSONEncoder().encode(entry)
@@ -142,9 +162,10 @@ struct llhTests {
         #expect(decoded.formattedText?.pinyinText == "ni hao")
         #expect(decoded.formattedText?.russianTranslation == "привет")
         #expect(decoded.formattingStatus == .succeeded)
-        #expect(decoded.studyAssistantData?.words.first?.pinyinText == "ni hao")
-        #expect(decoded.studyAssistantData?.phrases.first?.russianTranslation == "как дела")
-        #expect(decoded.studyAssistantData?.grammar.examples.count == 1)
-        #expect(decoded.studyAssistantStatus == .succeeded)
+        #expect(decoded.studyMaterials.words?.entries.first?.termPinyin == "ni hao")
+        #expect(decoded.studyMaterials.words?.entries.first?.characterBreakdown.count == 2)
+        #expect(decoded.studyMaterials.phrases?.entries.first?.russianTranslation == "как дела")
+        #expect(decoded.studyMaterials.grammar?.structures.first?.examples.count == 1)
+        #expect(decoded.studyMaterials.grammarStatus == .succeeded)
     }
 }
