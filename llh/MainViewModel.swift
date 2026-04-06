@@ -533,9 +533,9 @@ final class MainViewModel: ObservableObject {
         statusMessage = "Движок распознавания: \(engine.title)."
         guard showOverlay, shouldUseCompactOverlay else { return }
         translationOverlayService.showMessage(
-            title: "Движок OCR переключен",
-            subtitle: "\(previousEngine.title) -> \(engine.title)",
-            duration: 3
+            title: previousEngine.title + " ->",
+            subtitle: engine.title,
+            duration: 1.5
         )
     }
 

@@ -144,36 +144,37 @@ private struct CompactOverlayView: View {
                     .foregroundStyle(.secondary)
 
             case .message(let title, let subtitle):
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.primary)
-
-                if let subtitle, !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .multilineTextAlignment(.center)
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
+
+                    if let subtitle, !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                    }
                 }
+                .multilineTextAlignment(.center)
             }
         }
         .frame(width: 360)
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
         .background(backgroundView)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.22), radius: 18, y: 10)
     }
 
     private var backgroundView: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
             .fill(.ultraThinMaterial)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(Color.black.opacity(0.24))
             )
     }
