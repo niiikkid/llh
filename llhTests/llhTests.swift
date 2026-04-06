@@ -44,6 +44,7 @@ struct llhTests {
         let service = HistoryPersistenceService(fileURL: fileURL)
         let sourceProfile = LearningProfile(
             name: "Spanish",
+            learningLanguage: .spanish,
             history: [
                 CapturedTextEntry(text: "Hello"),
                 CapturedTextEntry(text: "World")
@@ -61,8 +62,30 @@ struct llhTests {
         #expect(loaded.profiles.count == 1)
         #expect(loaded.selectedProfileID == sourceProfile.id)
         #expect(loaded.profiles[0].name == "Spanish")
+        #expect(loaded.profiles[0].learningLanguage == .spanish)
         #expect(loaded.profiles[0].history.map(\.text) == ["Hello", "World"])
         #expect(loaded.profiles[0].history[0].id == sourceProfile.history[0].id)
+    }
+
+    @Test
+    func learningProfile_decodesLegacyPayloadWithoutLanguage() throws {
+        let json = """
+        {
+          "id": "11111111-1111-1111-1111-111111111111",
+          "name": "Legacy",
+          "createdAt": "2026-04-06T12:00:00Z",
+          "history": [],
+          "selectedEntryID": null
+        }
+        """
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let profile = try decoder.decode(LearningProfile.self, from: Data(json.utf8))
+
+        #expect(profile.name == "Legacy")
+        #expect(profile.learningLanguage == .english)
     }
 
     @Test

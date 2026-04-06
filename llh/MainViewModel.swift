@@ -272,16 +272,12 @@ struct StudyMaterials: Equatable, Codable {
 
 enum StudyAssistantTab: String, CaseIterable, Identifiable {
     case words
-    case phrases
-    case grammar
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .words: return "Слова"
-        case .phrases: return "Устойчивые фразы"
-        case .grammar: return "Грамматика"
         }
     }
 }
@@ -289,9 +285,26 @@ enum StudyAssistantTab: String, CaseIterable, Identifiable {
 struct LearningProfile: Identifiable, Equatable, Codable {
     let id: UUID
     var name: String
+    var learningLanguage: LearningLanguage
     let createdAt: Date
     var history: [CapturedTextEntry]
     var selectedEntryID: CapturedTextEntry.ID?
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        learningLanguage: LearningLanguage = .english,
+        createdAt: Date = Date(),
+        history: [CapturedTextEntry] = [],
+        selectedEntryID: CapturedTextEntry.ID? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.learningLanguage = learningLanguage
+        self.createdAt = createdAt
+        self.history = history
+        self.selectedEntryID = selectedEntryID
+    }
 
     init(
         id: UUID = UUID(),
@@ -300,11 +313,33 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         history: [CapturedTextEntry] = [],
         selectedEntryID: CapturedTextEntry.ID? = nil
     ) {
-        self.id = id
-        self.name = name
-        self.createdAt = createdAt
-        self.history = history
-        self.selectedEntryID = selectedEntryID
+        self.init(
+            id: id,
+            name: name,
+            learningLanguage: .english,
+            createdAt: createdAt,
+            history: history,
+            selectedEntryID: selectedEntryID
+        )
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case learningLanguage
+        case createdAt
+        case history
+        case selectedEntryID
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        learningLanguage = try container.decodeIfPresent(LearningLanguage.self, forKey: .learningLanguage) ?? .english
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        history = try container.decodeIfPresent([CapturedTextEntry].self, forKey: .history) ?? []
+        selectedEntryID = try container.decodeIfPresent(CapturedTextEntry.ID.self, forKey: .selectedEntryID)
     }
 
     mutating func deleteEntry(with id: CapturedTextEntry.ID) -> Bool {
@@ -332,7 +367,7 @@ final class MainViewModel: ObservableObject {
     @Published var selectedEntryID: CapturedTextEntry.ID?
     @Published private(set) var availableOpenAIModels: [OpenAIModel] = []
     @Published var selectedOpenAIModelID: String?
-    @Published var selectedLearningLanguage: LearningLanguage = .english
+    @Published var defaultNewProfileLearningLanguage: LearningLanguage = .english
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
 
@@ -353,7 +388,7 @@ final class MainViewModel: ObservableObject {
         }
         loadHistory()
         selectedOpenAIModelID = openAISettingsStore.selectedModelID
-        selectedLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
+        defaultNewProfileLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
         refreshPermissionState()
     }
 
@@ -406,10 +441,13 @@ final class MainViewModel: ObservableObject {
         }
     }
 
-    func selectLearningLanguage(_ language: LearningLanguage) {
-        selectedLearningLanguage = language
+    func setDefaultNewProfileLearningLanguage(_ language: LearningLanguage) {
+        defaultNewProfileLearningLanguage = language
         openAISettingsStore.selectedLearningLanguageRawValue = language.rawValue
-        statusMessage = "Язык изучения: \(language.title)"
+    }
+
+    var currentProfileLearningLanguage: LearningLanguage {
+        activeProfile?.learningLanguage ?? defaultNewProfileLearningLanguage
     }
 
     func triggerCapture() {
@@ -439,19 +477,23 @@ final class MainViewModel: ObservableObject {
         statusMessage = "Перевод удален."
     }
 
-    func createProfile(named rawName: String) {
+    func createProfile(named rawName: String, learningLanguage: LearningLanguage) {
         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = trimmed.isEmpty ? "Новый профиль" : trimmed
-        let profile = LearningProfile(name: name)
+        let profile = LearningProfile(name: name, learningLanguage: learningLanguage)
         profiles.insert(profile, at: 0)
+        setDefaultNewProfileLearningLanguage(learningLanguage)
         selectProfile(profile.id)
         persistHistory()
-        statusMessage = "Профиль \"\(name)\" создан."
+        statusMessage = "Профиль \"\(name)\" создан для языка \(learningLanguage.title.lowercased())."
     }
 
     func selectProfile(_ id: LearningProfile.ID?) {
         selectedProfileID = id
         syncProfileSelectionToEditor()
+        if let activeProfile {
+            statusMessage = "Выбрана история \"\(activeProfile.name)\" (\(activeProfile.learningLanguage.title.lowercased()))."
+        }
     }
 
     func deleteSelectedProfile() {
@@ -461,7 +503,7 @@ final class MainViewModel: ObservableObject {
         profiles.remove(at: profileIndex)
 
         if profiles.isEmpty {
-            let defaultProfile = LearningProfile(name: "Основной")
+            let defaultProfile = LearningProfile(name: "Основной", learningLanguage: defaultNewProfileLearningLanguage)
             profiles = [defaultProfile]
             selectedProfileID = defaultProfile.id
         } else if let firstID = profiles.first?.id {
@@ -731,7 +773,7 @@ final class MainViewModel: ObservableObject {
             let formatted = try await openAIService.formatRecognizedText(
                 apiKey: token,
                 modelID: modelID,
-                targetLanguage: selectedLearningLanguage,
+                targetLanguage: profiles[profileIndex].learningLanguage,
                 rawText: rawText
             )
 
@@ -783,14 +825,6 @@ final class MainViewModel: ObservableObject {
             if !forceReload, entry.studyMaterials.wordsStatus == .succeeded, entry.studyMaterials.words?.hasContent == true { return }
             if !forceReload, entry.studyMaterials.wordsStatus == .processing { return }
             profiles[profileIndex].history[entryIndex].studyMaterials.wordsStatus = .processing
-        case .phrases:
-            if !forceReload, entry.studyMaterials.phrasesStatus == .succeeded, entry.studyMaterials.phrases?.hasContent == true { return }
-            if !forceReload, entry.studyMaterials.phrasesStatus == .processing { return }
-            profiles[profileIndex].history[entryIndex].studyMaterials.phrasesStatus = .processing
-        case .grammar:
-            if !forceReload, entry.studyMaterials.grammarStatus == .succeeded, entry.studyMaterials.grammar?.hasContent == true { return }
-            if !forceReload, entry.studyMaterials.grammarStatus == .processing { return }
-            profiles[profileIndex].history[entryIndex].studyMaterials.grammarStatus = .processing
         }
         persistHistory()
         entry = profiles[profileIndex].history[entryIndex]
@@ -798,23 +832,16 @@ final class MainViewModel: ObservableObject {
         do {
             switch tab {
             case .words:
-                let result = try await openAIService.buildWordsStudyData(apiKey: token, modelID: modelID, targetLanguage: selectedLearningLanguage, formattedText: formattedText)
+                let result = try await openAIService.buildWordsStudyData(
+                    apiKey: token,
+                    modelID: modelID,
+                    targetLanguage: profiles[profileIndex].learningLanguage,
+                    formattedText: formattedText
+                )
                 guard let latestProfileIndex = selectedProfileIndex,
                       let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
                 profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = result
                 profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .succeeded
-            case .phrases:
-                let result = try await openAIService.buildPhrasesStudyData(apiKey: token, modelID: modelID, targetLanguage: selectedLearningLanguage, formattedText: formattedText)
-                guard let latestProfileIndex = selectedProfileIndex,
-                      let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrases = result
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrasesStatus = .succeeded
-            case .grammar:
-                let result = try await openAIService.buildGrammarStudyData(apiKey: token, modelID: modelID, targetLanguage: selectedLearningLanguage, formattedText: formattedText)
-                guard let latestProfileIndex = selectedProfileIndex,
-                      let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammar = result
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammarStatus = .succeeded
             }
 
             if selectedEntryID == entryID {
@@ -831,12 +858,6 @@ final class MainViewModel: ObservableObject {
             case .words:
                 profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = nil
                 profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .failed
-            case .phrases:
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrases = nil
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.phrasesStatus = .failed
-            case .grammar:
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammar = nil
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.grammarStatus = .failed
             }
             if selectedEntryID == entryID {
                 studyMaterials = profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials
@@ -862,8 +883,6 @@ final class MainViewModel: ObservableObject {
         let materials = profiles[profileIndex].history[entryIndex].studyMaterials
         switch selectedStudyAssistantTab {
         case .words: return materials.wordsStatus
-        case .phrases: return materials.phrasesStatus
-        case .grammar: return materials.grammarStatus
         }
     }
 
@@ -872,8 +891,6 @@ final class MainViewModel: ObservableObject {
         let materials = profiles[profileIndex].history[entryIndex].studyMaterials
         switch selectedStudyAssistantTab {
         case .words: return materials.wordsStatus == .failed && (materials.words?.hasContent ?? false) == false
-        case .phrases: return materials.phrasesStatus == .failed && (materials.phrases?.hasContent ?? false) == false
-        case .grammar: return materials.grammarStatus == .failed && (materials.grammar?.hasContent ?? false) == false
         }
     }
 }

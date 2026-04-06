@@ -12,6 +12,7 @@ struct ContentView: View {
     @ObservedObject var viewModel: MainViewModel
     @State private var selectedTextTab: TextTab = .raw
     @State private var newProfileName = ""
+    @State private var newProfileLearningLanguage: LearningLanguage = .english
     @State private var isCreateProfilePresented = false
     @State private var isDeleteProfileConfirmationPresented = false
     @State private var isOpenAISettingsPresented = false
@@ -69,9 +70,10 @@ struct ContentView: View {
                 Spacer()
             }
 
-            HSplitView {
-                GroupBox("История") {
-                    VStack(alignment: .leading, spacing: 10) {
+            GeometryReader { geometry in
+                HSplitView {
+                    GroupBox("История") {
+                        VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
                             Picker(
                                 "Профиль",
@@ -88,6 +90,7 @@ struct ContentView: View {
 
                             Button {
                                 newProfileName = ""
+                                newProfileLearningLanguage = viewModel.defaultNewProfileLearningLanguage
                                 isCreateProfilePresented = true
                             } label: {
                                 Image(systemName: "plus")
@@ -111,18 +114,20 @@ struct ContentView: View {
                             .disabled(!viewModel.canDeleteSelectedEntry)
                         }
 
-                        Picker(
-                            "Язык изучения",
-                            selection: Binding(
-                                get: { viewModel.selectedLearningLanguage },
-                                set: { viewModel.selectLearningLanguage($0) }
-                            )
-                        ) {
-                            ForEach(LearningLanguage.allCases) { language in
-                                Text(language.title).tag(language)
-                            }
+                        HStack(spacing: 8) {
+                            Text("Язык истории:")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Text(viewModel.currentProfileLearningLanguage.title)
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(.background.secondary)
+                                )
+                            Spacer()
                         }
-                        .pickerStyle(.segmented)
 
                         if viewModel.history.isEmpty {
                             ContentUnavailableView(
@@ -158,40 +163,48 @@ struct ContentView: View {
                             }
                             .listStyle(.sidebar)
                         }
+                        }
                     }
-                }
-                .frame(minWidth: 280, idealWidth: 320)
+                    .frame(
+                        minWidth: 280,
+                        idealWidth: max(280, geometry.size.width * 0.25),
+                        maxWidth: max(280, geometry.size.width * 0.25)
+                    )
 
-                GroupBox("Текст записи") {
-                    if viewModel.selectedEntryID == nil {
-                        ContentUnavailableView(
-                            "Выберите запись",
-                            systemImage: "doc.text.magnifyingglass",
-                            description: Text("Слева выберите элемент истории, чтобы открыть полный текст.")
-                        )
-                    } else {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Picker("Режим текста", selection: $selectedTextTab) {
-                                Text("Сырой текст").tag(TextTab.raw)
-                                Text("Форматированный").tag(TextTab.formatted)
-                            }
-                            .pickerStyle(.segmented)
+                    GroupBox("Текст записи") {
+                        if viewModel.selectedEntryID == nil {
+                            ContentUnavailableView(
+                                "Выберите запись",
+                                systemImage: "doc.text.magnifyingglass",
+                                description: Text("Слева выберите элемент истории, чтобы открыть полный текст.")
+                            )
+                        } else {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Picker("Режим текста", selection: $selectedTextTab) {
+                                    Text("Сырой текст").tag(TextTab.raw)
+                                    Text("Форматированный").tag(TextTab.formatted)
+                                }
+                                .pickerStyle(.segmented)
 
-                            if selectedTextTab == .raw {
-                                TextEditor(
-                                    text: Binding(
-                                        get: { viewModel.recognizedText },
-                                        set: { viewModel.updateSelectedText($0) }
+                                if selectedTextTab == .raw {
+                                    TextEditor(
+                                        text: Binding(
+                                            get: { viewModel.recognizedText },
+                                            set: { viewModel.updateSelectedText($0) }
+                                        )
                                     )
-                                )
-                                .font(.system(.body, design: .monospaced))
-                            } else {
-                                formattedTextContent
+                                    .font(.system(.body, design: .monospaced))
+                                } else {
+                                    formattedTextContent
+                                }
                             }
                         }
                     }
+                    .frame(
+                        minWidth: 480,
+                        idealWidth: max(480, geometry.size.width * 0.75)
+                    )
                 }
-                .frame(minWidth: 480)
             }
             .frame(minHeight: 320)
             .overlay {
@@ -207,13 +220,22 @@ struct ContentView: View {
                 Text("Новый профиль")
                     .font(.headline)
                 TextField("Название профиля", text: $newProfileName)
+                Picker("Язык изучения", selection: $newProfileLearningLanguage) {
+                    ForEach(LearningLanguage.allCases) { language in
+                        Text(language.title).tag(language)
+                    }
+                }
+                .pickerStyle(.segmented)
                 HStack {
                     Spacer()
                     Button("Отмена") {
                         isCreateProfilePresented = false
                     }
                     Button("Создать") {
-                        viewModel.createProfile(named: newProfileName)
+                        viewModel.createProfile(
+                            named: newProfileName,
+                            learningLanguage: newProfileLearningLanguage
+                        )
                         isCreateProfilePresented = false
                     }
                     .keyboardShortcut(.defaultAction)
@@ -240,33 +262,7 @@ struct ContentView: View {
         if let formatted = viewModel.formattedRecognizedText, formatted.hasContent {
             ScrollView {
                 VStack(spacing: 16) {
-                    VStack(spacing: 18) {
-                        Text(formatted.cleanedText)
-                            .font(.system(size: 26, weight: .medium, design: .default))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .textSelection(.enabled)
-
-                        Text(formatted.pinyinText.isEmpty ? "—" : formatted.pinyinText)
-                            .font(.system(size: 44, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.center)
-                            .textSelection(.enabled)
-
-                        Text(formatted.russianTranslation)
-                            .font(.system(size: 26, weight: .regular, design: .default))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .textSelection(.enabled)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(.background.secondary)
-                    )
-
+                    formattedTranslationBlock(formatted)
                     studyAssistantBlock
                 }
                 .padding(12)
@@ -301,18 +297,15 @@ struct ContentView: View {
     @ViewBuilder
     private var studyAssistantBlock: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker(
-                "Дополнительные материалы",
-                selection: Binding(
-                    get: { viewModel.selectedStudyAssistantTab },
-                    set: { viewModel.selectStudyAssistantTab($0) }
-                )
-            ) {
-                ForEach(StudyAssistantTab.allCases) { tab in
-                    Text(tab.title).tag(tab)
+            HStack {
+                Text("Перевод слов")
+                    .font(.headline)
+                Spacer()
+                Button(hasSelectedStudyMaterialContent ? "Обновить" : "Загрузить") {
+                    viewModel.retryStudyAssistantDataForSelectedEntry()
                 }
+                .disabled(viewModel.selectedEntryStudyAssistantStatus == .processing)
             }
-            .pickerStyle(.segmented)
 
             studyAssistantContent
         }
@@ -328,36 +321,37 @@ struct ContentView: View {
     private var studyAssistantContent: some View {
         if viewModel.selectedEntryStudyAssistantStatus == .processing {
             ContentUnavailableView(
-                "Готовлю материалы",
+                "Готовлю перевод слов",
                 systemImage: "books.vertical",
-                description: Text("Запрашиваю только текущую вкладку.")
+                description: Text("Запрашиваю слова для текущего текста.")
             )
         } else if hasSelectedStudyMaterialContent {
             switch viewModel.selectedStudyAssistantTab {
             case .words:
                 wordsView(viewModel.studyMaterials.words)
-            case .phrases:
-                phrasesView(viewModel.studyMaterials.phrases)
-            case .grammar:
-                grammarView(viewModel.studyMaterials.grammar)
             }
         } else if viewModel.canRetryStudyAssistantData {
             VStack(alignment: .leading, spacing: 10) {
                 ContentUnavailableView(
-                    "Материалы не загрузились",
+                    "Слова не загрузились",
                     systemImage: "arrow.clockwise.circle",
-                    description: Text("Можно запросить слова, фразы и грамматику еще раз.")
+                    description: Text("Можно запросить перевод слов еще раз.")
                 )
                 Button("Попробовать еще раз") {
                     viewModel.retryStudyAssistantDataForSelectedEntry()
                 }
             }
         } else {
-            ContentUnavailableView(
-                "Нажмите на вкладку",
-                systemImage: "hand.tap",
-                description: Text("Материал для этой вкладки загружается только по запросу.")
-            )
+            VStack(alignment: .leading, spacing: 10) {
+                ContentUnavailableView(
+                    "Загрузить перевод слов",
+                    systemImage: "hand.tap",
+                    description: Text("Материал загружается только по запросу.")
+                )
+                Button("Загрузить слова") {
+                    viewModel.retryStudyAssistantDataForSelectedEntry()
+                }
+            }
         }
     }
 
@@ -423,110 +417,51 @@ struct ContentView: View {
         }
     }
 
-    @ViewBuilder
-    private func phrasesView(_ payload: PhraseStudyPayload?) -> some View {
-        if let payload, !payload.entries.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(payload.entries.enumerated()), id: \.offset) { index, item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Фраза \(index + 1)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text(item.pinyinText)
-                            .font(.system(size: 20, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primary)
-                            .textSelection(.enabled)
-                        Text(item.russianTranslation)
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(.background)
-                    )
-                }
-            }
-        } else {
-            ContentUnavailableView(
-                "Устойчивые фразы не найдены",
-                systemImage: "quote.bubble",
-                description: Text("AI не выделил отдельных устойчивых фраз.")
-            )
-        }
-    }
-
-    @ViewBuilder
-    private func grammarView(_ payload: GrammarExplanationPayload?) -> some View {
-        if let payload, !payload.structures.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array(payload.structures.enumerated()), id: \.offset) { index, structure in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Структура \(index + 1)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text(structure.title)
-                            .font(.headline)
-                        Text(structure.explanation)
-                            .font(.system(size: 15))
-                            .textSelection(.enabled)
-                        if !structure.usageNotes.isEmpty {
-                            Text(structure.usageNotes)
-                                .font(.system(size: 14))
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
-                        }
-                        if !structure.examples.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Примеры")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                ForEach(Array(structure.examples.enumerated()), id: \.offset) { _, example in
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(example.pinyinText)
-                                            .font(.system(size: 17, weight: .semibold, design: .rounded))
-                                            .textSelection(.enabled)
-                                        Text(example.russianTranslation)
-                                            .font(.system(size: 14))
-                                            .foregroundStyle(.secondary)
-                                            .textSelection(.enabled)
-                                    }
-                                    .padding(10)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(.background)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(.background)
-                    )
-                }
-            }
-        } else {
-            ContentUnavailableView(
-                "Грамматика не найдена",
-                systemImage: "text.book.closed",
-                description: Text("AI не выделил отдельных грамматических структур.")
-            )
-        }
-    }
-
     private var hasSelectedStudyMaterialContent: Bool {
         switch viewModel.selectedStudyAssistantTab {
         case .words:
             return viewModel.studyMaterials.words?.hasContent == true
-        case .phrases:
-            return viewModel.studyMaterials.phrases?.hasContent == true
-        case .grammar:
-            return viewModel.studyMaterials.grammar?.hasContent == true
         }
+    }
+
+    @ViewBuilder
+    private func formattedTranslationBlock(_ formatted: StructuredFormattedText) -> some View {
+        VStack(spacing: 10) {
+            if viewModel.currentProfileLearningLanguage == .chinese {
+                Text(formatted.cleanedText)
+                    .font(.system(size: 13, weight: .medium, design: .default))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .textSelection(.enabled)
+            }
+
+            Text(primaryFormattedLine(formatted))
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.center)
+                .textSelection(.enabled)
+
+            Text(formatted.russianTranslation)
+                .font(.system(size: 13, weight: .regular, design: .default))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 20)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.background.secondary)
+        )
+    }
+
+    private func primaryFormattedLine(_ formatted: StructuredFormattedText) -> String {
+        if viewModel.currentProfileLearningLanguage == .chinese {
+            return formatted.pinyinText.isEmpty ? "—" : formatted.pinyinText
+        }
+        return formatted.cleanedText
     }
 }
 
