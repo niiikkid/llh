@@ -619,6 +619,23 @@ private struct GeneralSettingsTab: View {
 
                 Divider()
 
+                Text("Поведение захвата")
+                    .font(.headline)
+
+                Toggle(
+                    "Ставить медиа на паузу во время захвата",
+                    isOn: Binding(
+                        get: { viewModel.pauseMediaDuringHotkeyCaptureEnabled },
+                        set: { viewModel.setPauseMediaDuringHotkeyCaptureEnabled($0) }
+                    )
+                )
+
+                Text("Когда опция включена, приложение попытается поставить на паузу текущее видео или аудио перед выделением области (и через кнопку, и через shortcut) и возобновить воспроизведение сразу после снимка.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+
+                Divider()
+
                 Text("Компактное окно перевода")
                     .font(.headline)
 

@@ -179,6 +179,10 @@ struct llhTests {
         #expect(store.translationOverlaySecondsPerWord == 0.5)
         store.translationOverlaySecondsPerWord = 10
         #expect(store.translationOverlaySecondsPerWord == 2)
+
+        #expect(store.pauseMediaDuringHotkeyCaptureEnabled == false)
+        store.pauseMediaDuringHotkeyCaptureEnabled = true
+        #expect(store.pauseMediaDuringHotkeyCaptureEnabled == true)
     }
 
     @Test
@@ -332,7 +336,9 @@ struct llhTests {
 
         #expect(prompt.system.contains("Never use hieroglyphs or source script in the response."))
         #expect(userPrompt.contains("Pronunciation:"))
-        #expect(userPrompt.contains("explain each part separately in `character_breakdown`"))
+        #expect(userPrompt.contains("Prefer short meaning units, stable expressions, and common multi-character chunks over isolated single characters."))
+        #expect(userPrompt.contains("Do not mechanically split the text into standalone words"))
+        #expect(userPrompt.contains("explain every individual character or part separately in `character_breakdown`"))
     }
 
     @Test
@@ -343,7 +349,8 @@ struct llhTests {
         #expect(prompt.system.contains("Keep the target-language words in their original writing."))
         #expect(prompt.system.contains("always return an empty array in `character_breakdown`"))
         #expect(!userPrompt.contains("Pronunciation:"))
-        #expect(userPrompt.contains("keep the original word exactly as it appears in the target language text"))
+        #expect(userPrompt.contains("Prefer short meaning units or stable expressions over isolated words"))
+        #expect(userPrompt.contains("keep the original word or short expression exactly as it appears in the target language text"))
         #expect(userPrompt.contains("return `character_breakdown` as an empty array"))
     }
 
@@ -351,5 +358,49 @@ struct llhTests {
     func learningLanguage_autoDisablesWordStudy() {
         #expect(LearningLanguage.auto.supportsWordStudy == false)
         #expect(LearningLanguage.english.supportsWordStudy == true)
+    }
+
+    @Test
+    func mainViewModel_shouldPauseMediaDuringCapture_whenFeatureEnabledForAnyTriggerSource() {
+        #expect(
+            MainViewModel.shouldPauseMediaDuringCapture(
+                triggeredBy: .hotkey,
+                isEnabled: true
+            ) == true
+        )
+        #expect(
+            MainViewModel.shouldPauseMediaDuringCapture(
+                triggeredBy: .interface,
+                isEnabled: true
+            ) == true
+        )
+        #expect(
+            MainViewModel.shouldPauseMediaDuringCapture(
+                triggeredBy: .hotkey,
+                isEnabled: false
+            ) == false
+        )
+    }
+
+    @Test
+    func mediaPlaybackInterruptionService_buildsBrowserScriptsForSupportedApps() {
+        let safariScript = MediaPlaybackInterruptionService.browserPlaybackScript(
+            for: "Safari",
+            action: .pause
+        )
+        let chromeScript = MediaPlaybackInterruptionService.browserPlaybackScript(
+            for: "Google Chrome",
+            action: .play
+        )
+        let unsupportedScript = MediaPlaybackInterruptionService.browserPlaybackScript(
+            for: "Finder",
+            action: .pause
+        )
+
+        #expect(safariScript?.contains("do JavaScript") == true)
+        #expect(safariScript?.contains("media.pause()") == true)
+        #expect(chromeScript?.contains("execute activeTab javascript") == true)
+        #expect(chromeScript?.contains("media.play()") == true)
+        #expect(unsupportedScript == nil)
     }
 }

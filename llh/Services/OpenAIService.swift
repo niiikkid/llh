@@ -268,6 +268,7 @@ struct OpenAIService: OpenAIServing {
                     Additional rules:
                     1) cleaned_text: cleaned meaningful source text after OCR cleanup.
                     2) pinyin_text: if the cleaned_text is Chinese, provide pinyin for it; otherwise return empty string.
+                    \(Self.pinyinTonePromptLine(for: targetLanguage))
                     3) russian_translation: concise Russian translation of cleaned_text.
                     4) If target language is Auto-detect, first detect the main language of the text and then apply the same rules.
 
@@ -372,6 +373,7 @@ struct OpenAIService: OpenAIServing {
                 You produce JSON only for language-learning word analysis.
                 Never use hieroglyphs or source script in the response.
                 Use only pinyin/transliteration and Russian.
+                When using pinyin, always include tone marks on every syllable.
                 Return JSON object with key `entries`.
                 Each entry has:
                 term_pinyin
@@ -394,10 +396,13 @@ struct OpenAIService: OpenAIServing {
                     Translation:
                     \(russianTranslation)
 
-                    Extract only useful study words.
-                    For each word:
-                    1) give the full word in pinyin/transliteration and its Russian meaning
-                    2) if the word consists of multiple characters or meaningful parts, explain each part separately in `character_breakdown`
+                    Extract only useful study entries.
+                    Prefer short meaning units, stable expressions, and common multi-character chunks over isolated single characters.
+                    Do not mechanically split the text into standalone words if a fixed phrase or compact expression carries the meaning better.
+                    Include a single character as a separate entry only if it is clearly useful on its own in this context.
+                    For each entry:
+                    1) give the full phrase or word in pinyin/transliteration and its Russian meaning
+                    2) if the entry consists of multiple characters or meaningful parts, explain every individual character or part separately in `character_breakdown`
                     3) keep the result compact and readable
                     """
                 }
@@ -429,11 +434,12 @@ struct OpenAIService: OpenAIServing {
                 Translation:
                 \(russianTranslation)
 
-                Extract only useful study words.
-                For each word:
-                1) keep the original word exactly as it appears in the target language text
+                Extract only useful study entries.
+                Prefer short meaning units or stable expressions over isolated words when that preserves the meaning better.
+                For each entry:
+                1) keep the original word or short expression exactly as it appears in the target language text
                 2) provide a concise Russian translation
-                3) do not split the word into parts
+                3) do not split the entry into parts
                 4) return `character_breakdown` as an empty array
                 5) keep the result compact and readable
                 """
@@ -455,6 +461,7 @@ struct OpenAIService: OpenAIServing {
             You produce JSON only for stable phrase extraction.
             Never use hieroglyphs or source script.
             Use only pinyin/transliteration and Russian.
+            \(Self.pinyinTonePromptParagraph(for: targetLanguage))
             Return JSON object with key `entries`.
             Each item has:
             pinyin_text
@@ -494,6 +501,7 @@ struct OpenAIService: OpenAIServing {
             You produce JSON only for grammar explanation.
             Never use hieroglyphs or source script.
             Use only pinyin/transliteration and Russian.
+            \(Self.pinyinTonePromptParagraph(for: targetLanguage))
             Return JSON object with key `structures`.
             Each structure has:
             title
@@ -710,6 +718,7 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
     private let selectedOCREngineKey: String
     private let translationOverlayMinimumDurationKey: String
     private let translationOverlaySecondsPerWordKey: String
+    private let pauseMediaDuringHotkeyCaptureEnabledKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -718,7 +727,8 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         cachedModelsKey: String = "openai.cached.model.ids",
         selectedOCREngineKey: String = "ocr.selected.engine",
         translationOverlayMinimumDurationKey: String = "overlay.translation.minimum.duration",
-        translationOverlaySecondsPerWordKey: String = "overlay.translation.seconds.per.word"
+        translationOverlaySecondsPerWordKey: String = "overlay.translation.seconds.per.word",
+        pauseMediaDuringHotkeyCaptureEnabledKey: String = "capture.pause.media.on.hotkey"
     ) {
         self.userDefaults = userDefaults
         self.selectedModelKey = selectedModelKey
@@ -727,6 +737,7 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         self.selectedOCREngineKey = selectedOCREngineKey
         self.translationOverlayMinimumDurationKey = translationOverlayMinimumDurationKey
         self.translationOverlaySecondsPerWordKey = translationOverlaySecondsPerWordKey
+        self.pauseMediaDuringHotkeyCaptureEnabledKey = pauseMediaDuringHotkeyCaptureEnabledKey
     }
 
     var selectedModelID: String? {
@@ -778,6 +789,11 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         set {
             userDefaults.set(newValue.clamped(to: 0.1...2), forKey: translationOverlaySecondsPerWordKey)
         }
+    }
+
+    var pauseMediaDuringHotkeyCaptureEnabled: Bool {
+        get { userDefaults.bool(forKey: pauseMediaDuringHotkeyCaptureEnabledKey) }
+        set { userDefaults.set(newValue, forKey: pauseMediaDuringHotkeyCaptureEnabledKey) }
     }
 }
 
@@ -932,6 +948,22 @@ private extension String {
 }
 
 private extension OpenAIService {
+    static func pinyinTonePromptLine(for targetLanguage: LearningLanguage) -> String {
+        guard targetLanguage == .chinese || targetLanguage == .auto else {
+            return "2a) If pinyin_text is empty, return empty string."
+        }
+
+        return "2a) If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
+    }
+
+    static func pinyinTonePromptParagraph(for targetLanguage: LearningLanguage) -> String {
+        guard targetLanguage == .chinese || targetLanguage == .auto else {
+            return "If transliteration is used, keep it readable and consistent."
+        }
+
+        return "If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
+    }
+
     static func jpegData(from image: CGImage, compressionQuality: CGFloat = 0.9) -> Data? {
         let mutableData = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(

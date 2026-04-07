@@ -409,7 +409,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
 
 @MainActor
 final class MainViewModel: ObservableObject {
-    private enum CaptureTriggerSource {
+    enum CaptureTriggerSource {
         case interface
         case hotkey
     }
@@ -431,6 +431,7 @@ final class MainViewModel: ObservableObject {
     @Published var defaultNewProfileLearningLanguage: LearningLanguage = .english
     @Published var translationOverlayMinimumDuration: Double = 3
     @Published var translationOverlaySecondsPerWord: Double = 0.33
+    @Published var pauseMediaDuringHotkeyCaptureEnabled = false
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
 
@@ -441,6 +442,7 @@ final class MainViewModel: ObservableObject {
     private let historyPersistenceService = HistoryPersistenceService()
     private let openAIService = OpenAIService()
     private let translationOverlayService = TranslationOverlayService()
+    private let mediaPlaybackInterruptionService = MediaPlaybackInterruptionService()
     private var openAISettingsStore = OpenAISettingsStore()
     private let openAITokenStore = KeychainOpenAITokenStore()
     private var overlayEntryAwaitingFormattedResult: CapturedTextEntry.ID?
@@ -478,6 +480,7 @@ final class MainViewModel: ObservableObject {
         defaultNewProfileLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
         translationOverlayMinimumDuration = openAISettingsStore.translationOverlayMinimumDuration
         translationOverlaySecondsPerWord = openAISettingsStore.translationOverlaySecondsPerWord
+        pauseMediaDuringHotkeyCaptureEnabled = openAISettingsStore.pauseMediaDuringHotkeyCaptureEnabled
         refreshPermissionState()
     }
 
@@ -578,6 +581,11 @@ final class MainViewModel: ObservableObject {
         let clampedValue = min(max(value, 0.1), 2)
         translationOverlaySecondsPerWord = clampedValue
         openAISettingsStore.translationOverlaySecondsPerWord = clampedValue
+    }
+
+    func setPauseMediaDuringHotkeyCaptureEnabled(_ isEnabled: Bool) {
+        pauseMediaDuringHotkeyCaptureEnabled = isEnabled
+        openAISettingsStore.pauseMediaDuringHotkeyCaptureEnabled = isEnabled
     }
 
     func calculatedTranslationOverlayDuration(for formattedText: StructuredFormattedText) -> Double {
@@ -765,14 +773,44 @@ final class MainViewModel: ObservableObject {
         !NSApp.isActive
     }
 
+    static func shouldPauseMediaDuringCapture(
+        triggeredBy _: CaptureTriggerSource,
+        isEnabled: Bool
+    ) -> Bool {
+        return isEnabled
+    }
+
+    private func pauseMediaIfNeeded(for source: CaptureTriggerSource) async -> MediaPlaybackInterruptionSession {
+        guard Self.shouldPauseMediaDuringCapture(triggeredBy: source, isEnabled: pauseMediaDuringHotkeyCaptureEnabled) else {
+            return .inactive
+        }
+
+        let outcome = mediaPlaybackInterruptionService.pauseIfNeeded()
+        if let errorMessage = outcome.errorMessage {
+            statusMessage = "Не удалось поставить медиа на паузу: \(errorMessage)"
+        }
+        return outcome.session
+    }
+
+    private func resumeMediaIfNeeded(_ session: inout MediaPlaybackInterruptionSession) {
+        let errorMessage = mediaPlaybackInterruptionService.resumeIfNeeded(session)
+        session = .inactive
+
+        if let errorMessage {
+            statusMessage = "Не удалось возобновить медиа: \(errorMessage)"
+        }
+    }
+
     private func startCaptureFlow(triggeredBy source: CaptureTriggerSource) async {
         guard !isProcessing else { return }
         guard ensureScreenRecordingPermission() else { return }
 
         isProcessing = true
+        var mediaPlaybackSession = await pauseMediaIfNeeded(for: source)
         statusMessage = "Выберите область на экране..."
 
         defer {
+            resumeMediaIfNeeded(&mediaPlaybackSession)
             isProcessing = false
         }
 
@@ -781,6 +819,7 @@ final class MainViewModel: ObservableObject {
             statusMessage = "Снимаю выделенную область..."
 
             let image = try await screenshotService.capture(region: selectedRect)
+            resumeMediaIfNeeded(&mediaPlaybackSession)
             capturedImage = NSImage(cgImage: image, size: .zero)
             statusMessage = "Распознаю текст..."
 
