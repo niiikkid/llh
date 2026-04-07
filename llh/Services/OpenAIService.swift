@@ -397,11 +397,17 @@ struct OpenAIService: OpenAIServing {
                     \(russianTranslation)
 
                     Extract only useful study entries.
+                    Each entry must be a short phrase-sized meaning unit, not a whole sentence.
+                    Never return a full sentence or a long clause as one entry, even if it feels reusable.
+                    Split sentences into short phrases or compact chunks.
+                    Prefer entries that are usually 1 to 3 characters long; 4 characters are acceptable only when the phrase is clearly fixed and natural.
                     Prefer short meaning units, stable expressions, and common multi-character chunks over isolated single characters.
+                    Include all meaningful short standalone words too, even when they are not fixed phrases.
+                    Do not omit short words such as pronouns, particles, or other useful single-word units if they are helpful for study.
                     Do not mechanically split the text into standalone words if a fixed phrase or compact expression carries the meaning better.
                     Include a single character as a separate entry only if it is clearly useful on its own in this context.
                     For each entry:
-                    1) give the full phrase or word in pinyin/transliteration and its Russian meaning
+                    1) give the full short phrase or word in pinyin/transliteration and its Russian meaning
                     2) if the entry consists of multiple characters or meaningful parts, explain every individual character or part separately in `character_breakdown`
                     3) keep the result compact and readable
                     """

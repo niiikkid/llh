@@ -336,8 +336,10 @@ struct llhTests {
 
         #expect(prompt.system.contains("Never use hieroglyphs or source script in the response."))
         #expect(userPrompt.contains("Pronunciation:"))
-        #expect(userPrompt.contains("Prefer short meaning units, stable expressions, and common multi-character chunks over isolated single characters."))
-        #expect(userPrompt.contains("Do not mechanically split the text into standalone words"))
+        #expect(userPrompt.contains("Each entry must be a short phrase-sized meaning unit, not a whole sentence."))
+        #expect(userPrompt.contains("Never return a full sentence or a long clause as one entry"))
+        #expect(userPrompt.contains("Prefer entries that are usually 1 to 3 characters long; 4 characters are acceptable only when the phrase is clearly fixed and natural."))
+        #expect(userPrompt.contains("Include all meaningful short standalone words too, even when they are not fixed phrases."))
         #expect(userPrompt.contains("explain every individual character or part separately in `character_breakdown`"))
     }
 
