@@ -370,18 +370,13 @@ struct OpenAIService: OpenAIServing {
         if targetLanguage == .chinese {
             return (
                 system: """
-                You produce JSON only for language-learning word analysis.
+                You produce JSON only for word-by-word study.
                 Never use hieroglyphs or source script in the response.
                 Use only pinyin/transliteration and Russian.
                 When using pinyin, always include tone marks on every syllable.
                 Return JSON object with key `entries`.
-                Each entry has:
-                term_pinyin
-                term_translation
-                character_breakdown
-                `character_breakdown` is an array of objects with:
-                pinyin_text
-                russian_translation
+                Each entry has `term_pinyin`, `term_translation`, and `character_breakdown`.
+                Each `character_breakdown` item has `pinyin_text` and `russian_translation`.
                 No markdown. No extra keys.
                 """,
                 user: { cleanedText, pinyinText, russianTranslation in
@@ -396,20 +391,13 @@ struct OpenAIService: OpenAIServing {
                     Translation:
                     \(russianTranslation)
 
-                    Extract only useful study entries.
-                    Each entry must be a short phrase-sized meaning unit, not a whole sentence.
-                    Never return a full sentence or a long clause as one entry, even if it feels reusable.
-                    Split sentences into short phrases or compact chunks.
-                    Prefer entries that are usually 1 to 3 characters long; 4 characters are acceptable only when the phrase is clearly fixed and natural.
-                    Prefer short meaning units, stable expressions, and common multi-character chunks over isolated single characters.
-                    Include all meaningful short standalone words too, even when they are not fixed phrases.
-                    Do not omit short words such as pronouns, particles, or other useful single-word units if they are helpful for study.
-                    Do not mechanically split the text into standalone words if a fixed phrase or compact expression carries the meaning better.
-                    Include a single character as a separate entry only if it is clearly useful on its own in this context.
-                    For each entry:
-                    1) give the full short phrase or word in pinyin/transliteration and its Russian meaning
-                    2) if the entry consists of multiple characters or meaningful parts, explain every individual character or part separately in `character_breakdown`
-                    3) keep the result compact and readable
+                    Extract useful study entries from the text.
+                    Return short words or fixed short expressions, not full sentences.
+                    Prefer entries that are usually 1 to 3 characters long. Use 4 only for a natural fixed expression.
+                    Include useful standalone words such as pronouns or particles.
+                    If several characters form one word, keep them in one entry.
+                    If an entry has multiple characters or meaningful parts, explain each part separately in `character_breakdown`.
+                    Keep the result compact.
                     """
                 }
             )
@@ -417,18 +405,15 @@ struct OpenAIService: OpenAIServing {
 
         return (
             system: """
-            You produce JSON only for language-learning word analysis.
+            You produce JSON only for word-by-word study.
             Keep the target-language words in their original writing.
             Use Russian only for translations.
             Return JSON object with key `entries`.
-            Each entry has:
-            term_pinyin
-            term_translation
-            character_breakdown
+            Each entry has `term_pinyin`, `term_translation`, and `character_breakdown`.
             For non-Chinese languages:
-            - put the original word or expression into `term_pinyin`
-            - put the Russian translation into `term_translation`
-            - always return an empty array in `character_breakdown`
+            - `term_pinyin`: original word or short expression
+            - `term_translation`: concise Russian translation
+            - `character_breakdown`: always an empty array
             No markdown. No extra keys.
             """,
             user: { cleanedText, _, russianTranslation in
@@ -440,14 +425,12 @@ struct OpenAIService: OpenAIServing {
                 Translation:
                 \(russianTranslation)
 
-                Extract only useful study entries.
-                Prefer short meaning units or stable expressions over isolated words when that preserves the meaning better.
-                For each entry:
-                1) keep the original word or short expression exactly as it appears in the target language text
-                2) provide a concise Russian translation
-                3) do not split the entry into parts
-                4) return `character_breakdown` as an empty array
-                5) keep the result compact and readable
+                Extract useful study entries from the text.
+                Return words or short fixed expressions, not full sentences.
+                Keep each entry exactly as written in the text.
+                Do not split entries into parts.
+                Always return `character_breakdown` as an empty array.
+                Keep the result compact.
                 """
             }
         )

@@ -428,11 +428,10 @@ struct llhTests {
 
         #expect(prompt.system.contains("Never use hieroglyphs or source script in the response."))
         #expect(userPrompt.contains("Pronunciation:"))
-        #expect(userPrompt.contains("Each entry must be a short phrase-sized meaning unit, not a whole sentence."))
-        #expect(userPrompt.contains("Never return a full sentence or a long clause as one entry"))
-        #expect(userPrompt.contains("Prefer entries that are usually 1 to 3 characters long; 4 characters are acceptable only when the phrase is clearly fixed and natural."))
-        #expect(userPrompt.contains("Include all meaningful short standalone words too, even when they are not fixed phrases."))
-        #expect(userPrompt.contains("explain every individual character or part separately in `character_breakdown`"))
+        #expect(userPrompt.contains("Return short words or fixed short expressions, not full sentences."))
+        #expect(userPrompt.contains("Prefer entries that are usually 1 to 3 characters long. Use 4 only for a natural fixed expression."))
+        #expect(userPrompt.contains("If several characters form one word, keep them in one entry."))
+        #expect(userPrompt.contains("explain each part separately in `character_breakdown`"))
     }
 
     @Test
@@ -441,11 +440,11 @@ struct llhTests {
         let userPrompt = prompt.user("hello world", "hello world", "привет мир")
 
         #expect(prompt.system.contains("Keep the target-language words in their original writing."))
-        #expect(prompt.system.contains("always return an empty array in `character_breakdown`"))
+        #expect(prompt.system.contains("`character_breakdown`: always an empty array"))
         #expect(!userPrompt.contains("Pronunciation:"))
-        #expect(userPrompt.contains("Prefer short meaning units or stable expressions over isolated words"))
-        #expect(userPrompt.contains("keep the original word or short expression exactly as it appears in the target language text"))
-        #expect(userPrompt.contains("return `character_breakdown` as an empty array"))
+        #expect(userPrompt.contains("Return words or short fixed expressions, not full sentences."))
+        #expect(userPrompt.contains("Keep each entry exactly as written in the text."))
+        #expect(userPrompt.contains("Always return `character_breakdown` as an empty array."))
     }
 
     @Test
