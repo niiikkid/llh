@@ -37,6 +37,98 @@ struct llhTests {
     }
 
     @Test
+    func sessionListLines_useFormattedSourceAndRussianWhenAvailable() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "Hello world",
+            pinyinText: "should not show for english",
+            russianTranslation: "Привет мир"
+        )
+        let entry = CapturedTextEntry(
+            text: "raw noisy hello",
+            formattedText: formatted,
+            formattingStatus: .succeeded
+        )
+
+        #expect(entry.sessionListTitleLine(learningLanguage: .english) == "Hello world")
+        #expect(entry.sessionListPreviewLine() == "Привет мир")
+    }
+
+    @Test
+    func sessionListLines_chineseSessionShowsPinyinInTitle() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "你好",
+            pinyinText: "nǐ hǎo",
+            russianTranslation: "привет"
+        )
+        let entry = CapturedTextEntry(
+            text: "你好",
+            formattedText: formatted,
+            formattingStatus: .succeeded
+        )
+
+        #expect(entry.sessionListTitleLine(learningLanguage: .chinese) == "nǐ hǎo")
+        #expect(entry.sessionListPreviewLine() == "привет")
+    }
+
+    @Test
+    func sessionListLines_autoSessionUsesPinyinWhenPresent() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "你好",
+            pinyinText: "ni hao",
+            russianTranslation: "здравствуй"
+        )
+        let entry = CapturedTextEntry(
+            text: "你好",
+            formattedText: formatted,
+            formattingStatus: .succeeded
+        )
+
+        #expect(entry.sessionListTitleLine(learningLanguage: .auto) == "ni hao")
+    }
+
+    @Test
+    func sessionReadingLines_matchSessionSourceAndRussianTranslation() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "你好",
+            pinyinText: "nǐ hǎo",
+            russianTranslation: "привет"
+        )
+        let entry = CapturedTextEntry(
+            text: "你好",
+            formattedText: formatted,
+            formattingStatus: .succeeded
+        )
+
+        #expect(entry.sessionReadingSourceLine(learningLanguage: .chinese) == "nǐ hǎo")
+        #expect(entry.sessionReadingTranslationLine() == "привет")
+    }
+
+    @Test
+    func sessionReadingLines_englishUsesCleanedTextNotPinyin() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "Hello",
+            pinyinText: "ignored",
+            russianTranslation: "Привет"
+        )
+        let entry = CapturedTextEntry(
+            text: "raw",
+            formattedText: formatted,
+            formattingStatus: .succeeded
+        )
+
+        #expect(entry.sessionReadingSourceLine(learningLanguage: .english) == "Hello")
+        #expect(entry.sessionReadingTranslationLine() == "Привет")
+    }
+
+    @Test
+    func sessionListLines_fallsBackToRawWhenNoFormattedText() {
+        let entry = CapturedTextEntry(text: "Line one\nLine two")
+
+        #expect(entry.sessionListTitleLine(learningLanguage: .english) == "Line one")
+        #expect(entry.sessionListPreviewLine().contains("Line one Line two"))
+    }
+
+    @Test
     func historyPersistenceService_savesAndLoadsHistory() throws {
         let folderURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

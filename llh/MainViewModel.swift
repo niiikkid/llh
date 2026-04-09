@@ -36,22 +36,51 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
     }
 
     var title: String {
-        let firstLine = text
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .first
-            .map(String.init)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let firstLine = Self.firstLine(from: text)
         return firstLine.isEmpty ? "Без текста" : firstLine
     }
 
     var preview: String {
+        Self.compactPreview(of: text)
+    }
+
+    /// Первая строка списка сессий: форматированный источник (с учётом языка сессии) или сырой текст.
+    func sessionListTitleLine(learningLanguage: LearningLanguage) -> String {
+        if let formatted = formattedText, formatted.hasContent {
+            let display = formatted.sessionListSourceDisplay(learningLanguage: learningLanguage)
+            let line = Self.firstLine(from: display)
+            if !line.isEmpty {
+                return line
+            }
+        }
+        return title
+    }
+
+    /// Вторая строка: русский перевод из форматированного ответа или компактный сырой текст.
+    func sessionListPreviewLine() -> String {
+        if let formatted = formattedText,
+           !formatted.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return Self.compactPreview(of: formatted.russianTranslation)
+        }
+        return preview
+    }
+
+    private static func firstLine(from text: String) -> String {
+        text
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .first
+            .map(String.init)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    private static func compactPreview(of text: String, maxCharacters: Int = 90) -> String {
         let compact = text
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        if compact.count <= 90 {
+        if compact.count <= maxCharacters {
             return compact
         }
-        return String(compact.prefix(90)) + "..."
+        return String(compact.prefix(maxCharacters)) + "..."
     }
 
     enum CodingKeys: String, CodingKey {
@@ -124,6 +153,27 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         try container.encode(studyMaterials, forKey: .studyMaterials)
         try container.encode(createdAt, forKey: .createdAt)
     }
+
+    /// Строка оригинала для просмотра «вся сессия»: для китайского и авто с пиньинем — пиньинь, иначе очищенный текст; без форматирования — сырой текст.
+    func sessionReadingSourceLine(learningLanguage: LearningLanguage) -> String {
+        if let formatted = formattedText, formatted.hasContent {
+            return formatted.sessionListSourceDisplay(learningLanguage: learningLanguage)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Перевод для режима «вся сессия» (пусто, если форматирования ещё нет).
+    func sessionReadingTranslationLine() -> String {
+        guard let formatted = formattedText, formatted.hasContent else { return "" }
+        return formatted.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+struct SessionReadingSequenceItem: Identifiable, Equatable {
+    let id: CapturedTextEntry.ID
+    let sourceLine: String
+    let translationLine: String
 }
 
 enum FormattingStatus: String, Codable {
@@ -203,6 +253,26 @@ struct StructuredFormattedText: Equatable, Codable {
 
     var hasContent: Bool {
         !cleanedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Текст источника для строки списка переводов: для китайской сессии и авто с непустым пиньинем — пиньинь, иначе очищенный исходник.
+    func sessionListSourceDisplay(learningLanguage: LearningLanguage) -> String {
+        let trimmedCleaned = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPinyin = pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch learningLanguage {
+        case .chinese:
+            if !trimmedPinyin.isEmpty {
+                return pinyinText
+            }
+            return cleanedText
+        case .auto:
+            if !trimmedPinyin.isEmpty {
+                return pinyinText
+            }
+            return cleanedText
+        case .english, .spanish:
+            return cleanedText
+        }
     }
 }
 
@@ -434,6 +504,7 @@ final class MainViewModel: ObservableObject {
     @Published var pauseMediaDuringHotkeyCaptureEnabled = false
     @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
+    @Published private(set) var showsSessionReadingOverview = false
 
     private let permissionService = ScreenRecordingPermissionService()
     private let regionSelectionService = RegionSelectionService()
@@ -702,6 +773,25 @@ final class MainViewModel: ObservableObject {
         return profiles[selectedProfileIndex].history
     }
 
+    /// Переводы текущей сессии от первого по времени к последнему для режима «весь текст».
+    var sessionReadingSequence: [SessionReadingSequenceItem] {
+        guard let selectedProfileIndex else { return [] }
+        let language = profiles[selectedProfileIndex].learningLanguage
+        return profiles[selectedProfileIndex].history
+            .sorted(by: { $0.createdAt < $1.createdAt })
+            .map { entry in
+                SessionReadingSequenceItem(
+                    id: entry.id,
+                    sourceLine: entry.sessionReadingSourceLine(learningLanguage: language),
+                    translationLine: entry.sessionReadingTranslationLine()
+                )
+            }
+    }
+
+    func toggleSessionReadingOverview() {
+        showsSessionReadingOverview.toggle()
+    }
+
     var selectedProfileName: String {
         activeProfile?.name ?? "Профиль"
     }
@@ -711,6 +801,7 @@ final class MainViewModel: ObservableObject {
     }
 
     func selectEntry(_ id: CapturedTextEntry.ID?) {
+        showsSessionReadingOverview = false
         selectedEntryID = id
         if let selectedProfileIndex {
             profiles[selectedProfileIndex].selectedEntryID = id
@@ -913,6 +1004,7 @@ final class MainViewModel: ObservableObject {
     }
 
     private func syncProfileSelectionToEditor() {
+        showsSessionReadingOverview = false
         guard let selectedProfileIndex else {
             selectedEntryID = nil
             recognizedText = ""

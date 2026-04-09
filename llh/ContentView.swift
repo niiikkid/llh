@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var isCreateProfilePresented = false
     @State private var isDeleteProfileConfirmationPresented = false
     @State private var isSettingsPresented = false
+    @State private var sessionReadingFontSizePoints: CGFloat = 16
 
     private enum TextTab: String, Hashable {
         case raw
@@ -138,7 +139,7 @@ struct ContentView: View {
                                 }
 
                                 if viewModel.currentProfileLearningLanguage == .auto {
-                                    Text("Для этой сессии язык определяется автоматически, а снизу показывается только перевод без блока слов.")
+                                    Text("Для этой сессии язык определяется автоматически, отображается только перевод.")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -150,33 +151,61 @@ struct ContentView: View {
                                         description: Text("После захвата текста переводы появятся здесь.")
                                     )
                                 } else {
-                                    List(
-                                        viewModel.history,
-                                        selection: Binding(
-                                            get: { viewModel.selectedEntryID },
-                                            set: { viewModel.selectEntry($0) }
-                                        )
-                                    ) { item in
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            HStack(alignment: .firstTextBaseline) {
-                                                Text(item.title)
-                                                    .font(.subheadline.weight(.semibold))
-                                                    .lineLimit(1)
-                                                Spacer(minLength: 8)
-                                                Text(viewModel.formattedDate(for: item.createdAt))
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 8) {
+                                            Button {
+                                                viewModel.toggleSessionReadingOverview()
+                                            } label: {
+                                                Label(
+                                                    viewModel.showsSessionReadingOverview
+                                                        ? "К списку переводов"
+                                                        : "Весь текст сессии",
+                                                    systemImage: viewModel.showsSessionReadingOverview
+                                                        ? "list.bullet.rectangle"
+                                                        : "doc.plaintext"
+                                                )
                                             }
-                                            Text(item.preview)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(2)
+                                            .buttonStyle(.bordered)
+                                            .help(
+                                                viewModel.showsSessionReadingOverview
+                                                    ? "Вернуться к выбранному переводу в списке."
+                                                    : "Показать все фрагменты сессии подряд: строка оригинала и строка перевода."
+                                            )
+                                            Spacer()
                                         }
-                                        .padding(.vertical, 4)
-                                        .tag(item.id)
+
+                                        List(
+                                            viewModel.history,
+                                            selection: Binding(
+                                                get: { viewModel.selectedEntryID },
+                                                set: { viewModel.selectEntry($0) }
+                                            )
+                                        ) { item in
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(
+                                                        item.sessionListTitleLine(
+                                                            learningLanguage: viewModel.currentProfileLearningLanguage
+                                                        )
+                                                    )
+                                                        .font(.subheadline.weight(.semibold))
+                                                        .lineLimit(1)
+                                                    Spacer(minLength: 8)
+                                                    Text(viewModel.formattedDate(for: item.createdAt))
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                Text(item.sessionListPreviewLine())
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(2)
+                                            }
+                                            .padding(.vertical, 4)
+                                            .tag(item.id)
+                                        }
+                                        .listStyle(.sidebar)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     }
-                                    .listStyle(.sidebar)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 }
                             }
                         }
@@ -189,8 +218,20 @@ struct ContentView: View {
                         )
                     }
 
-                    GroupBox("Перевод") {
-                        if viewModel.selectedEntryID == nil {
+                    GroupBox {
+                        if viewModel.showsSessionReadingOverview {
+                            if viewModel.history.isEmpty {
+                                centeredContent {
+                                    ContentUnavailableView(
+                                        "Пока пусто",
+                                        systemImage: "doc.plaintext",
+                                        description: Text("В этой сессии ещё нет переводов.")
+                                    )
+                                }
+                            } else {
+                                sessionReadingOverviewPanel
+                            }
+                        } else if viewModel.selectedEntryID == nil {
                             centeredContent {
                                 ContentUnavailableView(
                                     "Выберите перевод",
@@ -234,6 +275,8 @@ struct ContentView: View {
                                 }
                             }
                         }
+                    } label: {
+                        Text(viewModel.showsSessionReadingOverview ? "Вся сессия" : "Перевод")
                     }
                     .groupBoxStyle(PanelGroupBoxStyle())
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -332,6 +375,75 @@ struct ContentView: View {
                 )
             }
         }
+    }
+
+    @ViewBuilder
+    private var sessionReadingOverviewPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                Button {
+                    sessionReadingFontSizePoints = max(12, sessionReadingFontSizePoints - 1)
+                } label: {
+                    Image(systemName: "textformat.size.smaller")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(sessionReadingFontSizePoints <= 12)
+                .help("Уменьшить размер текста")
+
+                Button {
+                    sessionReadingFontSizePoints = min(24, sessionReadingFontSizePoints + 1)
+                } label: {
+                    Image(systemName: "textformat.size.larger")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(sessionReadingFontSizePoints >= 24)
+                .help("Увеличить размер текста")
+            }
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    ForEach(Array(viewModel.sessionReadingSequence.enumerated()), id: \.element.id) { index, item in
+                        VStack(alignment: .leading, spacing: 8) {
+                            if item.sourceLine.isEmpty {
+                                Text("—")
+                                    .font(.system(size: sessionReadingFontSizePoints))
+                                    .foregroundStyle(.tertiary)
+                            } else {
+                                Text(item.sourceLine)
+                                    .font(.system(size: sessionReadingFontSizePoints, weight: .medium))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .textSelection(.enabled)
+                            }
+
+                            if item.translationLine.isEmpty {
+                                Text("Перевод пока недоступен")
+                                    .font(.system(size: max(11, sessionReadingFontSizePoints - 2)))
+                                    .foregroundStyle(.tertiary)
+                            } else {
+                                Text(item.translationLine)
+                                    .font(.system(size: max(11, sessionReadingFontSizePoints - 2)))
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < viewModel.sessionReadingSequence.count - 1 {
+                            Divider()
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     @ViewBuilder
