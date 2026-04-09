@@ -8,12 +8,40 @@ import Combine
 import Foundation
 import KeyboardShortcuts
 
+/// Один вопрос к отформатированному оригиналу фрагмента и ответ модели (без общего контекста между вопросами).
+struct PassageQuestionTurn: Identifiable, Equatable, Codable {
+    let id: UUID
+    let question: String
+    let createdAt: Date
+    var answer: String
+    var isLoading: Bool
+    var errorMessage: String?
+
+    init(
+        id: UUID = UUID(),
+        question: String,
+        createdAt: Date = Date(),
+        answer: String = "",
+        isLoading: Bool = false,
+        errorMessage: String? = nil
+    ) {
+        self.id = id
+        self.question = question
+        self.createdAt = createdAt
+        self.answer = answer
+        self.isLoading = isLoading
+        self.errorMessage = errorMessage
+    }
+}
+
 struct CapturedTextEntry: Identifiable, Equatable, Codable {
     let id: UUID
     var text: String
     var formattedText: StructuredFormattedText?
     var formattingStatus: FormattingStatus
     var studyMaterials: StudyMaterials
+    /// Вопросы к `formattedText.cleanedText`; каждый обмен независим, порядок — по времени.
+    var passageQuestionTurns: [PassageQuestionTurn]
     let createdAt: Date
     let image: NSImage?
 
@@ -23,6 +51,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         formattedText: StructuredFormattedText? = nil,
         formattingStatus: FormattingStatus = .notRequested,
         studyMaterials: StudyMaterials = StudyMaterials(),
+        passageQuestionTurns: [PassageQuestionTurn] = [],
         createdAt: Date = Date(),
         image: NSImage? = nil
     ) {
@@ -31,6 +60,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         self.formattedText = formattedText
         self.formattingStatus = formattingStatus
         self.studyMaterials = studyMaterials
+        self.passageQuestionTurns = passageQuestionTurns
         self.createdAt = createdAt
         self.image = image
     }
@@ -91,6 +121,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         case studyMaterials
         case studyAssistantData
         case studyAssistantStatus
+        case passageQuestionTurns
         case createdAt
     }
 
@@ -108,6 +139,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         } else {
             formattedText = nil
         }
+        passageQuestionTurns = try container.decodeIfPresent([PassageQuestionTurn].self, forKey: .passageQuestionTurns) ?? []
         formattingStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .formattingStatus) ?? .notRequested
         if let materials = try container.decodeIfPresent(StudyMaterials.self, forKey: .studyMaterials) {
             studyMaterials = materials
@@ -151,6 +183,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
         try container.encodeIfPresent(formattedText, forKey: .formattedText)
         try container.encode(formattingStatus, forKey: .formattingStatus)
         try container.encode(studyMaterials, forKey: .studyMaterials)
+        try container.encode(passageQuestionTurns, forKey: .passageQuestionTurns)
         try container.encode(createdAt, forKey: .createdAt)
     }
 
@@ -181,6 +214,18 @@ enum FormattingStatus: String, Codable {
     case processing
     case succeeded
     case failed
+}
+
+enum PassageQuestionAnswerLimiter {
+    static let maxCharacters = 500
+
+    static func clamped(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= maxCharacters {
+            return trimmed
+        }
+        return String(trimmed.prefix(maxCharacters))
+    }
 }
 
 enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
@@ -273,6 +318,11 @@ struct StructuredFormattedText: Equatable, Codable {
         case .english, .spanish:
             return cleanedText
         }
+    }
+
+    /// Текст фрагмента для вопросов к модели: форматированный оригинал (`cleaned_text`) — иероглифы для китайского, исходный язык для EN/ES; не пиньинь и не русский перевод.
+    func passageContextForModelQuestions() -> String {
+        cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -407,12 +457,14 @@ struct StudyMaterials: Equatable, Codable {
 
 enum StudyAssistantTab: String, CaseIterable, Identifiable {
     case words
+    case passageQuestions
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .words: return "Слова"
+        case .passageQuestions: return "Вопросы"
         }
     }
 }
@@ -525,6 +577,8 @@ final class MainViewModel: ObservableObject {
     @Published var formattedRecognizedText: StructuredFormattedText?
     @Published var studyMaterials = StudyMaterials()
     @Published var selectedStudyAssistantTab: StudyAssistantTab = .words
+    @Published private(set) var selectedEntryPassageQuestionTurns: [PassageQuestionTurn] = []
+    @Published private(set) var isSubmittingPassageQuestion = false
     @Published var capturedImage: NSImage?
     @Published var statusMessage = "Нажмите shortcut и выделите область."
     @Published var showPermissionHelp = false
@@ -843,7 +897,7 @@ final class MainViewModel: ObservableObject {
         if let selectedProfileIndex {
             profiles[selectedProfileIndex].selectedEntryID = id
         }
-        selectedStudyAssistantTab = .words
+        selectedStudyAssistantTab = currentProfileSupportsWordStudy ? .words : .passageQuestions
         syncSelectionToEditor()
     }
 
@@ -854,8 +908,10 @@ final class MainViewModel: ObservableObject {
         profiles[profileIndex].history[entryIndex].formattedText = nil
         profiles[profileIndex].history[entryIndex].formattingStatus = .notRequested
         profiles[profileIndex].history[entryIndex].studyMaterials = StudyMaterials()
+        profiles[profileIndex].history[entryIndex].passageQuestionTurns = []
         formattedRecognizedText = nil
         studyMaterials = StudyMaterials()
+        selectedEntryPassageQuestionTurns = []
         profiles[profileIndex].selectedEntryID = selectedEntryID
         persistHistory()
     }
@@ -873,14 +929,95 @@ final class MainViewModel: ObservableObject {
 
     func selectStudyAssistantTab(_ tab: StudyAssistantTab) {
         selectedStudyAssistantTab = tab
-        guard let selectedEntryID else { return }
+        guard let selectedEntryID, tab == .words else { return }
         Task {
             await loadStudyMaterial(for: selectedEntryID, tab: tab, forceReload: false)
         }
     }
 
+    func submitPassageQuestion(_ rawQuestion: String) {
+        let question = rawQuestion.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty else { return }
+        guard !isSubmittingPassageQuestion else { return }
+        guard let token = openAITokenStore.loadToken() else {
+            statusMessage = "Сначала сохраните OpenAI token."
+            return
+        }
+        guard let modelID = selectedOpenAIModelID else {
+            statusMessage = "Выберите модель OpenAI."
+            return
+        }
+        guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return }
+        guard let formatted = profiles[profileIndex].history[entryIndex].formattedText, formatted.hasContent else { return }
+
+        let passage = formatted.passageContextForModelQuestions()
+        guard !passage.isEmpty else { return }
+
+        let entryID = profiles[profileIndex].history[entryIndex].id
+        var turn = PassageQuestionTurn(question: question, isLoading: true)
+        let turnID = turn.id
+        profiles[profileIndex].history[entryIndex].passageQuestionTurns.append(turn)
+        selectedEntryPassageQuestionTurns = profiles[profileIndex].history[entryIndex].passageQuestionTurns
+        persistHistory()
+
+        isSubmittingPassageQuestion = true
+        Task {
+            let outcome: Result<String, Error>
+            do {
+                let answer = try await openAIService.answerPassageQuestion(
+                    apiKey: token,
+                    modelID: modelID,
+                    passageText: passage,
+                    question: question,
+                    maxAnswerCharacters: PassageQuestionAnswerLimiter.maxCharacters
+                )
+                outcome = .success(answer)
+            } catch {
+                outcome = .failure(error)
+            }
+            await MainActor.run {
+                self.isSubmittingPassageQuestion = false
+                switch outcome {
+                case .success(let answer):
+                    self.applyPassageQuestionOutcome(
+                        entryID: entryID,
+                        turnID: turnID,
+                        answer: PassageQuestionAnswerLimiter.clamped(answer),
+                        errorMessage: nil
+                    )
+                case .failure(let error):
+                    self.applyPassageQuestionOutcome(
+                        entryID: entryID,
+                        turnID: turnID,
+                        answer: "",
+                        errorMessage: error.localizedDescription
+                    )
+                }
+            }
+        }
+    }
+
+    private func applyPassageQuestionOutcome(entryID: CapturedTextEntry.ID, turnID: UUID, answer: String, errorMessage: String?) {
+        guard let profileIndex = selectedProfileIndex,
+              let entryIndex = profiles[profileIndex].history.firstIndex(where: { $0.id == entryID }),
+              let turnIndex = profiles[profileIndex].history[entryIndex].passageQuestionTurns.firstIndex(where: { $0.id == turnID }) else {
+            return
+        }
+        profiles[profileIndex].history[entryIndex].passageQuestionTurns[turnIndex].isLoading = false
+        profiles[profileIndex].history[entryIndex].passageQuestionTurns[turnIndex].errorMessage = errorMessage
+        profiles[profileIndex].history[entryIndex].passageQuestionTurns[turnIndex].answer = answer
+        if selectedEntryID == entryID {
+            selectedEntryPassageQuestionTurns = profiles[profileIndex].history[entryIndex].passageQuestionTurns
+        }
+        persistHistory()
+        if let errorMessage {
+            statusMessage = "Не удалось получить ответ: \(errorMessage)"
+        }
+    }
+
     func retryStudyAssistantDataForSelectedEntry() {
         guard let selectedEntryID else { return }
+        guard selectedStudyAssistantTab == .words else { return }
         Task {
             await loadStudyMaterial(for: selectedEntryID, tab: selectedStudyAssistantTab, forceReload: true)
         }
@@ -1031,12 +1168,14 @@ final class MainViewModel: ObservableObject {
             recognizedText = ""
             formattedRecognizedText = nil
             studyMaterials = StudyMaterials()
+            selectedEntryPassageQuestionTurns = []
             capturedImage = nil
             return
         }
         recognizedText = profiles[profileIndex].history[entryIndex].text
         formattedRecognizedText = profiles[profileIndex].history[entryIndex].formattedText
         studyMaterials = profiles[profileIndex].history[entryIndex].studyMaterials
+        selectedEntryPassageQuestionTurns = profiles[profileIndex].history[entryIndex].passageQuestionTurns
         capturedImage = profiles[profileIndex].history[entryIndex].image
     }
 
@@ -1047,6 +1186,7 @@ final class MainViewModel: ObservableObject {
             recognizedText = ""
             formattedRecognizedText = nil
             studyMaterials = StudyMaterials()
+            selectedEntryPassageQuestionTurns = []
             capturedImage = nil
             return
         }
@@ -1059,6 +1199,15 @@ final class MainViewModel: ObservableObject {
             profiles[selectedProfileIndex].selectedEntryID = selectedEntryID
         }
         syncSelectionToEditor()
+        normalizeStudyAssistantTabForProfileLanguage()
+    }
+
+    private func normalizeStudyAssistantTabForProfileLanguage() {
+        guard let selectedProfileIndex else { return }
+        if !profiles[selectedProfileIndex].learningLanguage.supportsWordStudy,
+           selectedStudyAssistantTab == .words {
+            selectedStudyAssistantTab = .passageQuestions
+        }
     }
 
     private func loadHistory() {
@@ -1241,24 +1390,23 @@ final class MainViewModel: ObservableObject {
             if !forceReload, entry.studyMaterials.wordsStatus == .succeeded, entry.studyMaterials.words?.hasContent == true { return }
             if !forceReload, entry.studyMaterials.wordsStatus == .processing { return }
             profiles[profileIndex].history[entryIndex].studyMaterials.wordsStatus = .processing
+        case .passageQuestions:
+            return
         }
         persistHistory()
         entry = profiles[profileIndex].history[entryIndex]
 
         do {
-            switch tab {
-            case .words:
-                let result = try await openAIService.buildWordsStudyData(
-                    apiKey: token,
-                    modelID: modelID,
-                    targetLanguage: profiles[profileIndex].learningLanguage,
-                    formattedText: formattedText
-                )
-                guard let latestProfileIndex = selectedProfileIndex,
-                      let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = result
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .succeeded
-            }
+            let result = try await openAIService.buildWordsStudyData(
+                apiKey: token,
+                modelID: modelID,
+                targetLanguage: profiles[profileIndex].learningLanguage,
+                formattedText: formattedText
+            )
+            guard let latestProfileIndex = selectedProfileIndex,
+                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
+            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = result
+            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .succeeded
 
             if selectedEntryID == entryID {
                 studyMaterials = profiles[selectedProfileIndex!].history[profiles[selectedProfileIndex!].history.firstIndex(where: { $0.id == entryID })!].studyMaterials
@@ -1270,11 +1418,8 @@ final class MainViewModel: ObservableObject {
                   let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
                 return
             }
-            switch tab {
-            case .words:
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = nil
-                profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .failed
-            }
+            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = nil
+            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .failed
             if selectedEntryID == entryID {
                 studyMaterials = profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials
             }
@@ -1299,6 +1444,7 @@ final class MainViewModel: ObservableObject {
         let materials = profiles[profileIndex].history[entryIndex].studyMaterials
         switch selectedStudyAssistantTab {
         case .words: return materials.wordsStatus
+        case .passageQuestions: return nil
         }
     }
 
@@ -1307,6 +1453,7 @@ final class MainViewModel: ObservableObject {
         let materials = profiles[profileIndex].history[entryIndex].studyMaterials
         switch selectedStudyAssistantTab {
         case .words: return materials.wordsStatus == .failed && (materials.words?.hasContent ?? false) == false
+        case .passageQuestions: return false
         }
     }
 }

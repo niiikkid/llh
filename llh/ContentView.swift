@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var isDeleteProfileConfirmationPresented = false
     @State private var isSettingsPresented = false
     @State private var sessionReadingFontSizePoints: CGFloat = 16
+    @State private var passageQuestionDraft = ""
 
     private enum TextTab: String, Hashable {
         case raw
@@ -339,9 +340,7 @@ struct ContentView: View {
         if let formatted = viewModel.formattedRecognizedText, formatted.hasContent {
             VStack(spacing: 12) {
                 formattedTranslationBlock(formatted)
-                if viewModel.currentProfileSupportsWordStudy {
-                    studyAssistantBlock
-                }
+                studyAssistantBlock
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         } else if viewModel.isFormattingRecognizedText || viewModel.selectedEntryFormattingStatus == .processing {
@@ -446,21 +445,59 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    private var effectiveStudyAssistantTab: StudyAssistantTab {
+        viewModel.currentProfileSupportsWordStudy
+            ? viewModel.selectedStudyAssistantTab
+            : .passageQuestions
+    }
+
+    private var studyAssistantSectionNeedsScroll: Bool {
+        switch effectiveStudyAssistantTab {
+        case .words:
+            return hasSelectedStudyMaterialContent
+        case .passageQuestions:
+            return !viewModel.selectedEntryPassageQuestionTurns.isEmpty
+        }
+    }
+
+    private var studyAssistantSectionTitle: String {
+        switch effectiveStudyAssistantTab {
+        case .words:
+            return "Перевод слов"
+        case .passageQuestions:
+            return "Вопросы к оригиналу"
+        }
+    }
+
     @ViewBuilder
     private var studyAssistantBlock: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if viewModel.currentProfileSupportsWordStudy {
+                Picker("Режим", selection: Binding(
+                    get: { viewModel.selectedStudyAssistantTab },
+                    set: { viewModel.selectStudyAssistantTab($0) }
+                )) {
+                    Text(StudyAssistantTab.words.title).tag(StudyAssistantTab.words)
+                    Text(StudyAssistantTab.passageQuestions.title).tag(StudyAssistantTab.passageQuestions)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
             HStack {
-                Text("Перевод слов")
+                Text(studyAssistantSectionTitle)
                     .font(.headline)
                 Spacer()
-                Button(hasSelectedStudyMaterialContent ? "Обновить перевод" : "Перевести слова") {
-                    viewModel.retryStudyAssistantDataForSelectedEntry()
+                if effectiveStudyAssistantTab == .words {
+                    Button(hasSelectedStudyMaterialContent ? "Обновить перевод" : "Перевести слова") {
+                        viewModel.retryStudyAssistantDataForSelectedEntry()
+                    }
+                    .disabled(viewModel.selectedEntryStudyAssistantStatus == .processing)
                 }
-                .disabled(viewModel.selectedEntryStudyAssistantStatus == .processing)
             }
 
             Group {
-                if hasSelectedStudyMaterialContent {
+                if studyAssistantSectionNeedsScroll {
                     ScrollView {
                         studyAssistantContent
                     }
@@ -481,35 +518,37 @@ struct ContentView: View {
 
     @ViewBuilder
     private var studyAssistantContent: some View {
-        if viewModel.selectedEntryStudyAssistantStatus == .processing {
-            centeredContent {
-                ContentUnavailableView(
-                    "Готовлю перевод слов",
-                    systemImage: "books.vertical",
-                    description: Text("Запрашиваю слова для текущего текста.")
-                )
-            }
-        } else if hasSelectedStudyMaterialContent {
-            switch viewModel.selectedStudyAssistantTab {
-            case .words:
+        switch effectiveStudyAssistantTab {
+        case .words:
+            if viewModel.selectedEntryStudyAssistantStatus == .processing {
+                centeredContent {
+                    ContentUnavailableView(
+                        "Готовлю перевод слов",
+                        systemImage: "books.vertical",
+                        description: Text("Запрашиваю слова для текущего текста.")
+                    )
+                }
+            } else if hasSelectedStudyMaterialContent {
                 wordsView(viewModel.studyMaterials.words)
+            } else if viewModel.canRetryStudyAssistantData {
+                centeredContent {
+                    ContentUnavailableView(
+                        "Слова не загрузились",
+                        systemImage: "arrow.clockwise.circle",
+                        description: Text("Можно запросить перевод слов еще раз.")
+                    )
+                }
+            } else {
+                centeredContent {
+                    ContentUnavailableView(
+                        "Загрузить перевод слов",
+                        systemImage: "hand.tap",
+                        description: Text("Материал загружается только по запросу.")
+                    )
+                }
             }
-        } else if viewModel.canRetryStudyAssistantData {
-            centeredContent {
-                ContentUnavailableView(
-                    "Слова не загрузились",
-                    systemImage: "arrow.clockwise.circle",
-                    description: Text("Можно запросить перевод слов еще раз.")
-                )
-            }
-        } else {
-            centeredContent {
-                ContentUnavailableView(
-                    "Загрузить перевод слов",
-                    systemImage: "hand.tap",
-                    description: Text("Материал загружается только по запросу.")
-                )
-            }
+        case .passageQuestions:
+            passageQuestionsStudyContent
         }
     }
 
@@ -575,10 +614,109 @@ struct ContentView: View {
     }
 
     private var hasSelectedStudyMaterialContent: Bool {
-        switch viewModel.selectedStudyAssistantTab {
+        switch effectiveStudyAssistantTab {
         case .words:
             return viewModel.studyMaterials.words?.hasContent == true
+        case .passageQuestions:
+            return false
         }
+    }
+
+    @ViewBuilder
+    private var passageQuestionsStudyContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if !viewModel.selectedEntryPassageQuestionTurns.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(viewModel.selectedEntryPassageQuestionTurns) { turn in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(turn.question)
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                            if turn.isLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else if let error = turn.errorMessage {
+                                Text(error)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.red)
+                                    .textSelection(.enabled)
+                            } else {
+                                Text(turn.answer)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(.background)
+                        )
+                    }
+                }
+            } else {
+                ContentUnavailableView(
+                    "Пока нет вопросов",
+                    systemImage: "bubble.left.and.bubble.right",
+                    description: Text("Каждый вопрос обрабатывается отдельно; ответ не длиннее \(PassageQuestionAnswerLimiter.maxCharacters) символов.")
+                )
+                .frame(maxWidth: .infinity)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Пресеты")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(PassageQuestionPresetCatalog.items) { preset in
+                                Button(preset.shortLabel) {
+                                    passageQuestionDraft = preset.question
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .help(preset.question)
+                                .disabled(viewModel.isSubmittingPassageQuestion)
+                            }
+                        }
+                    }
+                }
+
+                TextField("Напишите вопрос к оригиналу выше…", text: $passageQuestionDraft, axis: .vertical)
+                    .lineLimit(2...6)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        submitPassageQuestionFromDraft()
+                    }
+                HStack {
+                    Text("Ответ модели — до \(PassageQuestionAnswerLimiter.maxCharacters) символов.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Отправить") {
+                        submitPassageQuestionFromDraft()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canSubmitPassageQuestion)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private var canSubmitPassageQuestion: Bool {
+        !passageQuestionDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !viewModel.isSubmittingPassageQuestion
+    }
+
+    private func submitPassageQuestionFromDraft() {
+        let trimmed = passageQuestionDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !viewModel.isSubmittingPassageQuestion else { return }
+        passageQuestionDraft = ""
+        viewModel.submitPassageQuestion(trimmed)
     }
 
     @ViewBuilder
@@ -655,6 +793,22 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+private struct PassageQuestionPresetItem: Identifiable {
+    let id: String
+    let shortLabel: String
+    let question: String
+}
+
+private enum PassageQuestionPresetCatalog {
+    static let items: [PassageQuestionPresetItem] = [
+        PassageQuestionPresetItem(
+            id: "grammar_structure",
+            shortLabel: "Грамматика",
+            question: "Объясни грамматическую структуру данного предложения."
+        )
+    ]
 }
 
 private struct PanelGroupBoxStyle: GroupBoxStyle {

@@ -43,6 +43,14 @@ protocol OpenAIServing {
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
     ) async throws -> GrammarExplanationPayload
+    /// Короткий ответ на вопрос только по переданному фрагменту; язык ответа — русский, длина ограничена.
+    func answerPassageQuestion(
+        apiKey: String,
+        modelID: String,
+        passageText: String,
+        question: String,
+        maxAnswerCharacters: Int
+    ) async throws -> String
 }
 
 enum OpenAIServiceError: LocalizedError {
@@ -569,6 +577,106 @@ struct OpenAIService: OpenAIServing {
         )
         guard result.hasContent else { throw OpenAIServiceError.invalidStructuredResponse }
         return result
+    }
+
+    func answerPassageQuestion(
+        apiKey: String,
+        modelID: String,
+        passageText: String,
+        question: String,
+        maxAnswerCharacters: Int
+    ) async throws -> String {
+        let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty, token.hasPrefix("sk-") else {
+            throw OpenAIServiceError.invalidTokenFormat
+        }
+        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        let trimmedPassage = passageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedQuestion = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedPassage.isEmpty, !trimmedQuestion.isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        guard maxAnswerCharacters > 0 else {
+            throw OpenAIServiceError.invalidResponse
+        }
+
+        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+            throw OpenAIServiceError.invalidResponse
+        }
+
+        let requestBody = ChatCompletionsRequest(
+            model: modelID,
+            temperature: 0.3,
+            messages: [
+                .init(
+                    role: "system",
+                    content: """
+                    You answer questions about a short passage the user is learning.
+                    Use only the passage as context. If the question cannot be answered from the passage, say so briefly in Russian.
+                    Reply in Russian only. No markdown, no bullet lists unless a single short line.
+                    Hard limit: at most \(maxAnswerCharacters) characters in your entire reply (count carefully).
+                    """
+                ),
+                .init(
+                    role: "user",
+                    content: """
+                    Passage (original formatted text, not a translation):
+                    \(trimmedPassage)
+
+                    Question (independent; ignore any previous questions):
+                    \(trimmedQuestion)
+                    """
+                )
+            ]
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError {
+            switch error.code {
+            case .cannotFindHost, .dnsLookupFailed:
+                throw OpenAIServiceError.hostNotFound
+            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
+                throw OpenAIServiceError.networkUnavailable
+            default:
+                throw error
+            }
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        if httpResponse.statusCode == 401 {
+            throw OpenAIServiceError.unauthorized
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
+        }
+
+        let decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: data)
+        let content = decoded.choices.first?.message.content.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !content.isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        return Self.clampedPassageAnswer(content, maxLength: maxAnswerCharacters)
+    }
+
+    private static func clampedPassageAnswer(_ raw: String, maxLength: Int) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= maxLength {
+            return trimmed
+        }
+        return String(trimmed.prefix(maxLength))
     }
 
     private static func extractJSONObjectString(from content: String) -> String? {
