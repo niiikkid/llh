@@ -448,6 +448,26 @@ struct llhTests {
     }
 
     @Test
+    func wordStudyEntry_decodesWhenRussianPronunciationGuideKeyIsAbsent() throws {
+        let json = Data(
+            #"{"termPinyin":"hola","termTranslation":"привет","characterBreakdown":[]}"#.utf8
+        )
+        let decoded = try JSONDecoder().decode(WordStudyEntry.self, from: json)
+        #expect(decoded.russianPronunciationGuide == "")
+    }
+
+    @Test
+    func openAIService_wordsAnalysisPrompt_spanishIncludesRussianPronunciationGuide() {
+        let prompt = OpenAIService.wordsAnalysisPrompt(for: .spanish)
+        let userPrompt = prompt.user("Hola", "", "привет")
+
+        #expect(prompt.system.contains("russian_pronunciation"))
+        #expect(prompt.system.contains("Cyrillic"))
+        #expect(userPrompt.contains("MUST fill `russian_pronunciation`"))
+        #expect(prompt.system.contains("`character_breakdown`: always an empty array"))
+    }
+
+    @Test
     func learningLanguage_autoDisablesWordStudy() {
         #expect(LearningLanguage.auto.supportsWordStudy == false)
         #expect(LearningLanguage.english.supportsWordStudy == true)

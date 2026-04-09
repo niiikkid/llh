@@ -522,6 +522,11 @@ struct ContentView: View {
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text(entry.termPinyin)
                                 .font(.system(size: 19, weight: .semibold, design: .rounded))
+                            if !entry.russianPronunciationGuide.isEmpty {
+                                Text("(\(entry.russianPronunciationGuide))")
+                                    .font(.system(size: 15, weight: .regular, design: .default))
+                                    .foregroundStyle(.secondary)
+                            }
                             Text("-")
                                 .font(.system(size: 17, weight: .regular, design: .default))
                             Text(entry.termTranslation)

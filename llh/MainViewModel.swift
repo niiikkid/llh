@@ -115,7 +115,7 @@ struct CapturedTextEntry: Identifiable, Equatable, Codable {
             let legacyData = try container.decodeIfPresent(StudyAssistantData.self, forKey: .studyAssistantData)
             let legacyStatus = try container.decodeIfPresent(FormattingStatus.self, forKey: .studyAssistantStatus) ?? .notRequested
             studyMaterials = StudyMaterials(
-                words: legacyData?.words.isEmpty == false ? WordStudyPayload(entries: legacyData?.words.map { WordStudyEntry(termPinyin: $0.pinyinText, termTranslation: $0.russianTranslation, characterBreakdown: []) } ?? []) : nil,
+                words: legacyData?.words.isEmpty == false ? WordStudyPayload(entries: legacyData?.words.map { WordStudyEntry(termPinyin: $0.pinyinText, termTranslation: $0.russianTranslation, russianPronunciationGuide: "", characterBreakdown: []) } ?? []) : nil,
                 wordsStatus: legacyData?.words.isEmpty == false ? .succeeded : legacyStatus,
                 phrases: legacyData?.phrases.isEmpty == false ? PhraseStudyPayload(entries: legacyData?.phrases ?? []) : nil,
                 phrasesStatus: legacyData?.phrases.isEmpty == false ? .succeeded : legacyStatus,
@@ -289,7 +289,44 @@ struct CharacterMeaning: Equatable, Codable {
 struct WordStudyEntry: Equatable, Codable {
     let termPinyin: String
     let termTranslation: String
+    /// Как произнести слово русскоговорящему: кириллическая подсказка (например для испанского).
+    let russianPronunciationGuide: String
     let characterBreakdown: [CharacterMeaning]
+
+    enum CodingKeys: String, CodingKey {
+        case termPinyin
+        case termTranslation
+        case russianPronunciationGuide
+        case characterBreakdown
+    }
+
+    init(
+        termPinyin: String,
+        termTranslation: String,
+        russianPronunciationGuide: String = "",
+        characterBreakdown: [CharacterMeaning]
+    ) {
+        self.termPinyin = termPinyin
+        self.termTranslation = termTranslation
+        self.russianPronunciationGuide = russianPronunciationGuide
+        self.characterBreakdown = characterBreakdown
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        termPinyin = try container.decode(String.self, forKey: .termPinyin)
+        termTranslation = try container.decode(String.self, forKey: .termTranslation)
+        russianPronunciationGuide = try container.decodeIfPresent(String.self, forKey: .russianPronunciationGuide) ?? ""
+        characterBreakdown = try container.decode([CharacterMeaning].self, forKey: .characterBreakdown)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(termPinyin, forKey: .termPinyin)
+        try container.encode(termTranslation, forKey: .termTranslation)
+        try container.encode(russianPronunciationGuide, forKey: .russianPronunciationGuide)
+        try container.encode(characterBreakdown, forKey: .characterBreakdown)
+    }
 }
 
 struct WordStudyPayload: Equatable, Codable {

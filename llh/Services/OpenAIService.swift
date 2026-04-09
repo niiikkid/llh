@@ -356,6 +356,7 @@ struct OpenAIService: OpenAIServing {
                 WordStudyEntry(
                     termPinyin: $0.termPinyin.trimmed,
                     termTranslation: $0.termTranslation.trimmed,
+                    russianPronunciationGuide: ($0.russianPronunciation ?? "").trimmed,
                     characterBreakdown: $0.characterBreakdown.map {
                         CharacterMeaning(pinyinText: $0.pinyinText.trimmed, russianTranslation: $0.russianTranslation.trimmed)
                     }
@@ -397,6 +398,39 @@ struct OpenAIService: OpenAIServing {
                     Include useful standalone words such as pronouns or particles.
                     If several characters form one word, keep them in one entry.
                     If an entry has multiple characters or meaningful parts, explain each part separately in `character_breakdown`.
+                    Keep the result compact.
+                    """
+                }
+            )
+        }
+
+        if targetLanguage == .spanish {
+            return (
+                system: """
+                You produce JSON only for word-by-word study.
+                Keep Spanish words in original spelling (include accents: á, ñ, etc.).
+                Return JSON object with key `entries`.
+                Each entry has `term_pinyin`, `term_translation`, `russian_pronunciation`, and `character_breakdown`.
+                - `term_pinyin`: the Spanish word or short fixed expression exactly as it appears in the cleaned text.
+                - `term_translation`: concise Russian translation of the meaning.
+                - `russian_pronunciation`: short hint IN RUSSIAN (Cyrillic) for how a Russian speaker should read this Spanish aloud—like phrasebook transcription, not IPA. Use familiar Russian letters and hyphens between syllables if helpful; mark stress with an acute accent on the vowel (e.g. ó) when it helps. Do not repeat the Spanish word here—only the reading guide.
+                - `character_breakdown`: always an empty array
+                No markdown. No extra keys.
+                """,
+                user: { cleanedText, _, russianTranslation in
+                    """
+                    Target language: \(targetLanguage.openAIInstructionName)
+                    Cleaned text:
+                    \(cleanedText)
+
+                    Translation:
+                    \(russianTranslation)
+
+                    Extract useful study entries from the text.
+                    Return words or short fixed expressions, not full sentences.
+                    Keep each Spanish term exactly as written in the text.
+                    For every entry you MUST fill `russian_pronunciation` with a Cyrillic reading guide for a Russian learner.
+                    Always return `character_breakdown` as an empty array.
                     Keep the result compact.
                     """
                 }
@@ -895,11 +929,13 @@ private struct WordCharacterDTO: Decodable {
 private struct WordEntryDTO: Decodable {
     let termPinyin: String
     let termTranslation: String
+    let russianPronunciation: String?
     let characterBreakdown: [WordCharacterDTO]
 
     enum CodingKeys: String, CodingKey {
         case termPinyin = "term_pinyin"
         case termTranslation = "term_translation"
+        case russianPronunciation = "russian_pronunciation"
         case characterBreakdown = "character_breakdown"
     }
 }
