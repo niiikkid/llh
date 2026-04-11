@@ -207,6 +207,21 @@ struct SessionReadingSequenceItem: Identifiable, Equatable {
     let id: CapturedTextEntry.ID
     let sourceLine: String
     let translationLine: String
+
+    /// Плейсхолдер пустого оригинала в режиме «вся сессия» (совпадает с подписью в интерфейсе).
+    static let missingSourcePlaceholder = "—"
+    /// Плейсхолдер, если форматирования ещё нет (совпадает с подписью в интерфейсе).
+    static let missingTranslationPlaceholder = "Перевод пока недоступен"
+
+    /// Строка оригинала для отображения и копирования.
+    var displaySourceLine: String {
+        sourceLine.isEmpty ? Self.missingSourcePlaceholder : sourceLine
+    }
+
+    /// Строка перевода для отображения и копирования.
+    var displayTranslationLine: String {
+        translationLine.isEmpty ? Self.missingTranslationPlaceholder : translationLine
+    }
 }
 
 enum FormattingStatus: String, Codable {
@@ -877,6 +892,25 @@ final class MainViewModel: ObservableObject {
                     translationLine: entry.sessionReadingTranslationLine()
                 )
             }
+    }
+
+    /// Плоский текст режима «вся сессия» для буфера обмена: у каждого фрагмента две строки, блоки разделены пустой строкой.
+    static func plainTextForSessionReadingCopy(items: [SessionReadingSequenceItem]) -> String {
+        items
+            .map { "\($0.displaySourceLine)\n\($0.displayTranslationLine)" }
+            .joined(separator: "\n\n")
+    }
+
+    var sessionReadingOverviewPlainTextForCopy: String {
+        Self.plainTextForSessionReadingCopy(items: sessionReadingSequence)
+    }
+
+    /// Копирует текст режима «вся сессия» в общий буфер обмена macOS.
+    func copySessionReadingOverviewToPasteboard() {
+        let text = sessionReadingOverviewPlainTextForCopy
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
     }
 
     func toggleSessionReadingOverview() {

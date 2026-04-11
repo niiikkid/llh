@@ -121,6 +121,25 @@ struct llhTests {
     }
 
     @Test
+    func sessionReadingCopy_plainText_joinsBlocksWithBlankLineAndPlaceholders() {
+        let id1 = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let id2 = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let items = [
+            SessionReadingSequenceItem(id: id1, sourceLine: "Hello", translationLine: "Привет"),
+            SessionReadingSequenceItem(id: id2, sourceLine: "", translationLine: "Только перевод"),
+        ]
+        let plain = MainViewModel.plainTextForSessionReadingCopy(items: items)
+        let expected = """
+        Hello
+        Привет
+
+        \(SessionReadingSequenceItem.missingSourcePlaceholder)
+        Только перевод
+        """
+        #expect(plain == expected)
+    }
+
+    @Test
     func passageContextForModelQuestions_usesCleanedOriginalText() {
         let formatted = StructuredFormattedText(
             cleanedText: "学习",

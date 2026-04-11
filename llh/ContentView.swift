@@ -380,6 +380,15 @@ struct ContentView: View {
     private var sessionReadingOverviewPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
+                Button {
+                    viewModel.copySessionReadingOverviewToPasteboard()
+                } label: {
+                    Label("Копировать весь текст", systemImage: "doc.on.doc")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Скопировать все фрагменты сессии в буфер обмена.")
+
                 Spacer(minLength: 0)
                 Button {
                     sessionReadingFontSizePoints = max(12, sessionReadingFontSizePoints - 1)
@@ -407,7 +416,7 @@ struct ContentView: View {
                     ForEach(Array(viewModel.sessionReadingSequence.enumerated()), id: \.element.id) { index, item in
                         VStack(alignment: .leading, spacing: 8) {
                             if item.sourceLine.isEmpty {
-                                Text("—")
+                                Text(item.displaySourceLine)
                                     .font(.system(size: sessionReadingFontSizePoints))
                                     .foregroundStyle(.tertiary)
                             } else {
@@ -418,7 +427,7 @@ struct ContentView: View {
                             }
 
                             if item.translationLine.isEmpty {
-                                Text("Перевод пока недоступен")
+                                Text(item.displayTranslationLine)
                                     .font(.system(size: max(11, sessionReadingFontSizePoints - 2)))
                                     .foregroundStyle(.tertiary)
                             } else {
