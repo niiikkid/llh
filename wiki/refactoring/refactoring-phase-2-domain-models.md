@@ -11,7 +11,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 1. **Инкремент 1** — product-модели из `MainViewModel.swift` → `llh/Domain/Models/` (`MainViewModel` ~1316 → ~744 строк).
 2. **Инкремент 2** — JSON snapshot и OpenAI-границы в Data: `HistoryStoreSnapshot`, `OpenAIModel`, `OpenAIServiceError`, `OpenAIPromptBuilder`; протокол `OpenAIServing` → `Domain/Services/`. Промпты убраны из `LearningLanguage`.
 
-Опционально остаётся ввести `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). Следующая фаза — **Phase 3** (use cases).
+Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 3** начата — см. [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md).
 
 ## Инкремент 1 — Domain/Models
 
@@ -55,9 +55,9 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## MainViewModel
 
-- ~744 строк: координация UI/workflows, `CaptureTriggerSource`
+- После Phase 3 (инкремент 1): ~721 строк; capture делегирован use cases
 - DI из Phase 1: `AppDependencyContainer` → `init(dependencies:)`
-- Workflows пока в ViewModel (Phase 3)
+- Остальные workflows пока в ViewModel — [Phase 3](refactoring-phase-3-use-cases.md)
 
 ## Покрытие тестами
 
@@ -84,12 +84,9 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 | `OpenAIServing` в Domain | выполнено |
 | `Domain/Errors` (workflow) | опционально, не блокирует Phase 3 |
 
-## Следующий шаг
-
-**Phase 3** — use cases по одному workflow: `CaptureRegionUseCase` → recognize → format → history → profiles → word study → OpenAI settings.
-
 ## See Also
 
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — capture/recognize use cases (в процессе)
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI и repositories
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь и safety net
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

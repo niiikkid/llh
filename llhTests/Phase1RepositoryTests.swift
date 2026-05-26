@@ -62,6 +62,18 @@ struct Phase1RepositoryTests {
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
             .appendingPathComponent("history.json", isDirectory: false)
         let defaults = UserDefaults(suiteName: "llh.tests.\(UUID().uuidString)")!
+        let permissionService = ScreenRecordingPermissionService()
+        let regionSelectionService = RegionSelectionService()
+        let screenshotService = ScreenshotService()
+        let ocrService = OCRService()
+        let openAIService = OpenAIService()
+        let (recognizeTextUseCase, captureRegionUseCase) = AppDependencyContainer.makeCaptureUseCases(
+            permissionService: permissionService,
+            regionSelectionService: regionSelectionService,
+            screenshotService: screenshotService,
+            ocrService: ocrService,
+            openAIService: openAIService
+        )
         let dependencies = AppDependencyContainer(
             historyRepository: JSONHistoryRepository(
                 persistence: HistoryPersistenceService(fileURL: fileURL)
@@ -70,12 +82,14 @@ struct Phase1RepositoryTests {
                 store: OpenAISettingsStore(userDefaults: defaults)
             ),
             apiKeyRepository: KeychainAPIKeyRepository(tokenStore: InMemoryOpenAITokenStore()),
-            permissionService: ScreenRecordingPermissionService(),
-            regionSelectionService: RegionSelectionService(),
-            screenshotService: ScreenshotService(),
-            ocrService: OCRService(),
-            openAIService: OpenAIService(),
-            translationOverlayService: TranslationOverlayService()
+            permissionService: permissionService,
+            regionSelectionService: regionSelectionService,
+            screenshotService: screenshotService,
+            ocrService: ocrService,
+            openAIService: openAIService,
+            translationOverlayService: TranslationOverlayService(),
+            recognizeTextUseCase: recognizeTextUseCase,
+            captureRegionUseCase: captureRegionUseCase
         )
         let viewModel = dependencies.makeMainViewModel()
 

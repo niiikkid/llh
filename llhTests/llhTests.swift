@@ -121,6 +121,7 @@ struct llhTests {
     }
 
     @Test
+    @MainActor
     func sessionReadingCopy_plainText_joinsBlocksWithBlankLineAndPlaceholders() {
         let id1 = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let id2 = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!

@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. Поведение приложения для пользователя не менялось. Phase 1 (протоколы и DI) и Phase 2 (domain models + Data/OpenAI границы) выполнены отдельно — см. [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md), [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md).
+Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. Поведение приложения для пользователя не менялось. Phase 1–2 завершены; Phase 3 (use cases) в процессе — см. [Phase 1](refactoring-phase-1-boundaries.md), [Phase 2](refactoring-phase-2-domain-models.md), [Phase 3](refactoring-phase-3-use-cases.md).
 
 ## Артефакты в коде
 
@@ -80,6 +80,7 @@ Capture/editor: `recognizedText`, `formattedRecognizedText`, `studyMaterials`, `
 
 ## See Also
 
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — capture/recognize (текущая работа)
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — завершённый Phase 1
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный пофазный план (архивный snapshot на 2026-05-26)

@@ -36,9 +36,7 @@ final class MainViewModel: ObservableObject {
     @Published private(set) var showsSessionReadingOverview = false
 
     private let permissionService: ScreenRecordingPermissionChecking
-    private let regionSelectionService: RegionSelecting
-    private let screenshotService: ScreenCapturing
-    private let ocrService: OCRServing
+    private let captureRegionUseCase: CaptureRegionUseCase
     private let historyRepository: HistoryRepository
     private let openAIService: OpenAIServing
     private let translationOverlayService: TranslationOverlayService
@@ -48,9 +46,7 @@ final class MainViewModel: ObservableObject {
 
     init(dependencies: AppDependencyContainer) {
         permissionService = dependencies.permissionService
-        regionSelectionService = dependencies.regionSelectionService
-        screenshotService = dependencies.screenshotService
-        ocrService = dependencies.ocrService
+        captureRegionUseCase = dependencies.captureRegionUseCase
         historyRepository = dependencies.historyRepository
         openAIService = dependencies.openAIService
         translationOverlayService = dependencies.translationOverlayService
@@ -390,24 +386,12 @@ final class MainViewModel: ObservableObject {
         }
     }
 
-    private func ensureScreenRecordingPermission() -> Bool {
-        if permissionService.hasPermission {
-            showPermissionHelp = false
-            return true
-        }
-
-        showPermissionHelp = true
-        statusMessage = "Нет доступа к Screen Recording. Откройте System Settings и включите доступ."
-        return false
-    }
-
     private var shouldUseCompactOverlay: Bool {
         !NSApp.isActive
     }
 
     private func startCaptureFlow(triggeredBy source: CaptureTriggerSource) async {
         guard !isProcessing else { return }
-        guard ensureScreenRecordingPermission() else { return }
 
         isProcessing = true
         statusMessage = "Выберите область на экране..."
@@ -416,70 +400,62 @@ final class MainViewModel: ObservableObject {
             isProcessing = false
         }
 
+        let configuration = CaptureRegionConfiguration(
+            ocrEngine: selectedOCREngine,
+            apiKey: apiKeyRepository.loadAPIKey(),
+            selectedModelID: selectedOpenAIModelID
+        )
+
         do {
-            let selectedRect = try await regionSelectionService.selectRegion()
-            statusMessage = "Снимаю выделенную область..."
-
-            let image = try await screenshotService.capture(region: selectedRect)
-            capturedImage = NSImage(cgImage: image, size: .zero)
-            statusMessage = "Распознаю текст..."
-
-            let text = try await recognizeText(in: image)
-            guard !text.isEmpty else {
+            switch try await captureRegionUseCase.execute(configuration: configuration) {
+            case .permissionDenied:
+                showPermissionHelp = true
+                statusMessage = "Нет доступа к Screen Recording. Откройте System Settings и включите доступ."
+            case .selectionCancelled:
+                showPermissionHelp = false
+                statusMessage = "Выделение отменено."
+                overlayEntryAwaitingFormattedResult = nil
+                if source == .hotkey, shouldUseCompactOverlay {
+                    translationOverlayService.hide()
+                }
+            case .noTextFound(let image):
+                showPermissionHelp = false
+                capturedImage = NSImage(cgImage: image, size: .zero)
                 recognizedText = ""
                 statusMessage = "Текст не найден."
                 overlayEntryAwaitingFormattedResult = nil
                 if source == .hotkey, shouldUseCompactOverlay {
                     translationOverlayService.showMessage(title: "Текст не найден", duration: 3)
                 }
-                return
-            }
-
-            let imagePreview = NSImage(cgImage: image, size: .zero)
-            let entry = CapturedTextEntry(text: text, image: imagePreview)
-            guard let selectedProfileIndex else { return }
-            profiles[selectedProfileIndex].history.insert(entry, at: 0)
-            profiles[selectedProfileIndex].selectedEntryID = entry.id
-            selectedEntryID = entry.id
-            syncSelectionToEditor()
-            persistHistory()
-            statusMessage = "Готово. Запись добавлена в историю. Форматирую текст..."
-            if source == .hotkey, shouldUseCompactOverlay {
-                overlayEntryAwaitingFormattedResult = entry.id
-                translationOverlayService.showLoading()
-            }
-            await formatEntryText(entryID: entry.id, forceRetry: false)
-        } catch RegionSelectionService.SelectionError.cancelled {
-            statusMessage = "Выделение отменено."
-            overlayEntryAwaitingFormattedResult = nil
-            if source == .hotkey, shouldUseCompactOverlay {
-                translationOverlayService.hide()
+            case .captured(let image, let text):
+                showPermissionHelp = false
+                capturedImage = NSImage(cgImage: image, size: .zero)
+                let imagePreview = NSImage(cgImage: image, size: .zero)
+                let entry = CapturedTextEntry(text: text, image: imagePreview)
+                guard let selectedProfileIndex else { return }
+                profiles[selectedProfileIndex].history.insert(entry, at: 0)
+                profiles[selectedProfileIndex].selectedEntryID = entry.id
+                selectedEntryID = entry.id
+                syncSelectionToEditor()
+                persistHistory()
+                statusMessage = "Готово. Запись добавлена в историю. Форматирую текст..."
+                if source == .hotkey, shouldUseCompactOverlay {
+                    overlayEntryAwaitingFormattedResult = entry.id
+                    translationOverlayService.showLoading()
+                }
+                await formatEntryText(entryID: entry.id, forceRetry: false)
             }
         } catch {
+            showPermissionHelp = false
             statusMessage = "Ошибка: \(error.localizedDescription)"
             overlayEntryAwaitingFormattedResult = nil
             if source == .hotkey, shouldUseCompactOverlay {
-                translationOverlayService.showMessage(title: "Ошибка обработки", subtitle: error.localizedDescription, duration: 3)
+                translationOverlayService.showMessage(
+                    title: "Ошибка обработки",
+                    subtitle: error.localizedDescription,
+                    duration: 3
+                )
             }
-        }
-    }
-
-    private func recognizeText(in image: CGImage) async throws -> String {
-        switch selectedOCREngine {
-        case .local:
-            return try await ocrService.recognizeText(in: image)
-        case .ai:
-            guard let token = apiKeyRepository.loadAPIKey() else {
-                throw OpenAIServiceError.invalidTokenFormat
-            }
-            guard let modelID = selectedOpenAIModelID else {
-                throw OpenAIServiceError.invalidResponse
-            }
-            return try await openAIService.recognizeTextInImage(
-                apiKey: token,
-                modelID: modelID,
-                image: image
-            )
         }
     }
 

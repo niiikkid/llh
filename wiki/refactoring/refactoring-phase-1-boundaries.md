@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2 (domain models + Data/OpenAI) завершена — см. [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md).
+Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2 завершена; Phase 3 добавляет use cases в контейнер — см. [Phase 2](refactoring-phase-2-domain-models.md), [Phase 3](refactoring-phase-3-use-cases.md).
 
 ## Направление зависимостей
 
@@ -73,6 +73,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 ## See Also
 
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases поверх протоколов Phase 1
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — Domain/Models и Data/OpenAI границы
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь и safety net до DI
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

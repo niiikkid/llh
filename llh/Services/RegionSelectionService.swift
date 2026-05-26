@@ -8,26 +8,12 @@ import Foundation
 
 @MainActor
 final class RegionSelectionService {
-    enum SelectionError: LocalizedError {
-        case cancelled
-        case noScreen
-
-        var errorDescription: String? {
-            switch self {
-            case .cancelled:
-                return "Выделение отменено."
-            case .noScreen:
-                return "Не удалось получить экран."
-            }
-        }
-    }
-
     private var windows: [NSWindow] = []
     private var continuation: CheckedContinuation<CGRect, Error>?
 
     func selectRegion() async throws -> CGRect {
-        guard continuation == nil else { throw SelectionError.cancelled }
-        guard !NSScreen.screens.isEmpty else { throw SelectionError.noScreen }
+        guard continuation == nil else { throw RegionSelectionError.cancelled }
+        guard !NSScreen.screens.isEmpty else { throw RegionSelectionError.noScreen }
 
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
@@ -55,7 +41,7 @@ final class RegionSelectionService {
                 let absoluteRect = rect.offsetBy(dx: window.frame.origin.x, dy: window.frame.origin.y)
                 self.finish(with: .success(absoluteRect.standardized))
             } onCancel: { [weak self] in
-                self?.finish(with: .failure(SelectionError.cancelled))
+                self?.finish(with: .failure(RegionSelectionError.cancelled))
             }
 
             window.contentView = overlayView
