@@ -11,7 +11,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 1. **Инкремент 1** — product-модели из `MainViewModel.swift` → `llh/Domain/Models/` (`MainViewModel` ~1316 → ~744 строк).
 2. **Инкремент 2** — JSON snapshot и OpenAI-границы в Data: `HistoryStoreSnapshot`, `OpenAIModel`, `OpenAIServiceError`, `OpenAIPromptBuilder`; протокол `OpenAIServing` → `Domain/Services/`. Промпты убраны из `LearningLanguage`.
 
-Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 5** — SQLite в `Data/Persistence/` — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6 завершена** — `OpenAIHTTPClient`, models/OCR/translation/study services, `OpenAITokenStore`, `OpenAISettingsStore` — см. [Phase 6](refactoring-phase-6-openai-integration.md). **Phase 7 завершена** — `OCRResult`, `VisionOCRService`, `OCRImagePreprocessor` — см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md).
+Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 5** — SQLite в `Data/Persistence/` — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6 завершена** — `OpenAIHTTPClient`, models/OCR/translation/study services, `OpenAITokenStore`, `OpenAISettingsStore` — см. [Phase 6](refactoring-phase-6-openai-integration.md). **Phase 7 завершена** — `OCRResult`, `VisionOCRService`, `OCRImagePreprocessor` — см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md). **Phase 10** — `overlayPrimaryText` для overlay/timing — см. [Phase 10](refactoring-phase-10-cleanup.md).
 
 ## Инкремент 1 — Domain/Models
 
@@ -22,7 +22,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 | `OCREngine.swift` | local / AI |
 | `OCRResult.swift` | Structured OCR: `text`, `lines`, `isEmpty` (Phase 7) |
 | `ScreenRecordingPermissionStatus.swift` | `.authorized` / `.denied` (Phase 7) |
-| `StructuredFormattedText.swift` | Очищенный текст, пиньинь, перевод; display helpers (Phase 8) |
+| `StructuredFormattedText.swift` | Очищенный текст, пиньинь, перевод; display helpers (Phase 8); `overlayPrimaryText` (Phase 10) |
 | `StudyMaterials.swift` | Study payloads, legacy `StudyAssistantData` decode |
 | `CapturedTextEntry.swift` | Запись истории, legacy `Codable`, `NSImage?` только in-memory |
 | `LearningProfile.swift` | Профиль, `LearningProfileKind`, default profile |
@@ -110,6 +110,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## See Also
 
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `StructuredFormattedText.overlayPrimaryText`
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — display/prompt helpers в `Phase2DomainModelsTests` + `Phase9OpenAIPromptTests`
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — UI использует display helpers `StructuredFormattedText`
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, Infrastructure OCR/capture (завершена)

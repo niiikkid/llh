@@ -1,5 +1,16 @@
 # Wiki Log
 
+## [2026-05-27] lint | 0 issues found, 11 auto-fixed
+- Updated: Refactoring Phase 0–8, 9 (cascade: Phase 10 complete, See Also, «Следующий шаг»)
+- Updated: Refactoring Phase 6 OpenAI Integration (facade path `Data/OpenAI/`)
+- Updated: wiki/index.md summaries
+- Updated: LLH Project Refactoring Roadmap (Phase 10 completion note)
+
+## [2026-05-27] ingest | Refactoring Phase 10 Cleanup
+- Updated: LLH Project Refactoring Roadmap
+- Updated: Refactoring Phase 9 Testing Strategy
+- Updated: Refactoring Phases 0–8 (cascade)
+
 ## [2026-05-27] lint | 0 issues found, 0 auto-fixed
 
 ## [2026-05-27] ingest | Refactoring Phase 9 Testing Strategy (wiki sync)

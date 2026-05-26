@@ -50,42 +50,26 @@ struct Phase9OpenAIPromptTests {
     }
 
     @Test
-    func phrasesStudyPrompts_includeFormattedTextFields() {
-        let formatted = StructuredFormattedText(
+    func structuredFormattedText_overlayPrimaryText_prefersPinyinThenCleanedThenRussian() {
+        let withPinyin = StructuredFormattedText(
             cleanedText: "你好",
             pinyinText: "nǐ hǎo",
             russianTranslation: "привет"
         )
-        let system = OpenAIPromptBuilder.phrasesStudySystemPrompt(for: .chinese)
-        let user = OpenAIPromptBuilder.phrasesStudyUserPrompt(
-            targetLanguage: .chinese,
-            formattedText: formatted
-        )
+        #expect(withPinyin.overlayPrimaryText == "nǐ hǎo")
 
-        #expect(system.contains("entries"))
-        #expect(system.contains("pinyin_text"))
-        #expect(user.contains("你好"))
-        #expect(user.contains("nǐ hǎo"))
-        #expect(user.contains("привет"))
-        #expect(user.contains("stable phrases"))
-    }
-
-    @Test
-    func grammarStudyPrompts_requestStructuresWithExamples() {
-        let formatted = StructuredFormattedText(
-            cleanedText: "你好",
-            pinyinText: "nǐ hǎo",
+        let withoutPinyin = StructuredFormattedText(
+            cleanedText: "hello",
+            pinyinText: "",
             russianTranslation: "привет"
         )
-        let system = OpenAIPromptBuilder.grammarStudySystemPrompt(for: .chinese)
-        let user = OpenAIPromptBuilder.grammarStudyUserPrompt(
-            targetLanguage: .chinese,
-            formattedText: formatted
-        )
+        #expect(withoutPinyin.overlayPrimaryText == "hello")
 
-        #expect(system.contains("structures"))
-        #expect(system.contains("usage_notes"))
-        #expect(user.contains("grammar structures"))
-        #expect(user.contains("transliteration only"))
+        let russianOnly = StructuredFormattedText(
+            cleanedText: "",
+            pinyinText: "",
+            russianTranslation: "привет"
+        )
+        #expect(russianOnly.overlayPrimaryText == "привет")
     }
 }

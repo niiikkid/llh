@@ -32,7 +32,7 @@ struct TranslationOverlayTiming {
     }
 
     static func visibleTexts(for formattedText: StructuredFormattedText) -> [String] {
-        let primaryText = overlayPrimaryText(for: formattedText)
+        let primaryText = formattedText.overlayPrimaryText
         let secondaryText = formattedText.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if secondaryText.isEmpty || primaryText == secondaryText {
@@ -50,19 +50,5 @@ struct TranslationOverlayTiming {
                     .map(String.init)
             }
             .count
-    }
-
-    private static func overlayPrimaryText(for formattedText: StructuredFormattedText) -> String {
-        let trimmedPinyin = formattedText.pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedPinyin.isEmpty {
-            return trimmedPinyin
-        }
-
-        let trimmedCleaned = formattedText.cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedCleaned.isEmpty {
-            return trimmedCleaned
-        }
-
-        return formattedText.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

@@ -11,7 +11,7 @@ Phase 6 («OpenAI Integration Modernization») **завершена**. PR 1 (п�
 ## Слой Data/OpenAI
 
 ```text
-OpenAIService (Services/) — OpenAIServing facade only
+OpenAIService (Data/OpenAI/) — OpenAIServing facade only
   ├── OpenAIHTTPClient           — GET/POST /v1/*, errors, timeout, cancellation
   ├── OpenAIModelsService        — GET /models → [OpenAIModel]
   ├── OpenAIOCRService           — vision POST /chat/completions
@@ -121,10 +121,11 @@ Base URL: `https://api.openai.com/v1`. Default timeout: 120s.
 
 ## Следующий шаг
 
-**Phases 7–9 завершены** — prompt contracts и HTTP mapping tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup. Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
+**Phases 7–10 завершены** — prompt tests в [Phase 9](refactoring-phase-9-testing-strategy.md); unwired phrase/grammar API удалены в [Phase 10](refactoring-phase-10-cleanup.md). Опционально позже: Responses API migration.
 
 ## See Also
 
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `OpenAIService` в `Data/OpenAI/`, только `buildWordsStudyData`
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — `Phase9OpenAIPromptTests`, Phase 6 HTTP/OCR tests
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Vision vs OpenAI OCR polish, `OCRResult` (завершена)

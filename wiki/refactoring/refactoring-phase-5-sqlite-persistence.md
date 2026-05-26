@@ -96,12 +96,13 @@ let historyRepository = HistoryRepositoryBootstrap.makeRepository()
 
 ## Следующий шаг
 
-**Phases 6–9 завершены** — migration failure/bootstrap tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup ([roadmap](project-refactoring-roadmap.md)).
+**Phases 6–10 завершены** — migration tests в [Phase 9](refactoring-phase-9-testing-strategy.md); JSON backup сохранён в [Phase 10](refactoring-phase-10-cleanup.md).
 
-Опционально в рамках Phase 5: async save/load, UX при битом JSON.
+Опционально позже: async save/load, UX при битом JSON.
 
 ## See Also
 
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `HistoryPersistenceService` → `Data/Persistence/`
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — migration verification failure, bootstrap fallback
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — OCR/capture после persistence (завершена)

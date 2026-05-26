@@ -172,95 +172,11 @@ enum OpenAIPromptBuilder {
         )
     }
 
-    static func phrasesStudySystemPrompt(for targetLanguage: LearningLanguage) -> String {
-        """
-        You produce JSON only for stable phrase extraction.
-        Never use hieroglyphs or source script.
-        Use only pinyin/transliteration and Russian.
-        \(pinyinTonePromptParagraph(for: targetLanguage))
-        Return JSON object with key `entries`.
-        Each item has:
-        pinyin_text
-        russian_translation
-        Keep only stable or useful phrases, not isolated words.
-        """
-    }
-
-    static func phrasesStudyUserPrompt(
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) -> String {
-        """
-        Target language: \(openAIInstructionName(for: targetLanguage))
-        Cleaned text:
-        \(formattedText.cleanedText)
-
-        Pronunciation:
-        \(formattedText.pinyinText)
-
-        Translation:
-        \(formattedText.russianTranslation)
-
-        Extract stable phrases or reusable chunks.
-        """
-    }
-
-    static func grammarStudySystemPrompt(for targetLanguage: LearningLanguage) -> String {
-        """
-        You produce JSON only for grammar explanation.
-        Never use hieroglyphs or source script.
-        Use only pinyin/transliteration and Russian.
-        \(pinyinTonePromptParagraph(for: targetLanguage))
-        Return JSON object with key `structures`.
-        Each structure has:
-        title
-        explanation
-        usage_notes
-        examples
-        `examples` is an array of objects with:
-        pinyin_text
-        russian_translation
-        Explain simply, compactly, and clearly.
-        """
-    }
-
-    static func grammarStudyUserPrompt(
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) -> String {
-        """
-        Target language: \(openAIInstructionName(for: targetLanguage))
-        Cleaned text:
-        \(formattedText.cleanedText)
-
-        Pronunciation:
-        \(formattedText.pinyinText)
-
-        Translation:
-        \(formattedText.russianTranslation)
-
-        Find grammar structures that may confuse a learner.
-        For each structure:
-        - explain what it means in simple Russian
-        - explain where else it can be used
-        - give short examples with transliteration only
-        If there are multiple structures, return several.
-        """
-    }
-
     static func pinyinTonePromptLine(for targetLanguage: LearningLanguage) -> String {
         guard targetLanguage == .chinese || targetLanguage == .auto else {
             return "2a) If pinyin_text is empty, return empty string."
         }
 
         return "2a) If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
-    }
-
-    static func pinyinTonePromptParagraph(for targetLanguage: LearningLanguage) -> String {
-        guard targetLanguage == .chinese || targetLanguage == .auto else {
-            return "If transliteration is used, keep it readable and consistent."
-        }
-
-        return "If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
     }
 }

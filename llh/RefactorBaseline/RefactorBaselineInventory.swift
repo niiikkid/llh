@@ -127,23 +127,13 @@ enum RefactorBaselineInventory {
     case recognizeTextInImage
     case formatRecognizedText
     case buildWordsStudyData
-    case buildPhrasesStudyData
-    case buildGrammarStudyData
   }
 
   static let openAIPromptBuilders: [OpenAICallSite: String] = [
     .formatRecognizedText: "OpenAIPromptBuilder.formatRecognizedTextSystemPrompt/UserPrompt",
     .recognizeTextInImage: "OpenAIPromptBuilder.recognizeTextInImageUserPrompt",
     .buildWordsStudyData: "OpenAIPromptBuilder.wordsAnalysisPrompt(for:)",
-    .buildPhrasesStudyData: "OpenAIPromptBuilder.phrasesStudySystem/UserPrompt",
-    .buildGrammarStudyData: "OpenAIPromptBuilder.grammarStudySystem/UserPrompt",
     .fetchModels: "GET /v1/models (no prompt)",
-  ]
-
-  /// APIs present on `OpenAIService` but not wired from `MainViewModel` / UI (Phase 0 finding).
-  static let unwiredOpenAIStudyAPIs: [String] = [
-    "buildPhrasesStudyData",
-    "buildGrammarStudyData",
   ]
 
   /// Public actions on `TranslationOverlayCoordinator` (Phase 4).

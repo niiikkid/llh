@@ -165,7 +165,7 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 
 ### Границы (word study)
 
-- Phrase/grammar study (`buildPhrasesStudyData`, `buildGrammarStudyData`) вне scope — API не подключены к UI
+- Phrase/grammar study API удалены в Phase 10 (не были подключены к UI)
 - Загрузка только по запросу пользователя (`retryStudyAssistantDataForSelectedEntry` с `forceReload: true`)
 
 ### DI (word study)
@@ -289,10 +289,11 @@ Phase 3 завершена: `MainViewModel` делегирует все пере
 
 ## Следующий шаг
 
-Phase 3 завершена; **Phases 6–9 завершены** — use case integration tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup и product decisions ([roadmap](project-refactoring-roadmap.md)).
+Phase 3 завершена; **Phases 6–10 завершены** — integration tests в [Phase 9](refactoring-phase-9-testing-strategy.md); cleanup в [Phase 10](refactoring-phase-10-cleanup.md).
 
 ## See Also
 
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — phrase/grammar study API removed
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — capture/format/settings integration tests
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — split ContentView, per-VM status (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, cancellation, Infrastructure adapters (завершена)

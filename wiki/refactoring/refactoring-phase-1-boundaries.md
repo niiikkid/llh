@@ -79,6 +79,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 ## See Also
 
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `OpenAIService` и persistence paths после Phase 1
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — `AppDependencyContainer` smoke, repository fakes
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — split ContentView, per-VM status (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Infrastructure OCR/capture, cancellation (завершена)

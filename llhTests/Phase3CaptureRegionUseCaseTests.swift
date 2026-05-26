@@ -89,24 +89,6 @@ private struct FakeOpenAIServing: OpenAIServing {
     ) async throws -> WordStudyPayload {
         WordStudyPayload(entries: [])
     }
-
-    func buildPhrasesStudyData(
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) async throws -> PhraseStudyPayload {
-        PhraseStudyPayload(entries: [])
-    }
-
-    func buildGrammarStudyData(
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) async throws -> GrammarExplanationPayload {
-        GrammarExplanationPayload(structures: [])
-    }
 }
 
 private enum TestImageFactory {

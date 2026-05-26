@@ -43,16 +43,8 @@ struct RefactorBaselineTests {
   }
 
   @Test
-  func inventory_documentsUnwiredPhraseAndGrammarStudyAPIs() {
-    #expect(RefactorBaselineInventory.unwiredOpenAIStudyAPIs == [
-      "buildPhrasesStudyData",
-      "buildGrammarStudyData",
-    ])
-  }
-
-  @Test
   func inventory_openAICallSites_coverAllOpenAIServingMethods() {
-    #expect(RefactorBaselineInventory.OpenAICallSite.allCases.count == 6)
+    #expect(RefactorBaselineInventory.OpenAICallSite.allCases.count == 4)
     #expect(RefactorBaselineInventory.openAIPromptBuilders[.buildWordsStudyData] == "OpenAIPromptBuilder.wordsAnalysisPrompt(for:)")
   }
 

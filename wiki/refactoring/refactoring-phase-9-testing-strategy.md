@@ -84,10 +84,11 @@ xcodebuild -scheme llh -destination 'platform=macOS' test -only-testing:llhTests
 
 ## Следующий этап
 
-**Phase 10** — cleanup и product decisions (dead study paths, shims, roadmap §Phase 10).
+**Phase 10 завершена** — см. [Phase 10 Cleanup](refactoring-phase-10-cleanup.md).
 
 ## See Also
 
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — финальный этап refactor
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — `RefactorBaselineInventory` / characterization
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md)

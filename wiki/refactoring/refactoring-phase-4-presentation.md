@@ -255,10 +255,11 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 
 ## Следующий шаг
 
-Phases 5–9 завершены — UI smoke и `CaptureViewModel` tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup ([roadmap](project-refactoring-roadmap.md)).
+**Phases 5–10 завершены** — tests в [Phase 9](refactoring-phase-9-testing-strategy.md); cleanup в [Phase 10](refactoring-phase-10-cleanup.md).
 
 ## See Also
 
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — dead code removal, `overlayPrimaryText`
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — presentation-layer UI smoke
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — завершение split ContentView (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — CaptureViewModel permission/cancel polish (завершена)

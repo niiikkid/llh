@@ -14,6 +14,21 @@ struct StructuredFormattedText: Equatable, Codable {
         !cleanedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Основная строка для overlay и расчёта длительности: пиньинь → очищенный исходник → русский перевод.
+    var overlayPrimaryText: String {
+        let trimmedPinyin = pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPinyin.isEmpty {
+            return trimmedPinyin
+        }
+
+        let trimmedCleaned = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedCleaned.isEmpty {
+            return trimmedCleaned
+        }
+
+        return russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Основная строка в detail UI и overlay: пиньинь для китайского/авто с пиньинем, иначе очищенный исходник.
     func primaryDisplayLine(learningLanguage: LearningLanguage) -> String {
         if usesPinyinAsPrimary(learningLanguage: learningLanguage) {

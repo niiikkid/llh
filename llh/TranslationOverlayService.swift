@@ -42,7 +42,7 @@ final class TranslationOverlayService {
     func showTranslation(_ formattedText: StructuredFormattedText, duration: TimeInterval) {
         present(
             content: .translation(
-                primaryText: overlayPrimaryText(for: formattedText),
+                primaryText: formattedText.overlayPrimaryText,
                 secondaryText: formattedText.russianTranslation
             ),
             dismissAfter: duration,
@@ -53,7 +53,7 @@ final class TranslationOverlayService {
     func showPersistentLastTranslation(_ formattedText: StructuredFormattedText) {
         present(
             content: .translation(
-                primaryText: overlayPrimaryText(for: formattedText),
+                primaryText: formattedText.overlayPrimaryText,
                 secondaryText: formattedText.russianTranslation
             ),
             dismissAfter: nil,
@@ -115,20 +115,6 @@ final class TranslationOverlayService {
             return screenUnderMouse
         }
         return NSScreen.main ?? NSScreen.screens.first
-    }
-
-    private func overlayPrimaryText(for formattedText: StructuredFormattedText) -> String {
-        let trimmedPinyin = formattedText.pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedPinyin.isEmpty {
-            return trimmedPinyin
-        }
-
-        let trimmedCleaned = formattedText.cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedCleaned.isEmpty {
-            return trimmedCleaned
-        }
-
-        return formattedText.russianTranslation
     }
 }
 
