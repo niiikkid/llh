@@ -14,6 +14,31 @@ struct StructuredFormattedText: Equatable, Codable {
         !cleanedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Основная строка в detail UI и overlay: пиньинь для китайского/авто с пиньинем, иначе очищенный исходник.
+    func primaryDisplayLine(learningLanguage: LearningLanguage) -> String {
+        if usesPinyinAsPrimary(learningLanguage: learningLanguage) {
+            let trimmedPinyin = pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmedPinyin.isEmpty ? "—" : pinyinText
+        }
+        return cleanedText
+    }
+
+    /// Показывать очищенный исходник над основной строкой (китайский/авто с пиньинем).
+    func showsSourceCaptionAbovePrimary(learningLanguage: LearningLanguage) -> Bool {
+        usesPinyinAsPrimary(learningLanguage: learningLanguage)
+    }
+
+    func usesPinyinAsPrimary(learningLanguage: LearningLanguage) -> Bool {
+        switch learningLanguage {
+        case .chinese:
+            return true
+        case .auto:
+            return !pinyinText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .english, .spanish:
+            return false
+        }
+    }
+
     /// Текст источника для строки списка переводов: для китайской сессии и авто с непустым пиньинем — пиньинь, иначе очищенный исходник.
     func sessionListSourceDisplay(learningLanguage: LearningLanguage) -> String {
         let trimmedCleaned = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)

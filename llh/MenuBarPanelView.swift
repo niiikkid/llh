@@ -14,7 +14,7 @@ struct MenuBarPanelView: View {
             Text("Language Learning Helper")
                 .font(.headline)
 
-            Text(viewModel.statusMessage)
+            Text(viewModel.capture.statusMessage)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)

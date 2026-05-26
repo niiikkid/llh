@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26; Apple Vision documentation (Context7), 2026-05-26
 > Raw: [Phase 7 capture OCR permission completion](../../raw/refactoring/2026-05-26-phase-7-capture-ocr-permission-completion.md)
-> Updated: 2026-05-26
+> Updated: 2026-05-27
 
 ## Overview
 
@@ -51,7 +51,7 @@ Infrastructure/Capture/
 - Повторный hotkey во время `isProcessing` → `cancelActiveCapture()`
 - `CancellationError` → «Захват отменён»
 
-`ContentView`: кнопка «Запросить доступ» в permission GroupBox.
+`CapturePermissionBannerView` (Phase 8): кнопки «Запросить доступ», System Settings, «Проверить снова».
 
 ## Тесты
 
@@ -77,10 +77,11 @@ Infrastructure/Capture/
 
 ## Следующий шаг
 
-**Phase 8** — UI decomposition (`ContentView` split, feature views). См. [roadmap](project-refactoring-roadmap.md).
+**Phase 8 завершена** — см. [Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md). **Phase 9** — testing strategy ([roadmap](project-refactoring-roadmap.md)).
 
 ## See Also
 
+- [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md)
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md)
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md)

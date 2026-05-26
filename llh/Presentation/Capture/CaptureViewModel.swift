@@ -17,6 +17,7 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var isProcessing = false
     @Published private(set) var showPermissionHelp = false
     @Published private(set) var permissionStatus: ScreenRecordingPermissionStatus = .denied
+    @Published private(set) var statusMessage = "Нажмите shortcut и выделите область."
 
     private let permissionService: ScreenRecordingPermissionChecking
     private let captureRegionUseCase: CaptureRegionUseCase
@@ -27,7 +28,6 @@ final class CaptureViewModel: ObservableObject {
 
     private var activeCaptureTask: Task<Void, Never>?
 
-    private var reportStatus: (String) -> Void = { _ in }
     private var prepareForInterfaceCapture: () -> Void = {}
     private var syncSelectionToEditor: () -> Void = {}
     private var applyCapturePreviewWithoutEntry: (NSImage?) -> Void = { _ in }
@@ -49,10 +49,6 @@ final class CaptureViewModel: ObservableObject {
         self.translationOverlayService = translationOverlayService
         self.shouldUseCompactOverlay = shouldUseCompactOverlay
         refreshPermissionState()
-    }
-
-    func configureStatusReporting(_ reportStatus: @escaping (String) -> Void) {
-        self.reportStatus = reportStatus
     }
 
     func configurePrepareForInterfaceCapture(_ prepare: @escaping () -> Void) {
@@ -93,7 +89,7 @@ final class CaptureViewModel: ObservableObject {
         permissionStatus = permissionService.permissionStatus
         showPermissionHelp = !permissionStatus.isAuthorized
         if permissionStatus.isAuthorized {
-            reportStatus("Готово к захвату.")
+            publishStatus("Готово к захвату.")
         }
     }
 
@@ -101,9 +97,9 @@ final class CaptureViewModel: ObservableObject {
         _ = permissionService.requestPermission()
         refreshPermissionState()
         if permissionStatus.isAuthorized {
-            reportStatus("Доступ к Screen Recording предоставлен.")
+            publishStatus("Доступ к Screen Recording предоставлен.")
         } else {
-            reportStatus("Доступ не предоставлен. Включите приложение в System Settings.")
+            publishStatus("Доступ не предоставлен. Включите приложение в System Settings.")
         }
     }
 
@@ -116,7 +112,7 @@ final class CaptureViewModel: ObservableObject {
         activeCaptureTask?.cancel()
         activeCaptureTask = nil
         isProcessing = false
-        reportStatus("Захват отменён.")
+        publishStatus("Захват отменён.")
         clearOverlayAwaitingFormat()
     }
 
@@ -137,7 +133,7 @@ final class CaptureViewModel: ObservableObject {
         guard !isProcessing else { return }
 
         isProcessing = true
-        reportStatus("Выберите область на экране...")
+        publishStatus("Выберите область на экране...")
 
         defer {
             isProcessing = false
@@ -154,10 +150,10 @@ final class CaptureViewModel: ObservableObject {
             switch try await captureRegionUseCase.execute(configuration: configuration) {
             case .permissionDenied:
                 showPermissionHelp = true
-                reportStatus("Нет доступа к Screen Recording. Запросите доступ или откройте System Settings.")
+                publishStatus("Нет доступа к Screen Recording. Запросите доступ или откройте System Settings.")
             case .selectionCancelled:
                 showPermissionHelp = false
-                reportStatus("Выделение отменено.")
+                publishStatus("Выделение отменено.")
                 clearOverlayAwaitingFormat()
                 if source == .hotkey, shouldUseCompactOverlay() {
                     translationOverlayService.hide()
@@ -165,7 +161,7 @@ final class CaptureViewModel: ObservableObject {
             case .noTextFound(let image):
                 showPermissionHelp = false
                 applyCapturePreviewWithoutEntry(NSImage(cgImage: image, size: .zero))
-                reportStatus("Текст не найден.")
+                publishStatus("Текст не найден.")
                 clearOverlayAwaitingFormat()
                 if source == .hotkey, shouldUseCompactOverlay() {
                     translationOverlayService.showMessage(title: "Текст не найден", duration: 3)
@@ -178,7 +174,7 @@ final class CaptureViewModel: ObservableObject {
                 history.insertEntry(profileIndex: selectedProfileIndex, entry: entry)
                 syncSelectionToEditor()
                 history.persist()
-                reportStatus("Готово. Запись добавлена в историю. Форматирую текст...")
+                publishStatus("Готово. Запись добавлена в историю. Форматирую текст...")
                 if source == .hotkey, shouldUseCompactOverlay() {
                     translationOverlayService.showLoading()
                 }
@@ -186,14 +182,14 @@ final class CaptureViewModel: ObservableObject {
             }
         } catch is CancellationError {
             showPermissionHelp = false
-            reportStatus("Захват отменён.")
+            publishStatus("Захват отменён.")
             clearOverlayAwaitingFormat()
             if source == .hotkey, shouldUseCompactOverlay() {
                 translationOverlayService.hide()
             }
         } catch {
             showPermissionHelp = false
-            reportStatus("Ошибка: \(error.localizedDescription)")
+            publishStatus("Ошибка: \(error.localizedDescription)")
             clearOverlayAwaitingFormat()
             if source == .hotkey, shouldUseCompactOverlay() {
                 translationOverlayService.showMessage(
@@ -203,5 +199,9 @@ final class CaptureViewModel: ObservableObject {
                 )
             }
         }
+    }
+
+    private func publishStatus(_ message: String) {
+        statusMessage = message
     }
 }

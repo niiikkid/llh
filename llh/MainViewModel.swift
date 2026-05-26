@@ -9,8 +9,6 @@ import Foundation
 
 @MainActor
 final class MainViewModel: ObservableObject {
-    @Published var statusMessage = "Нажмите shortcut и выделите область."
-
     let settings: SettingsViewModel
     let history: HistoryViewModel
     let capture: CaptureViewModel
@@ -78,26 +76,11 @@ final class MainViewModel: ObservableObject {
                 }
             )
         )
-        settings.configureStatusReporting { [weak self] message in
-            self?.statusMessage = message
-        }
-        history.configureStatusReporting { [weak self] message in
-            self?.statusMessage = message
-        }
-        study.configureStatusReporting { [weak self] message in
-            self?.statusMessage = message
-        }
-        editor.configureStatusReporting { [weak self] message in
-            self?.statusMessage = message
-        }
         history.configureSelectionSync { [weak editor] in
             editor?.syncSelectionFromHistory()
         }
         history.configureNewProfileLanguagePersistence { [weak settings] language in
             settings?.setDefaultNewProfileLearningLanguage(language)
-        }
-        capture.configureStatusReporting { [weak self] message in
-            self?.statusMessage = message
         }
         capture.configurePrepareForInterfaceCapture { [weak self] in
             self?.closeTranslationOverlay()
@@ -133,18 +116,6 @@ final class MainViewModel: ObservableObject {
 
     func toggleLastTranslationOverlay() {
         overlay.toggleLastTranslation()
-    }
-
-    func retryStudyAssistantDataForSelectedEntry() {
-        study.retryStudyAssistantDataForSelectedEntry()
-    }
-
-    var selectedEntryStudyAssistantStatus: FormattingStatus? {
-        study.selectedEntryStudyAssistantStatus
-    }
-
-    var canRetryStudyAssistantData: Bool {
-        study.canRetryStudyAssistantData
     }
 
     private func subscribeToChildViewModelChanges(_ child: some ObservableObject) {

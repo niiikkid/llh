@@ -14,32 +14,32 @@ struct RefactorBaselineTests {
 
   @Test
   func inventory_mainViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.mainViewModelPublishedPropertyNames.count == 1)
+    #expect(RefactorBaselineInventory.mainViewModelPublishedPropertyNames.count == 0)
   }
 
   @Test
   func inventory_editorViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.editorViewModelPublishedPropertyNames.count == 4)
+    #expect(RefactorBaselineInventory.editorViewModelPublishedPropertyNames.count == 5)
   }
 
   @Test
   func inventory_studyViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.studyViewModelPublishedPropertyNames.count == 1)
+    #expect(RefactorBaselineInventory.studyViewModelPublishedPropertyNames.count == 2)
   }
 
   @Test
   func inventory_captureViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.captureViewModelPublishedPropertyNames.count == 2)
+    #expect(RefactorBaselineInventory.captureViewModelPublishedPropertyNames.count == 4)
   }
 
   @Test
   func inventory_historyViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.historyViewModelPublishedPropertyNames.count == 4)
+    #expect(RefactorBaselineInventory.historyViewModelPublishedPropertyNames.count == 5)
   }
 
   @Test
   func inventory_settingsViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.settingsViewModelPublishedPropertyNames.count == 7)
+    #expect(RefactorBaselineInventory.settingsViewModelPublishedPropertyNames.count == 8)
   }
 
   @Test

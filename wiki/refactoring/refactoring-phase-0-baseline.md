@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 0 baseline completion](../../raw/refactoring/2026-05-26-phase-0-baseline-completion.md)
-> Updated: 2026-05-26
+> Updated: 2026-05-27
 
 ## Overview
 
@@ -24,17 +24,19 @@ Phase 0 («Baseline And Safety Net») завершена: зафиксирова
 
 **Исходный снимок Phase 0:** 19 `@Published` на одном `MainViewModel`.
 
-**После Phase 4 inc. 5:** 1 на `MainViewModel` + 4 на `EditorViewModel` + 1 на `StudyViewModel` + 2 на `CaptureViewModel` + 4 на `HistoryViewModel` + 7 на `SettingsViewModel` (`RefactorBaselineInventory`).
+**После Phase 4 inc. 5:** 1 на `MainViewModel` + 4 на `EditorViewModel` + 1 на `StudyViewModel` + 2 на `CaptureViewModel` + 4 на `HistoryViewModel` + 7 на `SettingsViewModel`.
 
-Main: chrome (`statusMessage`). Editor: `recognizedText`, `formattedRecognizedText`, `capturedImage`, `isFormattingRecognizedText`.
+**После Phase 8:** 0 на `MainViewModel` + 5 на `EditorViewModel` + 2 на `StudyViewModel` + 4 на `CaptureViewModel` + 5 на `HistoryViewModel` + 8 на `SettingsViewModel` (`RefactorBaselineInventory`). На каждом feature VM добавлен `statusMessage`; menu bar читает `capture.statusMessage`.
 
-Study VM: `studyMaterials`.
+Editor: `recognizedText`, `formattedRecognizedText`, `capturedImage`, `isFormattingRecognizedText`, `statusMessage`.
 
-Capture VM: `isProcessing`, `showPermissionHelp`.
+Study VM: `studyMaterials`, `statusMessage`.
 
-History VM: `profiles`, `selectedProfileID`, `selectedEntryID`, `showsSessionReadingOverview`.
+Capture VM: `isProcessing`, `showPermissionHelp`, `permissionStatus`, `statusMessage`.
 
-Settings VM: OpenAI models/token, OCR engine, default profile language, overlay timing, `isLoadingOpenAIModels`.
+History VM: `profiles`, `selectedProfileID`, `selectedEntryID`, `showsSessionReadingOverview`, `statusMessage`.
+
+Settings VM: OpenAI models/token, OCR engine, default profile language, overlay timing, `isLoadingOpenAIModels`, `statusMessage`.
 
 ### Feature buckets (публичные действия)
 
@@ -44,7 +46,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - **History:** `updateSelectedText` (на `EditorViewModel`; координирует editor + `history.updateSelectedEntryText`)
 - **Profiles / session list:** на `HistoryViewModel` (`createProfile`, `selectProfile`, `deleteSelectedProfile`, `deleteSelectedEntry`, `selectEntry`, session reading)
 - **Overlay:** `TranslationOverlayCoordinator` (`close`, `toggleLastTranslation`, format-result handlers); Main — прокси `closeTranslationOverlay`, `toggleLastTranslationOverlay` для shortcuts
-- **Study (words):** `StudyViewModel.retryStudyAssistantDataForSelectedEntry`; Main — прокси `retryStudyAssistantDataForSelectedEntry`
+- **Study (words):** `StudyViewModel.retryStudyAssistantDataForSelectedEntry` (Phase 8: UI вызывает Study VM напрямую, без прокси Main)
 - **Session reading:** на `HistoryViewModel` (`toggleSessionReadingOverview`, `copySessionReadingOverviewToPasteboard`, `plainTextForSessionReadingCopy`)
 
 **Shortcuts:** `AppShortcutsCoordinator` в `App/`; handlers вызывают capture/settings/overlay на Main (не public API на feature ViewModels).
@@ -71,6 +73,8 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 **После Phase 4 inc. 5:** editor/format и 4 `@Published` — в `EditorViewModel` → `FormatCapturedTextUseCase`. `MainViewModel` (~157 строк) — фасад: `statusMessage`, shortcuts, overlay proxies.
 
+**После Phase 8:** `MainViewModel` (~129 строк) — композиция feature VMs + overlay shortcuts; без `@Published`. UI decomposition — см. [Phase 8](refactoring-phase-8-ui-decomposition.md).
+
 **Не подключены к UI:**
 
 - `buildPhrasesStudyData`
@@ -82,7 +86,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ### UI зависимости
 
-`llhApp` владеет `StateObject` `MainViewModel`; `ContentView` и `MenuBarPanelView` наблюдают Main; sidebar — `HistoryView(viewModel: main.history)`; настройки — `SettingsView(viewModel: main.settings)` в sheet; editor — `main.editor` (raw/formatted text, format retry); word study UI — `main.study.studyMaterials`; Screen Recording help и progress overlay — `main.capture`; menu bar capture — `main.capture.triggerCapture()`.
+`llhApp` владеет `StateObject` `MainViewModel`; `Presentation/Main/ContentView` и `MenuBarPanelView` наблюдают Main. Композиция UI: `MainChromeView`, `MainWorkspaceView`, `HistoryView`, `TranslationDetailPanelView`, `TranslationEditorView`, `StudyAssistantView`, `CapturePermissionBannerView`. Sidebar — `HistoryView(main.history)`; settings sheet — `SettingsView(main.settings)`; menu bar status — `main.capture.statusMessage`; capture — `main.capture.triggerCapture()`.
 
 ## Покрытие тестами (Phase 0)
 
@@ -107,6 +111,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ## See Also
 
+- [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — Phase 8 завершена: split ContentView, per-VM statusMessage
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Phase 7 завершена: `OCRResult`, Infrastructure OCR/capture, cancellation
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain, timeout
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence после baseline

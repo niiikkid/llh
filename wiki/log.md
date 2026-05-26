@@ -1,5 +1,20 @@
 # Wiki Log
 
+## [2026-05-27] lint | 0 issues found, 0 auto-fixed
+
+## [2026-05-27] ingest | Refactoring Phase 8 UI Decomposition (cascade)
+- Updated: Refactoring Phase 0 Baseline
+- Updated: Refactoring Phase 1 Boundaries And DI
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 5 SQLite Persistence
+- Updated: Refactoring Phase 6 OpenAI Integration
+- Updated: Refactoring Phase 7 OCR Capture Permission
+
+## [2026-05-27] ingest | Refactoring Phase 8 UI Decomposition
+- Updated: Refactoring Phase 7 OCR Capture Permission
+
 ## [2026-05-26] ingest | Refactoring Phase 7 OCR Capture Permission (cascade)
 - Updated: Refactoring Phase 0 Baseline
 - Updated: Refactoring Phase 1 Boundaries And DI

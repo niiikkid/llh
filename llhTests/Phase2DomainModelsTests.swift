@@ -29,6 +29,28 @@ struct Phase2DomainModelsTests {
   }
 
   @Test
+  func structuredFormattedText_primaryDisplayLine_usesPinyinForChinese() {
+    let formatted = StructuredFormattedText(
+      cleanedText: "你好",
+      pinyinText: "nǐ hǎo",
+      russianTranslation: "привет"
+    )
+    #expect(formatted.primaryDisplayLine(learningLanguage: .chinese) == "nǐ hǎo")
+    #expect(formatted.showsSourceCaptionAbovePrimary(learningLanguage: .chinese))
+  }
+
+  @Test
+  func structuredFormattedText_primaryDisplayLine_usesCleanedForEnglish() {
+    let formatted = StructuredFormattedText(
+      cleanedText: "Hello",
+      pinyinText: "",
+      russianTranslation: "Привет"
+    )
+    #expect(formatted.primaryDisplayLine(learningLanguage: .english) == "Hello")
+    #expect(!formatted.showsSourceCaptionAbovePrimary(learningLanguage: .english))
+  }
+
+  @Test
   func openAIPromptBuilder_formatRecognizedTextUserPrompt_includesRawText() {
     let prompt = OpenAIPromptBuilder.formatRecognizedTextUserPrompt(
       targetLanguage: .chinese,

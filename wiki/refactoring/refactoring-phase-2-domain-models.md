@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 2 domain models completion](../../raw/refactoring/2026-05-26-phase-2-domain-models-completion.md); [Phase 2 Data/OpenAI completion](../../raw/refactoring/2026-05-26-phase-2-data-openai-completion.md)
-> Updated: 2026-05-26
+> Updated: 2026-05-27
 
 ## Overview
 
@@ -22,7 +22,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 | `OCREngine.swift` | local / AI |
 | `OCRResult.swift` | Structured OCR: `text`, `lines`, `isEmpty` (Phase 7) |
 | `ScreenRecordingPermissionStatus.swift` | `.authorized` / `.denied` (Phase 7) |
-| `StructuredFormattedText.swift` | Очищенный текст, пиньинь, перевод |
+| `StructuredFormattedText.swift` | Очищенный текст, пиньинь, перевод; display helpers (Phase 8) |
 | `StudyMaterials.swift` | Study payloads, legacy `StudyAssistantData` decode |
 | `CapturedTextEntry.swift` | Запись истории, legacy `Codable`, `NSImage?` только in-memory |
 | `LearningProfile.swift` | Профиль, `LearningProfileKind`, default profile |
@@ -88,6 +88,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 - `LearningProfile.defaultProfile()` — `.auto`, `.default`, `isDefaultProfile`
 - `StructuredFormattedText.sessionListSourceDisplay` — пиньинь для `.chinese`
+- **Phase 8:** `primaryDisplayLine`, `usesPinyinAsPrimary`, `showsSourceCaptionAbovePrimary` — единая логика detail UI (раньше в `ContentView`)
 - `TranslationOverlayTiming.duration` — clamp минимума (1 с)
 - `openAIPromptBuilder_formatRecognizedTextUserPrompt_includesRawText`
 - `historyStoreSnapshot_roundtripsThroughJSON`
@@ -109,6 +110,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## See Also
 
+- [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — UI использует display helpers `StructuredFormattedText`
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, Infrastructure OCR/capture (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, models/OCR/translation/study services
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — SQLite слой для snapshot

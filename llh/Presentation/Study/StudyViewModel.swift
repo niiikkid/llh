@@ -9,11 +9,11 @@ import Foundation
 @MainActor
 final class StudyViewModel: ObservableObject {
     @Published private(set) var studyMaterials = StudyMaterials()
+    @Published private(set) var statusMessage = ""
 
     private let loadWordStudyUseCase: LoadWordStudyUseCase
     private let settings: SettingsViewModel
     private let history: HistoryViewModel
-    private var reportStatus: (String) -> Void = { _ in }
 
     init(
         loadWordStudyUseCase: LoadWordStudyUseCase,
@@ -23,10 +23,6 @@ final class StudyViewModel: ObservableObject {
         self.loadWordStudyUseCase = loadWordStudyUseCase
         self.settings = settings
         self.history = history
-    }
-
-    func configureStatusReporting(_ reportStatus: @escaping (String) -> Void) {
-        self.reportStatus = reportStatus
     }
 
     func applyStudyMaterialsFromEntry(_ materials: StudyMaterials) {
@@ -79,10 +75,10 @@ final class StudyViewModel: ObservableObject {
 
         switch loadWordStudyUseCase.preflight(request: request, configuration: configuration) {
         case .missingAPIKey:
-            reportStatus("Сначала сохраните OpenAI token.")
+            publishStatus("Сначала сохраните OpenAI token.")
             return
         case .missingModel:
-            reportStatus("Выберите модель OpenAI.")
+            publishStatus("Выберите модель OpenAI.")
             return
         case .skipped:
             return
@@ -122,7 +118,7 @@ final class StudyViewModel: ObservableObject {
         }
         syncStudyMaterialsToEditorIfSelected(entryID: entryID)
         history.persist()
-        reportStatus("Перевод слов готов.")
+        publishStatus("Перевод слов готов.")
     }
 
     private func applyWordStudyFailure(
@@ -138,7 +134,7 @@ final class StudyViewModel: ObservableObject {
         }
         syncStudyMaterialsToEditorIfSelected(entryID: entryID)
         history.persist()
-        reportStatus("Не удалось получить перевод слов: \(error.localizedDescription)")
+        publishStatus("Не удалось получить перевод слов: \(error.localizedDescription)")
     }
 
     private func syncStudyMaterialsToEditorIfSelected(entryID: CapturedTextEntry.ID) {
@@ -148,5 +144,9 @@ final class StudyViewModel: ObservableObject {
             return
         }
         studyMaterials = history.profiles[profileIndex].history[entryIndex].studyMaterials
+    }
+
+    private func publishStatus(_ message: String) {
+        statusMessage = message
     }
 }

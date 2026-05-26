@@ -2,11 +2,11 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 4 settings ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-settings-viewmodel-completion.md); [Phase 4 history ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-history-viewmodel-completion.md); [Phase 4 capture ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-capture-viewmodel-completion.md); [Phase 4 study and overlay completion](../../raw/refactoring/2026-05-26-phase-4-study-overlay-completion.md); [Phase 4 editor ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-editor-viewmodel-completion.md)
-> Updated: 2026-05-26
+> Updated: 2026-05-27
 
 ## Overview
 
-Phase 4 («Split Presentation Into Feature ViewModels») **завершена** по критериям roadmap. Слой `Presentation/` содержит feature ViewModels; `MainViewModel` — тонкий композиционный фасад (~157 строк, один `@Published` — `statusMessage`). Phase 5 подключила SQLite persistence через `HistoryRepositoryBootstrap` без изменения feature VMs — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md).
+Phase 4 («Split Presentation Into Feature ViewModels») **завершена** по критериям roadmap. Слой `Presentation/` содержит feature ViewModels; `MainViewModel` — композиционный фасад. **Phase 8** завершила decomposition SwiftUI views — см. [Phase 8](refactoring-phase-8-ui-decomposition.md). Phase 5 подключила SQLite persistence через `HistoryRepositoryBootstrap` без изменения feature VMs — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md).
 
 Целевая структура (roadmap):
 
@@ -241,16 +241,25 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 | `StudyViewModel` + overlay coordinator | выполнено |
 | `EditorViewModel` (format/editor state) | выполнено |
 | `MainViewModel` минимизирован | выполнено |
-| `ContentView` разбит по feature views | частично (History/Settings views; editor UI в ContentView) |
+| `ContentView` разбит по feature views | выполнено (Phase 8) |
 | Feature ViewModels владеют своим UI state | выполнено |
 | Shortcuts вне feature ViewModels | выполнено |
 
+## Phase 8 (UI decomposition, завершена)
+
+Критерий Phase 4 «ContentView split» закрыт в Phase 8:
+
+- `Presentation/Main/ContentView.swift` — тонкая композиция (~45 строк)
+- Feature views: `MainChromeView`, `MainWorkspaceView`, `TranslationDetailPanelView`, `TranslationEditorView`, `StudyAssistantView`, `SessionReadingOverviewView`, `CapturePermissionBannerView`
+- `statusMessage` перенесён с Main на feature ViewModels; Main без `@Published` (~129 строк)
+
 ## Следующий шаг
 
-Phase 5–7 завершены — [Phase 7](refactoring-phase-7-ocr-capture-permission.md). **Следующий этап — Phase 8** (UI decomposition, [roadmap](project-refactoring-roadmap.md)).
+Phase 5–8 завершены — [Phase 8](refactoring-phase-8-ui-decomposition.md). **Следующий этап — Phase 9** (testing strategy, [roadmap](project-refactoring-roadmap.md)).
 
 ## See Also
 
+- [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — завершение split ContentView (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — CaptureViewModel permission/cancel polish (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена (HTTP, models, OCR, translation/study, settings/keychain, timeout)
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — GRDB, миграция JSON→SQLite, bootstrap

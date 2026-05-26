@@ -23,9 +23,7 @@ enum RefactorBaselineInventory {
   }
 
   /// `@Published` properties on `MainViewModel` (inventory count for regression detection).
-  static let mainViewModelPublishedPropertyNames: [String] = [
-    "statusMessage",
-  ]
+  static let mainViewModelPublishedPropertyNames: [String] = []
 
   /// `@Published` properties on `EditorViewModel` (Phase 4 editor/format extraction).
   static let editorViewModelPublishedPropertyNames: [String] = [
@@ -33,11 +31,13 @@ enum RefactorBaselineInventory {
     "formattedRecognizedText",
     "capturedImage",
     "isFormattingRecognizedText",
+    "statusMessage",
   ]
 
   /// `@Published` properties on `StudyViewModel` (Phase 4 study extraction).
   static let studyViewModelPublishedPropertyNames: [String] = [
     "studyMaterials",
+    "statusMessage",
   ]
 
   /// `@Published` properties on `CaptureViewModel` (Phase 4 capture extraction).
@@ -45,6 +45,7 @@ enum RefactorBaselineInventory {
     "isProcessing",
     "showPermissionHelp",
     "permissionStatus",
+    "statusMessage",
   ]
 
   /// `@Published` properties on `HistoryViewModel` (Phase 4 history extraction).
@@ -53,6 +54,7 @@ enum RefactorBaselineInventory {
     "selectedProfileID",
     "selectedEntryID",
     "showsSessionReadingOverview",
+    "statusMessage",
   ]
 
   /// `@Published` properties on `SettingsViewModel` (Phase 4 settings extraction).
@@ -64,6 +66,7 @@ enum RefactorBaselineInventory {
     "translationOverlayMinimumDuration",
     "translationOverlaySecondsPerWord",
     "isLoadingOpenAIModels",
+    "statusMessage",
   ]
 
   /// Public actions on `MainViewModel` grouped by feature bucket.
@@ -79,9 +82,7 @@ enum RefactorBaselineInventory {
       "toggleLastTranslationOverlay",
     ],
     .shortcuts: [],
-    .studyMaterial: [
-      "retryStudyAssistantDataForSelectedEntry",
-    ],
+    .studyMaterial: [],
     .sessionReading: [],
   ]
 
@@ -183,7 +184,7 @@ enum RefactorBaselineInventory {
   /// SwiftUI / App entry points that hold or observe `MainViewModel`.
   static let mainViewModelUIConsumers: [String] = [
     "llhApp (StateObject owner)",
-    "ContentView",
+    "Presentation/Main/ContentView",
     "MenuBarPanelView",
     "SettingsView (via MainViewModel.settings)",
     "HistoryView (via MainViewModel.history)",

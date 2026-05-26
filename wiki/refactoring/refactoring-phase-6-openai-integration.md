@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26; OpenAI API documentation (Context7), 2026-05-26
 > Raw: [Phase 6 OpenAI HTTP client completion](../../raw/refactoring/2026-05-26-phase-6-openai-http-client-completion.md); [Phase 6 OpenAI models service completion](../../raw/refactoring/2026-05-26-phase-6-openai-models-service-completion.md); [Phase 6 OpenAI OCR service completion](../../raw/refactoring/2026-05-26-phase-6-openai-ocr-service-completion.md); [Phase 6 translation and study services completion](../../raw/refactoring/2026-05-26-phase-6-translation-study-services-completion.md); [Phase 6 settings/keychain and timeout completion](../../raw/refactoring/2026-05-26-phase-6-settings-keychain-timeout-completion.md)
-> Updated: 2026-05-26
+> Updated: 2026-05-27
 
 ## Overview
 
@@ -121,10 +121,11 @@ Base URL: `https://api.openai.com/v1`. Default timeout: 120s.
 
 ## Следующий шаг
 
-**Phase 7 завершена** — см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md). **Phase 8** — UI decomposition. Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
+**Phase 7–8 завершены** — см. [Phase 8](refactoring-phase-8-ui-decomposition.md). **Phase 9** — testing strategy. Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
 
 ## See Also
 
+- [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Vision vs OpenAI OCR polish, `OCRResult` (завершена)
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI, repositories, `AppDependencyContainer`
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md)

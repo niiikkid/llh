@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 1 boundaries and DI completion](../../raw/refactoring/2026-05-26-phase-1-boundaries-and-di-completion.md)
-> Updated: 2026-05-26
+> Updated: 2026-05-27
 
 ## Overview
 
@@ -48,14 +48,15 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 - **Phase 6 (завершена):** `live()` — один `OpenAIHTTPClient` (timeout 120s), `OpenAIOCRService` + `OpenAIService(httpClient:ocrService:)` (чистый фасад); `makeCaptureUseCases(..., openAIOCRService:)` для `RecognizeTextUseCase`. Settings/keychain types — `Data/OpenAI/`, не в `OpenAIService.swift` (см. [Phase 6](refactoring-phase-6-openai-integration.md)).
 - **Phase 7 (завершена):** `VisionOCRService` + `ScreenCaptureKitCaptureService` в `live()`; `RecognizeTextUseCase` — `Sendable`, возвращает `OCRResult` (см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md)).
 
-Точки входа: `llhApp` и SwiftUI preview в `ContentView` используют `AppDependencyContainer.live().makeMainViewModel()`.
+Точки входа: `llhApp` и SwiftUI preview в `Presentation/Main/ContentView` используют `AppDependencyContainer.live().makeMainViewModel()`.
 
 ## MainViewModel (состояние после Phase 3 / Phase 4)
 
 - Единственный designated init: `init(dependencies: AppDependencyContainer)`.
 - Repositories и `OpenAIServing` не инжектируются напрямую — только use cases и overlay service.
 - `TranslationOverlayService` остаётся конкретным типом в контейнере; lifecycle overlay после format — `TranslationOverlayCoordinator` (Phase 4 inc. 4).
-- **Phase 4 (завершена):** `let settings`, `history`, `capture`, `study`, `editor`; private `TranslationOverlayCoordinator`; `AppShortcutsCoordinator` в `init`. Main ~157 строк, один `@Published` (`statusMessage`). `FormatCapturedTextUseCase` — в `EditorViewModel`, не в Main.
+- **Phase 4 (завершена):** `let settings`, `history`, `capture`, `study`, `editor`; private `TranslationOverlayCoordinator`; `AppShortcutsCoordinator` в `init`. `FormatCapturedTextUseCase` — в `EditorViewModel`, не в Main.
+- **Phase 8 (завершена):** Main ~129 строк, **без `@Published`**; `statusMessage` на feature ViewModels; UI — `Presentation/Main/` + feature views — см. [Phase 8](refactoring-phase-8-ui-decomposition.md).
 
 ## Покрытие тестами (Phase 1)
 
@@ -78,6 +79,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 ## See Also
 
+- [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — split ContentView, per-VM status (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Infrastructure OCR/capture, cancellation (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — OpenAI modernization (завершена)
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — `SQLiteHistoryRepository`, bootstrap

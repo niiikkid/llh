@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 3 capture use cases completion](../../raw/refactoring/2026-05-26-phase-3-capture-use-cases-completion.md); [Phase 3 format captured text completion](../../raw/refactoring/2026-05-26-phase-3-format-captured-text-completion.md); [Phase 3 manage history use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-history-use-case-completion.md); [Phase 3 manage profiles use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-profiles-use-case-completion.md); [Phase 3 load word study use case completion](../../raw/refactoring/2026-05-26-phase-3-load-word-study-use-case-completion.md); [Phase 3 manage OpenAI settings use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-openai-settings-use-case-completion.md)
-> Updated: 2026-05-26
+> Updated: 2026-05-27
 
 ## Overview
 
@@ -289,10 +289,11 @@ Phase 3 завершена: `MainViewModel` делегирует все пере
 
 ## Следующий шаг
 
-Phase 3 завершена; **Phase 6–7 завершены** — см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md). Следующий этап — **Phase 8** (UI decomposition) в [roadmap](project-refactoring-roadmap.md).
+Phase 3 завершена; **Phase 6–8 завершены** — см. [Phase 8](refactoring-phase-8-ui-decomposition.md). Следующий этап — **Phase 9** (testing strategy) в [roadmap](project-refactoring-roadmap.md).
 
 ## See Also
 
+- [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — split ContentView, per-VM status (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, cancellation, Infrastructure adapters (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence за тем же protocol

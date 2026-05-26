@@ -16,10 +16,10 @@ final class SettingsViewModel: ObservableObject {
     @Published var translationOverlayMinimumDuration: Double = 3
     @Published var translationOverlaySecondsPerWord: Double = 0.33
     @Published private(set) var isLoadingOpenAIModels = false
+    @Published private(set) var statusMessage = ""
 
     private let manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
     private let translationOverlayService: TranslationOverlayService
-    private var reportStatus: (String) -> Void = { _ in }
 
     init(
         manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase,
@@ -28,10 +28,6 @@ final class SettingsViewModel: ObservableObject {
         self.manageOpenAISettingsUseCase = manageOpenAISettingsUseCase
         self.translationOverlayService = translationOverlayService
         applySnapshot(manageOpenAISettingsUseCase.loadSettingsSnapshot())
-    }
-
-    func configureStatusReporting(_ reportStatus: @escaping (String) -> Void) {
-        self.reportStatus = reportStatus
     }
 
     var hasOpenAIToken: Bool {
@@ -45,7 +41,7 @@ final class SettingsViewModel: ObservableObject {
     func validateAndSaveOpenAIToken(_ token: String) async {
         switch manageOpenAISettingsUseCase.preflightValidateAndSaveAPIKey(token) {
         case .emptyToken:
-            reportStatus("Введите OpenAI token.")
+            publishStatus("Введите OpenAI token.")
             return
         case let .ready(trimmedToken):
             isLoadingOpenAIModels = true
@@ -58,9 +54,9 @@ final class SettingsViewModel: ObservableObject {
                 )
                 availableOpenAIModels = result.models
                 selectedOpenAIModelID = result.selectedModelID
-                reportStatus("Подключение к OpenAI успешно. Моделей: \(result.models.count).")
+                publishStatus("Подключение к OpenAI успешно. Моделей: \(result.models.count).")
             } catch {
-                reportStatus("OpenAI: \(error.localizedDescription)")
+                publishStatus("OpenAI: \(error.localizedDescription)")
             }
         }
     }
@@ -68,7 +64,7 @@ final class SettingsViewModel: ObservableObject {
     func refreshOpenAIModels() async {
         switch manageOpenAISettingsUseCase.preflightRefreshModels() {
         case .missingAPIKey:
-            reportStatus("Сначала сохраните OpenAI token.")
+            publishStatus("Сначала сохраните OpenAI token.")
         case let .ready(trimmedToken):
             await validateAndSaveOpenAIToken(trimmedToken)
         }
@@ -77,23 +73,23 @@ final class SettingsViewModel: ObservableObject {
     func deleteOpenAIToken() {
         do {
             try manageOpenAISettingsUseCase.deleteAPIKey()
-            reportStatus("Токен OpenAI удален.")
+            publishStatus("Токен OpenAI удален.")
         } catch {
-            reportStatus("Не удалось удалить OpenAI token: \(error.localizedDescription)")
+            publishStatus("Не удалось удалить OpenAI token: \(error.localizedDescription)")
         }
     }
 
     func selectOpenAIModel(_ id: String?) {
         selectedOpenAIModelID = manageOpenAISettingsUseCase.persistSelectedModelID(id)
         if let id {
-            reportStatus("Выбрана модель OpenAI: \(id)")
+            publishStatus("Выбрана модель OpenAI: \(id)")
         }
     }
 
     func selectOCREngine(_ engine: OCREngine, showOverlay: Bool = false) {
         let previousEngine = selectedOCREngine
         selectedOCREngine = manageOpenAISettingsUseCase.persistOCREngine(engine)
-        reportStatus("Движок распознавания: \(engine.title).")
+        publishStatus("Движок распознавания: \(engine.title).")
         guard showOverlay, shouldUseCompactOverlay else { return }
         translationOverlayService.showMessage(
             title: previousEngine.title + " ->",
@@ -143,5 +139,9 @@ final class SettingsViewModel: ObservableObject {
 
     private var shouldUseCompactOverlay: Bool {
         !NSApp.isActive
+    }
+
+    private func publishStatus(_ message: String) {
+        statusMessage = message
     }
 }

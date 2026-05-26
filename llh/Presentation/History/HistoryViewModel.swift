@@ -13,11 +13,11 @@ final class HistoryViewModel: ObservableObject {
     @Published var selectedProfileID: LearningProfile.ID?
     @Published var selectedEntryID: CapturedTextEntry.ID?
     @Published private(set) var showsSessionReadingOverview = false
+    @Published private(set) var statusMessage = ""
 
     private let manageHistoryUseCase: ManageHistoryUseCase
     private let manageProfilesUseCase: ManageProfilesUseCase
     private let defaultLearningLanguage: () -> LearningLanguage
-    private var reportStatus: (String) -> Void = { _ in }
     private var onSelectionChanged: () -> Void = {}
     private var onPersistDefaultLanguageForNewProfile: (LearningLanguage) -> Void = { _ in }
 
@@ -29,10 +29,6 @@ final class HistoryViewModel: ObservableObject {
         self.manageHistoryUseCase = manageHistoryUseCase
         self.manageProfilesUseCase = manageProfilesUseCase
         self.defaultLearningLanguage = defaultLearningLanguage
-    }
-
-    func configureStatusReporting(_ reportStatus: @escaping (String) -> Void) {
-        self.reportStatus = reportStatus
     }
 
     func configureSelectionSync(_ onSelectionChanged: @escaping () -> Void) {
@@ -114,7 +110,7 @@ final class HistoryViewModel: ObservableObject {
             applySession(loaded)
             onSelectionChanged()
         } catch {
-            reportStatus("Не удалось загрузить историю: \(error.localizedDescription)")
+            publishStatus("Не удалось загрузить историю: \(error.localizedDescription)")
         }
     }
 
@@ -122,7 +118,7 @@ final class HistoryViewModel: ObservableObject {
         do {
             try manageHistoryUseCase.saveSession(session)
         } catch {
-            reportStatus("Не удалось сохранить историю: \(error.localizedDescription)")
+            publishStatus("Не удалось сохранить историю: \(error.localizedDescription)")
         }
     }
 
@@ -168,7 +164,7 @@ final class HistoryViewModel: ObservableObject {
         applySession(updated)
         onSelectionChanged()
         persist()
-        reportStatus("Перевод удален.")
+        publishStatus("Перевод удален.")
     }
 
     func createProfile(named rawName: String, learningLanguage: LearningLanguage) {
@@ -182,7 +178,7 @@ final class HistoryViewModel: ObservableObject {
         applySession(updated)
         onSelectionChanged()
         persist()
-        reportStatus("Профиль \"\(profile.name)\" создан для языка \(learningLanguage.title.lowercased()).")
+        publishStatus("Профиль \"\(profile.name)\" создан для языка \(learningLanguage.title.lowercased()).")
     }
 
     func selectProfile(_ id: LearningProfile.ID?) {
@@ -192,7 +188,7 @@ final class HistoryViewModel: ObservableObject {
         applySession(updated)
         onSelectionChanged()
         if let activeProfile {
-            reportStatus("Выбрана история \"\(activeProfile.name)\" (\(activeProfile.learningLanguage.title.lowercased())).")
+            publishStatus("Выбрана история \"\(activeProfile.name)\" (\(activeProfile.learningLanguage.title.lowercased())).")
         }
     }
 
@@ -203,9 +199,9 @@ final class HistoryViewModel: ObservableObject {
             applySession(updated)
             onSelectionChanged()
             persist()
-            reportStatus("Профиль \"\(removedName)\" удален.")
+            publishStatus("Профиль \"\(removedName)\" удален.")
         case .cannotDeleteDefaultProfile:
-            reportStatus("Сессию Default удалить нельзя.")
+            publishStatus("Сессию Default удалить нельзя.")
         case .noSelectedProfile:
             break
         }
@@ -249,5 +245,9 @@ final class HistoryViewModel: ObservableObject {
         items
             .map { "\($0.displaySourceLine)\n\($0.displayTranslationLine)" }
             .joined(separator: "\n\n")
+    }
+
+    private func publishStatus(_ message: String) {
+        statusMessage = message
     }
 }

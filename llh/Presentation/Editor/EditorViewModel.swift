@@ -13,13 +13,13 @@ final class EditorViewModel: ObservableObject {
     @Published var formattedRecognizedText: StructuredFormattedText?
     @Published var capturedImage: NSImage?
     @Published private(set) var isFormattingRecognizedText = false
+    @Published private(set) var statusMessage = ""
 
     private let formatCapturedTextUseCase: FormatCapturedTextUseCase
     private let settings: SettingsViewModel
     private let history: HistoryViewModel
     private let study: StudyViewModel
     private let overlay: TranslationOverlayCoordinator
-    private var reportStatus: (String) -> Void = { _ in }
 
     init(
         formatCapturedTextUseCase: FormatCapturedTextUseCase,
@@ -33,10 +33,6 @@ final class EditorViewModel: ObservableObject {
         self.history = history
         self.study = study
         self.overlay = overlay
-    }
-
-    func configureStatusReporting(_ reportStatus: @escaping (String) -> Void) {
-        self.reportStatus = reportStatus
     }
 
     func updateSelectedText(_ newText: String) {
@@ -119,11 +115,11 @@ final class EditorViewModel: ObservableObject {
 
         switch formatCapturedTextUseCase.preflight(request: request, configuration: configuration) {
         case .missingAPIKey:
-            reportStatus("Сначала сохраните OpenAI token.")
+            publishStatus("Сначала сохраните OpenAI token.")
             overlay.handleFormattingPreflightFailure(entryID: entryID, title: "Сначала сохраните OpenAI token")
             return
         case .missingModel:
-            reportStatus("Выберите модель OpenAI.")
+            publishStatus("Выберите модель OpenAI.")
             overlay.handleFormattingPreflightFailure(entryID: entryID, title: "Выберите модель OpenAI")
             return
         case .skipped:
@@ -159,7 +155,7 @@ final class EditorViewModel: ObservableObject {
             formattedRecognizedText = formatted
         }
         history.persist()
-        reportStatus("Форматирование завершено.")
+        publishStatus("Форматирование завершено.")
         overlay.handleFormattingSuccess(entryID: entryID, formatted: formatted)
     }
 
@@ -176,7 +172,7 @@ final class EditorViewModel: ObservableObject {
             formattedRecognizedText = nil
         }
         history.persist()
-        reportStatus("Не удалось отформатировать текст: \(error.localizedDescription)")
+        publishStatus("Не удалось отформатировать текст: \(error.localizedDescription)")
         overlay.handleFormattingFailure(entryID: entryID, error: error)
     }
 
@@ -195,5 +191,9 @@ final class EditorViewModel: ObservableObject {
 
     private func endFormattingEntry() {
         isFormattingRecognizedText = false
+    }
+
+    private func publishStatus(_ message: String) {
+        statusMessage = message
     }
 }
