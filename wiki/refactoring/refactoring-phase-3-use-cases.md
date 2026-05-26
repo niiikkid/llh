@@ -289,10 +289,12 @@ Phase 3 завершена: `MainViewModel` делегирует все пере
 
 ## Следующий шаг
 
-**Phase 5** — миграция истории на SQLite — см. [Roadmap](project-refactoring-roadmap.md). Phase 4 завершена — [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md).
+`ManageHistoryUseCase` → `HistoryRepository` (SQLite) — [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6** (PR 2–3): `OpenAIHTTPClient` + `OpenAIModelsService`; `ManageOpenAISettingsUseCase` по-прежнему через `OpenAIServing.fetchModels` — [Phase 6](refactoring-phase-6-openai-integration.md).
 
 ## See Also
 
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — HTTP + models services; `OpenAIServing` boundary сохранён
+- [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence за тем же protocol
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена (все 5 инкрементов)
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — протоколы и контейнер

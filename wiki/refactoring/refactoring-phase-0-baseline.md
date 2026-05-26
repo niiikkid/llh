@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. Поведение приложения для пользователя не менялось. Phase 1–4 завершены — см. [Phase 4](refactoring-phase-4-presentation.md).
+Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. `HistoryEntryLoadRepair` по-прежнему применяется при load через `ManageHistoryUseCase` (JSON и SQLite). Phase 1–5 — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md).
 
 ## Артефакты в коде
 
@@ -76,7 +76,9 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - `buildPhrasesStudyData`
 - `buildGrammarStudyData`
 
-Промпты: `wordsAnalysisPrompt(for:)` — централизован; format/recognize/phrases/grammar — inline в `OpenAIService` (кандидаты на extract в Phase 6).
+Промпты: `OpenAIPromptBuilder` (Phase 2). HTTP: `OpenAIHTTPClient` (PR 2). Models listing: `OpenAIModelsService` (PR 3). `OpenAIService` — фасад `OpenAIServing` (DTO/mapping/settings).
+
+**Phase 6:** transport + models в `Data/OpenAI/`; 429 → `rateLimited`; `GET /v1/models` для settings/validation ключа; endpoint без изменений.
 
 ### UI зависимости
 
@@ -91,7 +93,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - Default profile всегда на индексе 0 после load
 - Repair прерванного formatting / word study
 - Persistence OCR engine (`OpenAISettingsStore.selectedOCREngineRawValue`)
-- `OpenAIPromptBuilder.formattingRules` / `wordsAnalysisPrompt` / `OpenAIServiceError` descriptions
+- `OpenAIPromptBuilder.formattingRules` / `wordsAnalysisPrompt` / `OpenAIServiceError` descriptions (вкл. `rateLimited`)
 
 Ранее существующие тесты в `llhTests.swift` (overlay timing, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
 
@@ -105,6 +107,8 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ## See Also
 
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, `OpenAIModelsService`
+- [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence после baseline
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`

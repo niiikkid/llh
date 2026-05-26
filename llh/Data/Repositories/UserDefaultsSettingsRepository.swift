@@ -5,7 +5,7 @@
 
 import Foundation
 
-struct UserDefaultsSettingsRepository: SettingsRepository {
+final class UserDefaultsSettingsRepository: SettingsRepository {
     private var store: OpenAISettingsStore
 
     init(store: OpenAISettingsStore = OpenAISettingsStore()) {

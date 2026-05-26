@@ -8,6 +8,7 @@ import Foundation
 enum OpenAIServiceError: LocalizedError {
     case invalidTokenFormat
     case unauthorized
+    case rateLimited
     case unexpectedStatusCode(Int)
     case invalidResponse
     case noModelsFound
@@ -24,6 +25,8 @@ enum OpenAIServiceError: LocalizedError {
             return "Токен пустой или имеет неверный формат."
         case .unauthorized:
             return "Не удалось авторизоваться в OpenAI. Проверьте API token."
+        case .rateLimited:
+            return "OpenAI временно ограничил число запросов. Подождите и повторите попытку."
         case .unexpectedStatusCode(let code):
             return "OpenAI вернул ошибку (\(code))."
         case .invalidResponse:

@@ -30,13 +30,13 @@ struct FetchAndPersistModelsResult: Sendable {
 }
 
 @MainActor
-struct ManageOpenAISettingsUseCase {
-    private let settingsRepository: SettingsRepository
+final class ManageOpenAISettingsUseCase {
+    private var settingsRepository: any SettingsRepository
     private let apiKeyRepository: APIKeyRepository
     private let openAIService: OpenAIServing
 
     init(
-        settingsRepository: SettingsRepository,
+        settingsRepository: any SettingsRepository,
         apiKeyRepository: APIKeyRepository,
         openAIService: OpenAIServing
     ) {

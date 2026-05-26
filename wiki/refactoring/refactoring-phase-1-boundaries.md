@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2–4 завершены; Phase 4 композирует feature VMs (`Settings`, `History`, `Capture`, `Study`, `Editor`) и `TranslationOverlayCoordinator` из того же use cases и DI-графа; hotkeys — `AppShortcutsCoordinator` — см. [Phase 4](refactoring-phase-4-presentation.md).
+Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2–5: `HistoryRepository` реализован как `JSONHistoryRepository` + `SQLiteHistoryRepository`; live wiring — `HistoryRepositoryBootstrap` — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md). Phase 4 композирует feature VMs и `AppShortcutsCoordinator` — см. [Phase 4](refactoring-phase-4-presentation.md).
 
 ## Направление зависимостей
 
@@ -75,6 +75,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 ## See Also
 
+- [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — `SQLiteHistoryRepository`, bootstrap
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена (включая `EditorViewModel`)
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — Domain/Models и Data/OpenAI границы

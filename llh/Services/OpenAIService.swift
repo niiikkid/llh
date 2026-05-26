@@ -9,10 +9,18 @@ import ImageIO
 import Security
 
 struct OpenAIService: OpenAIServing {
-    private let session: URLSession
+    private let httpClient: OpenAIHTTPClient
+    private let modelsService: OpenAIModelsService
 
     init(session: URLSession = .shared) {
-        self.session = session
+        let httpClient = OpenAIHTTPClient(session: session)
+        self.httpClient = httpClient
+        self.modelsService = OpenAIModelsService(httpClient: httpClient)
+    }
+
+    init(httpClient: OpenAIHTTPClient) {
+        self.httpClient = httpClient
+        self.modelsService = OpenAIModelsService(httpClient: httpClient)
     }
 
     func recognizeTextInImage(
@@ -20,19 +28,12 @@ struct OpenAIService: OpenAIServing {
         modelID: String,
         image: CGImage
     ) async throws -> String {
-        let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty, token.hasPrefix("sk-") else {
-            throw OpenAIServiceError.invalidTokenFormat
-        }
         guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw OpenAIServiceError.invalidResponse
         }
         guard let imageData = Self.jpegData(from: image),
               !imageData.isEmpty else {
             throw OpenAIServiceError.invalidImageData
-        }
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
-            throw OpenAIServiceError.invalidResponse
         }
 
         let imageBase64 = imageData.base64EncodedString()
@@ -50,38 +51,12 @@ struct OpenAIService: OpenAIServing {
             ]
         )
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch let error as URLError {
-            switch error.code {
-            case .cannotFindHost, .dnsLookupFailed:
-                throw OpenAIServiceError.hostNotFound
-            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
-                throw OpenAIServiceError.networkUnavailable
-            default:
-                throw error
-            }
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw OpenAIServiceError.invalidResponse
-        }
-        if httpResponse.statusCode == 401 {
-            throw OpenAIServiceError.unauthorized
-        }
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
-        }
-
-        let decoded = try JSONDecoder().decode(VisionChatCompletionsResponse.self, from: data)
+        let data = try await httpClient.post(
+            path: "/chat/completions",
+            apiKey: apiKey,
+            body: requestBody
+        )
+        let decoded = try httpClient.decode(data, as: VisionChatCompletionsResponse.self)
         let recognizedText = decoded.choices.first?.message.content
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !recognizedText.isEmpty else {
@@ -93,55 +68,7 @@ struct OpenAIService: OpenAIServing {
     }
 
     func fetchModels(apiKey: String) async throws -> [OpenAIModel] {
-        let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty, token.hasPrefix("sk-") else {
-            throw OpenAIServiceError.invalidTokenFormat
-        }
-
-        guard let url = URL(string: "https://api.openai.com/v1/models") else {
-            throw OpenAIServiceError.invalidResponse
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch let error as URLError {
-            switch error.code {
-            case .cannotFindHost, .dnsLookupFailed:
-                throw OpenAIServiceError.hostNotFound
-            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
-                throw OpenAIServiceError.networkUnavailable
-            default:
-                throw error
-            }
-        }
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw OpenAIServiceError.invalidResponse
-        }
-
-        if httpResponse.statusCode == 401 {
-            throw OpenAIServiceError.unauthorized
-        }
-
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
-        }
-
-        let decoded = try JSONDecoder().decode(OpenAIModelsResponse.self, from: data)
-        let models = decoded.data
-            .map { OpenAIModel(id: $0.id) }
-            .sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending }
-
-        guard !models.isEmpty else {
-            throw OpenAIServiceError.noModelsFound
-        }
-        return models
+        try await modelsService.fetchModels(apiKey: apiKey)
     }
 
     func formatRecognizedText(
@@ -150,15 +77,7 @@ struct OpenAIService: OpenAIServing {
         targetLanguage: LearningLanguage,
         rawText: String
     ) async throws -> StructuredFormattedText {
-        let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty, token.hasPrefix("sk-") else {
-            throw OpenAIServiceError.invalidTokenFormat
-        }
         guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw OpenAIServiceError.invalidResponse
-        }
-
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
             throw OpenAIServiceError.invalidResponse
         }
 
@@ -180,38 +99,12 @@ struct OpenAIService: OpenAIServing {
             ]
         )
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch let error as URLError {
-            switch error.code {
-            case .cannotFindHost, .dnsLookupFailed:
-                throw OpenAIServiceError.hostNotFound
-            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
-                throw OpenAIServiceError.networkUnavailable
-            default:
-                throw error
-            }
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw OpenAIServiceError.invalidResponse
-        }
-        if httpResponse.statusCode == 401 {
-            throw OpenAIServiceError.unauthorized
-        }
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
-        }
-
-        let decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: data)
+        let data = try await httpClient.post(
+            path: "/chat/completions",
+            apiKey: apiKey,
+            body: requestBody
+        )
+        let decoded = try httpClient.decode(data, as: ChatCompletionsResponse.self)
         let content = decoded.choices.first?.message.content
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !content.isEmpty else {
@@ -334,14 +227,7 @@ struct OpenAIService: OpenAIServing {
         systemPrompt: String,
         userPrompt: String
     ) async throws -> Response {
-        let token = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty, token.hasPrefix("sk-") else {
-            throw OpenAIServiceError.invalidTokenFormat
-        }
         guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw OpenAIServiceError.invalidResponse
-        }
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
             throw OpenAIServiceError.invalidResponse
         }
 
@@ -354,38 +240,12 @@ struct OpenAIService: OpenAIServing {
             ]
         )
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch let error as URLError {
-            switch error.code {
-            case .cannotFindHost, .dnsLookupFailed:
-                throw OpenAIServiceError.hostNotFound
-            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
-                throw OpenAIServiceError.networkUnavailable
-            default:
-                throw error
-            }
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw OpenAIServiceError.invalidResponse
-        }
-        if httpResponse.statusCode == 401 {
-            throw OpenAIServiceError.unauthorized
-        }
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
-        }
-
-        let decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: data)
+        let data = try await httpClient.post(
+            path: "/chat/completions",
+            apiKey: apiKey,
+            body: requestBody
+        )
+        let decoded = try httpClient.decode(data, as: ChatCompletionsResponse.self)
         let content = decoded.choices.first?.message.content.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !content.isEmpty else { throw OpenAIServiceError.invalidStructuredResponse }
         let jsonString = Self.extractJSONObjectString(from: content) ?? content
@@ -566,14 +426,6 @@ private extension Double {
     func clamped(to range: ClosedRange<Double>) -> Double {
         min(max(self, range.lowerBound), range.upperBound)
     }
-}
-
-private struct OpenAIModelsResponse: Decodable {
-    let data: [OpenAIModelPayload]
-}
-
-private struct OpenAIModelPayload: Decodable {
-    let id: String
 }
 
 private struct ChatCompletionsRequest: Encodable {

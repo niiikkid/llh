@@ -62,19 +62,19 @@ final class MainViewModel: ObservableObject {
         )
         shortcutsCoordinator = AppShortcutsCoordinator(
             handlers: AppShortcutHandlers(
-                onCaptureArea: { [weak capture, weak self] in
-                    self?.closeTranslationOverlay()
+                onCaptureArea: { [weak capture, weak overlay] in
+                    overlay?.close()
                     capture?.triggerCaptureFromHotkey()
                 },
-                onSwitchOCREngine: { [weak self] in
-                    self?.closeTranslationOverlay(cancelPendingResult: false)
-                    self?.settings.switchToNextOCREngine(triggeredByHotkey: true)
+                onSwitchOCREngine: { [weak settings, weak overlay] in
+                    overlay?.close(cancelPendingResult: false)
+                    settings?.switchToNextOCREngine(triggeredByHotkey: true)
                 },
-                onCloseTranslationOverlay: { [weak self] in
-                    self?.closeTranslationOverlay()
+                onCloseTranslationOverlay: { [weak overlay] in
+                    overlay?.close()
                 },
-                onToggleLastTranslationOverlay: { [weak self] in
-                    self?.toggleLastTranslationOverlay()
+                onToggleLastTranslationOverlay: { [weak overlay] in
+                    overlay?.toggleLastTranslation()
                 }
             )
         )

@@ -1,5 +1,26 @@
 # Wiki Log
 
+## [2026-05-26] ingest | Refactoring Phase 6 OpenAI Integration (PR 3 OpenAIModelsService)
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 5 SQLite Persistence
+- Updated: Refactoring Phase 0 Baseline
+
+## [2026-05-26] ingest | Refactoring Phase 6 OpenAI Integration
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 5 SQLite Persistence
+- Updated: Refactoring Phase 0 Baseline
+
+## [2026-05-26] ingest | Refactoring Phase 5 SQLite Persistence
+- Updated: Refactoring Phase 0 Baseline
+- Updated: Refactoring Phase 1 Boundaries And DI
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 4 Presentation
+
 ## [2026-05-26] lint | 12 issues found, 12 auto-fixed
 - Index: Phase 0 summary `1+4+1+2+4+7`; Phase 1/4 уточнения
 - Phase 0: persist split (Editor format inc. 5), UI `main.editor`

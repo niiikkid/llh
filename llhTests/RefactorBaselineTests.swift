@@ -260,7 +260,8 @@ struct RefactorBaselineTests {
     let samples: [OpenAIServiceError] = [
       .invalidTokenFormat,
       .unauthorized,
-      .unexpectedStatusCode(429),
+      .rateLimited,
+      .unexpectedStatusCode(500),
       .invalidResponse,
       .noModelsFound,
       .hostNotFound,

@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 4 («Split Presentation Into Feature ViewModels») **завершена** по критериям roadmap. Слой `Presentation/` содержит feature ViewModels; `MainViewModel` — тонкий композиционный фасад (~157 строк, один `@Published` — `statusMessage`).
+Phase 4 («Split Presentation Into Feature ViewModels») **завершена** по критериям roadmap. Слой `Presentation/` содержит feature ViewModels; `MainViewModel` — тонкий композиционный фасад (~157 строк, один `@Published` — `statusMessage`). Phase 5 подключила SQLite persistence через `HistoryRepositoryBootstrap` без изменения feature VMs — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md).
 
 Целевая структура (roadmap):
 
@@ -246,10 +246,12 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 
 ## Следующий шаг
 
-**Phase 5** — миграция истории на SQLite ([Roadmap](project-refactoring-roadmap.md)).
+Phase 5 — [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6** — [Phase 6](refactoring-phase-6-openai-integration.md) (PR 2–3: HTTP + models; PR 4: AI OCR).
 
 ## See Also
 
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — OpenAI modernization (PR 2–3 done)
+- [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — GRDB, миграция JSON→SQLite, bootstrap
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel

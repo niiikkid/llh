@@ -11,7 +11,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 1. **Инкремент 1** — product-модели из `MainViewModel.swift` → `llh/Domain/Models/` (`MainViewModel` ~1316 → ~744 строк).
 2. **Инкремент 2** — JSON snapshot и OpenAI-границы в Data: `HistoryStoreSnapshot`, `OpenAIModel`, `OpenAIServiceError`, `OpenAIPromptBuilder`; протокол `OpenAIServing` → `Domain/Services/`. Промпты убраны из `LearningLanguage`.
 
-Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 3 завершена** — см. [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md).
+Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 5** — SQLite в `Data/Persistence/` — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6** — `OpenAIHTTPClient` (PR 2), `OpenAIModelsService` (PR 3) в `Data/OpenAI/` — см. [Phase 6](refactoring-phase-6-openai-integration.md).
 
 ## Инкремент 1 — Domain/Models
 
@@ -42,8 +42,10 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 | Файл | Содержимое |
 |------|------------|
 | `OpenAIModel.swift` | Модель для списка в настройках |
-| `OpenAIServiceError.swift` | Ошибки API с русскими `LocalizedError` |
+| `OpenAIServiceError.swift` | Ошибки API с русскими `LocalizedError` (вкл. `rateLimited` с Phase 6) |
 | `OpenAIPromptBuilder.swift` | Все промпты: format, AI OCR, words/phrases/grammar, pinyin rules, instruction names |
+| `OpenAIHTTPClient.swift` | HTTP transport для `/v1/*` (Phase 6 PR 2) |
+| `OpenAIModelsService.swift` | `GET /models`, listing для settings/validation (Phase 6 PR 3) |
 
 ### Domain/Services
 
@@ -51,7 +53,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 |------|------------|
 | `OpenAIServing.swift` | Протокол OpenAI-операций (ранее в `OpenAIService.swift`) |
 
-`OpenAIService` (~737 строк) — HTTP, DTO, mapping; промпты только через `OpenAIPromptBuilder`.
+`OpenAIService` — DTO, mapping, settings/keychain helpers; `fetchModels` → `OpenAIModelsService`; остальной HTTP через `OpenAIHTTPClient`; промпты через `OpenAIPromptBuilder`.
 
 ## MainViewModel
 
@@ -90,6 +92,8 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## See Also
 
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, `OpenAIModelsService`
+- [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — SQLite слой для snapshot
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI и repositories

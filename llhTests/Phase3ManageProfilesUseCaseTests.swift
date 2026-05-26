@@ -12,6 +12,7 @@ private func makeProfilesUseCase() -> ManageProfilesUseCase {
     ManageProfilesUseCase(manageHistoryUseCase: ManageHistoryUseCase(historyRepository: JSONHistoryRepository()))
 }
 
+@MainActor
 struct Phase3ManageProfilesUseCaseTests {
     @Test
     func normalizedProfileName_usesPlaceholderWhenEmpty() {
