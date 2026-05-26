@@ -893,5 +893,5 @@ private struct OpenAISettingsTab: View {
 }
 
 #Preview {
-    ContentView(viewModel: MainViewModel())
+    ContentView(viewModel: AppDependencyContainer.live().makeMainViewModel())
 }

@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct llhApp: App {
-    @StateObject private var viewModel = MainViewModel()
+    @StateObject private var viewModel = AppDependencyContainer.live().makeMainViewModel()
 
     var body: some Scene {
         WindowGroup(id: "main-window") {

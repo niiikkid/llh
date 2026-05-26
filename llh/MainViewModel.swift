@@ -545,18 +545,27 @@ final class MainViewModel: ObservableObject {
     @Published private(set) var isFormattingRecognizedText = false
     @Published private(set) var showsSessionReadingOverview = false
 
-    private let permissionService = ScreenRecordingPermissionService()
-    private let regionSelectionService = RegionSelectionService()
-    private let screenshotService = ScreenshotService()
-    private let ocrService = OCRService()
-    private let historyPersistenceService = HistoryPersistenceService()
-    private let openAIService = OpenAIService()
-    private let translationOverlayService = TranslationOverlayService()
-    private var openAISettingsStore = OpenAISettingsStore()
-    private let openAITokenStore = KeychainOpenAITokenStore()
+    private let permissionService: ScreenRecordingPermissionChecking
+    private let regionSelectionService: RegionSelecting
+    private let screenshotService: ScreenCapturing
+    private let ocrService: OCRServing
+    private let historyRepository: HistoryRepository
+    private let openAIService: OpenAIServing
+    private let translationOverlayService: TranslationOverlayService
+    private var settingsRepository: SettingsRepository
+    private let apiKeyRepository: APIKeyRepository
     private var overlayEntryAwaitingFormattedResult: CapturedTextEntry.ID?
 
-    init() {
+    init(dependencies: AppDependencyContainer) {
+        permissionService = dependencies.permissionService
+        regionSelectionService = dependencies.regionSelectionService
+        screenshotService = dependencies.screenshotService
+        ocrService = dependencies.ocrService
+        historyRepository = dependencies.historyRepository
+        openAIService = dependencies.openAIService
+        translationOverlayService = dependencies.translationOverlayService
+        settingsRepository = dependencies.settingsRepository
+        apiKeyRepository = dependencies.apiKeyRepository
         KeyboardShortcuts.onKeyUp(for: .captureArea) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.closeTranslationOverlay()
@@ -580,20 +589,20 @@ final class MainViewModel: ObservableObject {
             }
         }
         loadHistory()
-        availableOpenAIModels = openAISettingsStore.cachedModels
-        selectedOpenAIModelID = openAISettingsStore.selectedModelID
-        selectedOCREngine = OCREngine(rawValue: openAISettingsStore.selectedOCREngineRawValue) ?? .local
+        availableOpenAIModels = settingsRepository.cachedModels
+        selectedOpenAIModelID = settingsRepository.selectedModelID
+        selectedOCREngine = OCREngine(rawValue: settingsRepository.selectedOCREngineRawValue) ?? .local
         if selectedOpenAIModelID == nil {
             selectedOpenAIModelID = availableOpenAIModels.first?.id
         }
-        defaultNewProfileLearningLanguage = LearningLanguage(rawValue: openAISettingsStore.selectedLearningLanguageRawValue) ?? .english
-        translationOverlayMinimumDuration = openAISettingsStore.translationOverlayMinimumDuration
-        translationOverlaySecondsPerWord = openAISettingsStore.translationOverlaySecondsPerWord
+        defaultNewProfileLearningLanguage = LearningLanguage(rawValue: settingsRepository.selectedLearningLanguageRawValue) ?? .english
+        translationOverlayMinimumDuration = settingsRepository.translationOverlayMinimumDuration
+        translationOverlaySecondsPerWord = settingsRepository.translationOverlaySecondsPerWord
         refreshPermissionState()
     }
 
     var hasOpenAIToken: Bool {
-        openAITokenStore.loadToken() != nil
+        apiKeyRepository.loadAPIKey() != nil
     }
 
     func validateAndSaveOpenAIToken(_ token: String) async {
@@ -608,9 +617,9 @@ final class MainViewModel: ObservableObject {
 
         do {
             let models = try await openAIService.fetchModels(apiKey: trimmedToken)
-            try openAITokenStore.saveToken(trimmedToken)
+            try apiKeyRepository.saveAPIKey(trimmedToken)
             availableOpenAIModels = models
-            openAISettingsStore.cachedModels = models
+            settingsRepository.cachedModels = models
 
             if let selectedOpenAIModelID,
                models.contains(where: { $0.id == selectedOpenAIModelID }) {
@@ -618,7 +627,7 @@ final class MainViewModel: ObservableObject {
             } else {
                 selectedOpenAIModelID = models.first?.id
             }
-            openAISettingsStore.selectedModelID = selectedOpenAIModelID
+            settingsRepository.selectedModelID = selectedOpenAIModelID
 
             statusMessage = "Подключение к OpenAI успешно. Моделей: \(models.count)."
         } catch {
@@ -627,7 +636,7 @@ final class MainViewModel: ObservableObject {
     }
 
     func refreshOpenAIModels() async {
-        guard let token = openAITokenStore.loadToken() else {
+        guard let token = apiKeyRepository.loadAPIKey() else {
             statusMessage = "Сначала сохраните OpenAI token."
             return
         }
@@ -636,7 +645,7 @@ final class MainViewModel: ObservableObject {
 
     func deleteOpenAIToken() {
         do {
-            try openAITokenStore.deleteToken()
+            try apiKeyRepository.deleteAPIKey()
             statusMessage = "Токен OpenAI удален."
         } catch {
             statusMessage = "Не удалось удалить OpenAI token: \(error.localizedDescription)"
@@ -645,7 +654,7 @@ final class MainViewModel: ObservableObject {
 
     func selectOpenAIModel(_ id: String?) {
         selectedOpenAIModelID = id
-        openAISettingsStore.selectedModelID = id
+        settingsRepository.selectedModelID = id
         if let id {
             statusMessage = "Выбрана модель OpenAI: \(id)"
         }
@@ -654,7 +663,7 @@ final class MainViewModel: ObservableObject {
     func selectOCREngine(_ engine: OCREngine, showOverlay: Bool = false) {
         let previousEngine = selectedOCREngine
         selectedOCREngine = engine
-        openAISettingsStore.selectedOCREngineRawValue = engine.rawValue
+        settingsRepository.selectedOCREngineRawValue = engine.rawValue
         statusMessage = "Движок распознавания: \(engine.title)."
         guard showOverlay, shouldUseCompactOverlay else { return }
         translationOverlayService.showMessage(
@@ -676,19 +685,19 @@ final class MainViewModel: ObservableObject {
 
     func setDefaultNewProfileLearningLanguage(_ language: LearningLanguage) {
         defaultNewProfileLearningLanguage = language
-        openAISettingsStore.selectedLearningLanguageRawValue = language.rawValue
+        settingsRepository.selectedLearningLanguageRawValue = language.rawValue
     }
 
     func setTranslationOverlayMinimumDuration(_ duration: Double) {
         let clampedDuration = min(max(duration, 1), 15)
         translationOverlayMinimumDuration = clampedDuration
-        openAISettingsStore.translationOverlayMinimumDuration = clampedDuration
+        settingsRepository.translationOverlayMinimumDuration = clampedDuration
     }
 
     func setTranslationOverlaySecondsPerWord(_ value: Double) {
         let clampedValue = min(max(value, 0.1), 2)
         translationOverlaySecondsPerWord = clampedValue
-        openAISettingsStore.translationOverlaySecondsPerWord = clampedValue
+        settingsRepository.translationOverlaySecondsPerWord = clampedValue
     }
 
     func calculatedTranslationOverlayDuration(for formattedText: StructuredFormattedText) -> Double {
@@ -970,7 +979,7 @@ final class MainViewModel: ObservableObject {
         case .local:
             return try await ocrService.recognizeText(in: image)
         case .ai:
-            guard let token = openAITokenStore.loadToken() else {
+            guard let token = apiKeyRepository.loadAPIKey() else {
                 throw OpenAIServiceError.invalidTokenFormat
             }
             guard let modelID = selectedOpenAIModelID else {
@@ -1037,36 +1046,8 @@ final class MainViewModel: ObservableObject {
 
     private func loadHistory() {
         do {
-            var store = try historyPersistenceService.loadStore()
-            store.profiles = store.profiles.map { profile in
-                var mutableProfile = profile
-                mutableProfile.history = mutableProfile.history.map { entry in
-                    var mutableEntry = entry
-                    if mutableEntry.formattedText?.hasContent == false {
-                        mutableEntry.formattedText = nil
-                    }
-                    if mutableEntry.formattedText == nil, mutableEntry.formattingStatus == .processing {
-                        mutableEntry.formattingStatus = .failed
-                    }
-                    if mutableEntry.formattedText != nil {
-                        mutableEntry.formattingStatus = .succeeded
-                    }
-                    if mutableEntry.studyMaterials.words?.hasContent == false { mutableEntry.studyMaterials.words = nil }
-                    if mutableEntry.studyMaterials.phrases?.hasContent == false { mutableEntry.studyMaterials.phrases = nil }
-                    if mutableEntry.studyMaterials.grammar?.hasContent == false { mutableEntry.studyMaterials.grammar = nil }
-                    if mutableEntry.studyMaterials.words == nil, mutableEntry.studyMaterials.wordsStatus == .processing {
-                        mutableEntry.studyMaterials.wordsStatus = .failed
-                    }
-                    if mutableEntry.studyMaterials.phrases == nil, mutableEntry.studyMaterials.phrasesStatus == .processing {
-                        mutableEntry.studyMaterials.phrasesStatus = .failed
-                    }
-                    if mutableEntry.studyMaterials.grammar == nil, mutableEntry.studyMaterials.grammarStatus == .processing {
-                        mutableEntry.studyMaterials.grammarStatus = .failed
-                    }
-                    return mutableEntry
-                }
-                return mutableProfile
-            }
+            var store = try historyRepository.loadStore()
+            store.profiles = store.profiles.map(HistoryEntryLoadRepair.repairProfile)
             if !store.profiles.contains(where: \.isDefaultProfile) {
                 store.profiles.insert(.defaultProfile(), at: 0)
             }
@@ -1088,7 +1069,7 @@ final class MainViewModel: ObservableObject {
     private func persistHistory() {
         do {
             let store = HistoryStoreSnapshot(profiles: profiles, selectedProfileID: selectedProfileID)
-            try historyPersistenceService.saveStore(store)
+            try historyRepository.saveStore(store)
         } catch {
             statusMessage = "Не удалось сохранить историю: \(error.localizedDescription)"
         }
@@ -1096,7 +1077,7 @@ final class MainViewModel: ObservableObject {
 
     private func formatEntryText(entryID: CapturedTextEntry.ID, forceRetry: Bool) async {
         guard !isFormattingRecognizedText else { return }
-        guard let token = openAITokenStore.loadToken() else {
+        guard let token = apiKeyRepository.loadAPIKey() else {
             statusMessage = "Сначала сохраните OpenAI token."
             if overlayEntryAwaitingFormattedResult == entryID {
                 translationOverlayService.showMessage(title: "Сначала сохраните OpenAI token", duration: 3)
@@ -1195,7 +1176,7 @@ final class MainViewModel: ObservableObject {
 
     private func loadStudyMaterial(for entryID: CapturedTextEntry.ID, forceReload: Bool) async {
         guard currentProfileSupportsWordStudy else { return }
-        guard let token = openAITokenStore.loadToken() else {
+        guard let token = apiKeyRepository.loadAPIKey() else {
             statusMessage = "Сначала сохраните OpenAI token."
             return
         }
