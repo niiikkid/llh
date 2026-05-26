@@ -270,6 +270,8 @@ struct RefactorBaselineTests {
       .invalidStructuredResponse,
       .invalidImageData,
       .emptyRecognizedText,
+      .timeout,
+      .cancelled,
     ]
 
     for error in samples {

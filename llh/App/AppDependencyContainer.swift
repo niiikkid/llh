@@ -65,13 +65,15 @@ struct AppDependencyContainer {
         let regionSelectionService = RegionSelectionService()
         let screenshotService = ScreenshotService()
         let ocrService = OCRService()
-        let openAIService = OpenAIService()
+        let httpClient = OpenAIHTTPClient()
+        let openAIOCRService = OpenAIOCRService(httpClient: httpClient)
+        let openAIService = OpenAIService(httpClient: httpClient, ocrService: openAIOCRService)
         let (recognizeTextUseCase, captureRegionUseCase) = makeCaptureUseCases(
             permissionService: permissionService,
             regionSelectionService: regionSelectionService,
             screenshotService: screenshotService,
             ocrService: ocrService,
-            openAIService: openAIService
+            openAIOCRService: openAIOCRService
         )
         let formatCapturedTextUseCase = FormatCapturedTextUseCase(openAIService: openAIService)
         let historyRepository = HistoryRepositoryBootstrap.makeRepository()
@@ -116,11 +118,11 @@ struct AppDependencyContainer {
         regionSelectionService: RegionSelecting,
         screenshotService: ScreenCapturing,
         ocrService: OCRServing,
-        openAIService: OpenAIServing
+        openAIOCRService: OpenAIOCRServing
     ) -> (RecognizeTextUseCase, CaptureRegionUseCase) {
         let recognizeTextUseCase = RecognizeTextUseCase(
             ocrService: ocrService,
-            openAIService: openAIService
+            openAIOCRService: openAIOCRService
         )
         let captureRegionUseCase = CaptureRegionUseCase(
             permissionService: permissionService,

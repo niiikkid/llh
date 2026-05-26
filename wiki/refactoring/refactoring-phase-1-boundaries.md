@@ -24,8 +24,8 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 | Протокол | Реализация | Оборачивает |
 |----------|------------|-------------|
 | `HistoryRepository` | `JSONHistoryRepository` | `HistoryPersistenceService` |
-| `SettingsRepository` | `UserDefaultsSettingsRepository` | `OpenAISettingsStore` |
-| `APIKeyRepository` | `KeychainAPIKeyRepository` | `OpenAITokenStoring` / `KeychainOpenAITokenStore` |
+| `SettingsRepository` | `UserDefaultsSettingsRepository` | `OpenAISettingsStore` (`Data/OpenAI/`, Phase 6 PR 6) |
+| `APIKeyRepository` | `KeychainAPIKeyRepository` | `OpenAITokenStoring` / `KeychainOpenAITokenStore` (`Data/OpenAI/`, Phase 6 PR 6) |
 
 `MainViewModel` после Phase 1 напрямую использовал repositories; после Phase 3 — через use cases (`ManageHistoryUseCase`, `ManageOpenAISettingsUseCase` и др.). Настройки и токен на границе Domain: `SettingsRepository`, `APIKeyRepository` (`loadAPIKey` вместо `loadToken`).
 
@@ -44,6 +44,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 - `static func live()` — production-граф зависимостей.
 - `makeMainViewModel()` — фабрика `MainViewModel`.
 - Use cases (Phase 3): `recognizeTextUseCase`, `captureRegionUseCase` (`makeCaptureUseCases`), `formatCapturedTextUseCase`, `manageHistoryUseCase`, `manageProfilesUseCase`, `loadWordStudyUseCase`, `manageOpenAISettingsUseCase`.
+- **Phase 6 (завершена):** `live()` — один `OpenAIHTTPClient` (timeout 120s), `OpenAIOCRService` + `OpenAIService(httpClient:ocrService:)` (чистый фасад); `makeCaptureUseCases(..., openAIOCRService:)` для `RecognizeTextUseCase`. Settings/keychain types — `Data/OpenAI/`, не в `OpenAIService.swift` (см. [Phase 6](refactoring-phase-6-openai-integration.md)).
 
 Точки входа: `llhApp` и SwiftUI preview в `ContentView` используют `AppDependencyContainer.live().makeMainViewModel()`.
 
@@ -75,6 +76,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 ## See Also
 
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — OpenAI modernization (завершена)
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — `SQLiteHistoryRepository`, bootstrap
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена (включая `EditorViewModel`)
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена

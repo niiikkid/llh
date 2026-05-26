@@ -246,11 +246,11 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 
 ## Следующий шаг
 
-Phase 5 — [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6** — [Phase 6](refactoring-phase-6-openai-integration.md) (PR 2–3: HTTP + models; PR 4: AI OCR).
+Phase 5 — [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6 завершена** — [Phase 6](refactoring-phase-6-openai-integration.md). Следующий этап — Phase 7.
 
 ## See Also
 
-- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — OpenAI modernization (PR 2–3 done)
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена (HTTP, models, OCR, translation/study, settings/keychain, timeout)
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — GRDB, миграция JSON→SQLite, bootstrap
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs

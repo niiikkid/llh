@@ -45,6 +45,14 @@ private struct FakeOCRServing: OCRServing {
     }
 }
 
+private struct FakeOpenAIOCRServing: OpenAIOCRServing {
+    var recognizedText: String
+
+    func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> String {
+        recognizedText
+    }
+}
+
 private struct FakeOpenAIServing: OpenAIServing {
     var recognizedText: String
 
@@ -120,7 +128,7 @@ struct Phase3CaptureRegionUseCaseTests {
             screenshotService: FakeScreenCapturing(image: TestImageFactory.makeCGImage()),
             recognizeTextUseCase: RecognizeTextUseCase(
                 ocrService: FakeOCRServing(recognizedText: "你好"),
-                openAIService: FakeOpenAIServing(recognizedText: "你好")
+                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "你好")
             )
         )
 
@@ -149,7 +157,7 @@ struct Phase3CaptureRegionUseCaseTests {
             screenshotService: FakeScreenCapturing(image: image),
             recognizeTextUseCase: RecognizeTextUseCase(
                 ocrService: FakeOCRServing(recognizedText: "你好"),
-                openAIService: FakeOpenAIServing(recognizedText: "你好")
+                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "你好")
             )
         )
 
@@ -179,7 +187,7 @@ struct Phase3CaptureRegionUseCaseTests {
             screenshotService: FakeScreenCapturing(image: image),
             recognizeTextUseCase: RecognizeTextUseCase(
                 ocrService: FakeOCRServing(recognizedText: ""),
-                openAIService: FakeOpenAIServing(recognizedText: "")
+                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "")
             )
         )
 
@@ -209,7 +217,7 @@ struct Phase3CaptureRegionUseCaseTests {
             screenshotService: FakeScreenCapturing(image: TestImageFactory.makeCGImage()),
             recognizeTextUseCase: RecognizeTextUseCase(
                 ocrService: FakeOCRServing(recognizedText: "你好"),
-                openAIService: FakeOpenAIServing(recognizedText: "你好")
+                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "你好")
             )
         )
 
@@ -233,7 +241,7 @@ struct Phase3CaptureRegionUseCaseTests {
     func recognizeTextUseCase_usesLocalOCR() async throws {
         let useCase = RecognizeTextUseCase(
             ocrService: FakeOCRServing(recognizedText: "local"),
-            openAIService: FakeOpenAIServing(recognizedText: "ai")
+            openAIOCRService: FakeOpenAIOCRServing(recognizedText: "ai")
         )
 
         let text = try await useCase.execute(
@@ -253,7 +261,7 @@ struct Phase3CaptureRegionUseCaseTests {
     func recognizeTextUseCase_usesOpenAIWhenAIEngineSelected() async throws {
         let useCase = RecognizeTextUseCase(
             ocrService: FakeOCRServing(recognizedText: "local"),
-            openAIService: FakeOpenAIServing(recognizedText: "ai")
+            openAIOCRService: FakeOpenAIOCRServing(recognizedText: "ai")
         )
 
         let text = try await useCase.execute(
@@ -273,7 +281,7 @@ struct Phase3CaptureRegionUseCaseTests {
     func recognizeTextUseCase_requiresAPIKeyForAIEngine() async {
         let useCase = RecognizeTextUseCase(
             ocrService: FakeOCRServing(recognizedText: "local"),
-            openAIService: FakeOpenAIServing(recognizedText: "ai")
+            openAIOCRService: FakeOpenAIOCRServing(recognizedText: "ai")
         )
 
         do {

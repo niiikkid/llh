@@ -1,63 +1,77 @@
 # Refactoring Phase 6 OpenAI Integration
 
 > Sources: llh project, 2026-05-26; OpenAI API documentation (Context7), 2026-05-26
-> Raw: [Phase 6 OpenAI HTTP client completion](../../raw/refactoring/2026-05-26-phase-6-openai-http-client-completion.md); [Phase 6 OpenAI models service completion](../../raw/refactoring/2026-05-26-phase-6-openai-models-service-completion.md)
+> Raw: [Phase 6 OpenAI HTTP client completion](../../raw/refactoring/2026-05-26-phase-6-openai-http-client-completion.md); [Phase 6 OpenAI models service completion](../../raw/refactoring/2026-05-26-phase-6-openai-models-service-completion.md); [Phase 6 OpenAI OCR service completion](../../raw/refactoring/2026-05-26-phase-6-openai-ocr-service-completion.md); [Phase 6 translation and study services completion](../../raw/refactoring/2026-05-26-phase-6-translation-study-services-completion.md); [Phase 6 settings/keychain and timeout completion](../../raw/refactoring/2026-05-26-phase-6-settings-keychain-timeout-completion.md)
 > Updated: 2026-05-26
 
 ## Overview
 
-Phase 6 («OpenAI Integration Modernization») **в процессе**. PR 1 (промпты) — Phase 2 (`OpenAIPromptBuilder`). **PR 2** — `OpenAIHTTPClient`. **PR 3** — `OpenAIModelsService` (`GET /v1/models`, validation ключа через listing). `OpenAIService` остаётся фасадом `OpenAIServing`; use cases и UI без изменений. Endpoint **не менялся** — Chat Completions + Models API, Bearer auth.
+Phase 6 («OpenAI Integration Modernization») **завершена**. PR 1 (промпты) — Phase 2 (`OpenAIPromptBuilder`). PR 2–5 — HTTP, models, OCR, translation/study. **PR 6** — settings/keychain в `Data/OpenAI/`, timeout/cancellation в `OpenAIHTTPClient`. `OpenAIService` — чистый фасад `OpenAIServing`. Endpoint — Chat Completions + Models API. **Responses API отложен** (Context7: incremental migration; vision/multimodal — отдельная задача).
 
-## Слой Data/OpenAI (текущее)
+## Слой Data/OpenAI
 
 ```text
-OpenAIService (Services/) — OpenAIServing facade
-  ├── OpenAIHTTPClient      — GET/POST /v1/*, errors, decode helper
-  ├── OpenAIModelsService   — GET /models → [OpenAIModel]
-  └── … chat DTOs, mapping, OpenAISettingsStore, Keychain (ещё в монолите)
+OpenAIService (Services/) — OpenAIServing facade only
+  ├── OpenAIHTTPClient           — GET/POST /v1/*, errors, timeout, cancellation
+  ├── OpenAIModelsService        — GET /models → [OpenAIModel]
+  ├── OpenAIOCRService           — vision POST /chat/completions
+  ├── OpenAITranslationService   — format POST /chat/completions
+  ├── OpenAIStudyService         — words/phrases/grammar
+  └── OpenAIChatCompletionClient — shared text completions + JSON extract
+
+OpenAITokenStore.swift           — Keychain token storage (PR 6)
+OpenAISettingsStore.swift        — UserDefaults-backed settings (PR 6)
+
+Domain/Services/OpenAIOCRServing — AI OCR boundary (RecognizeTextUseCase)
 ```
 
 | Файл | Назначение |
 |------|------------|
-| `OpenAIHTTPClient.swift` | Transport (PR 2) |
+| `OpenAIHTTPClient.swift` | Transport (PR 2); timeout/cancellation (PR 6) |
 | `OpenAIModelsService.swift` | Model listing + empty-list guard (PR 3) |
+| `OpenAIOCRService.swift` | AI OCR vision request (PR 4) |
+| `OpenAITranslationService.swift` | Format recognized text (PR 5) |
+| `OpenAIStudyService.swift` | Word/phrase/grammar study (PR 5) |
+| `OpenAIChatCompletionClient.swift` | Text Chat Completions + JSON from content (PR 5) |
+| `OpenAITokenStore.swift` | `OpenAITokenStoring`, `KeychainOpenAITokenStore` (PR 6) |
+| `OpenAISettingsStore.swift` | UserDefaults settings store (PR 6) |
+| `Domain/Services/OpenAIOCRServing.swift` | Протокол AI OCR для `RecognizeTextUseCase` (PR 4) |
 | `OpenAIModel.swift` | Domain-facing model id |
-| `OpenAIServiceError.swift` | Typed API errors (вкл. `rateLimited`, `noModelsFound`) |
+| `OpenAIServiceError.swift` | Typed API errors (вкл. `rateLimited`, `timeout`, `cancelled`) |
 | `OpenAIPromptBuilder.swift` | Все промпты (Phase 2) |
 
-## Инкремент 2 — OpenAIModelsService (PR 3, завершён)
+## Инкремент 5 — Settings/Keychain и HTTP polish (PR 6, завершён)
 
-Вынесены listing и validation моделей из `OpenAIService`:
+| Изменение | Поведение |
+|-----------|-----------|
+| `OpenAITokenStore.swift` | `OpenAITokenStoring`, `KeychainOpenAITokenStore`, `OpenAITokenStoreError` — вынесены из `OpenAIService.swift` |
+| `OpenAISettingsStore.swift` | UserDefaults store для model/OCR/overlay settings — вынесен из `OpenAIService.swift` |
+| `OpenAIService.swift` | Только фасад `OpenAIServing`; без Keychain/Security |
+| `OpenAIHTTPClient` | `requestTimeout` default 120s; `Task.checkCancellation()`; `URLError.timedOut` → `.timeout`; `URLError.cancelled` → `.cancelled`; `CancellationError` пробрасывается |
+
+Repositories (`KeychainAPIKeyRepository`, `UserDefaultsSettingsRepository`) по-прежнему используют вынесенные типы из `Data/OpenAI/`.
+
+## Инкремент 2 — OpenAIModelsService (PR 3)
 
 | Шаг | Поведение |
 |-----|-----------|
 | HTTP | `GET /models` через общий `OpenAIHTTPClient` |
-| Decode | `{ "object": "list", "data": [{ "id": "..." }, ...] }` — лишние поля (`object`, `created`, `owned_by`) игнорируются |
+| Decode | `{ "object": "list", "data": [{ "id": "..." }, ...] }` |
 | Map | `data[].id` → `OpenAIModel` |
 | Sort | `localizedStandardCompare` по `id` |
 | Empty | `OpenAIServiceError.noModelsFound` |
 
-`ManageOpenAISettingsUseCase` по-прежнему вызывает `openAIService.fetchModels` (validation при сохранении/обновлении ключа). `OpenAISettingsStore` / Keychain **не переносились** — отдельный PR позже.
+## Инкремент 3 — OpenAIOCRService (PR 4)
 
-DI: `OpenAIService` создаёт один `OpenAIHTTPClient` и `OpenAIModelsService(httpClient:)` в обоих инициализаторах (`session:` / `httpClient:`).
+| Шаг | Поведение |
+|-----|-----------|
+| Image | JPEG encode → `data:image/jpeg;base64,...` |
+| Request | `POST /chat/completions`, text prompt + `image_url` |
+| Response | `choices[0].message.content` → normalize |
 
-## Инкремент 1 — OpenAIHTTPClient (PR 2, завершён)
+`RecognizeTextUseCase`: `.local` → `OCRServing`; `.ai` → `OpenAIOCRServing`.
 
-| Файл | Назначение |
-|------|------------|
-| `Data/OpenAI/OpenAIHTTPClient.swift` | Auth headers, GET/POST, decode, маппинг HTTP/network |
-| `Data/OpenAI/OpenAIServiceError.swift` | + `rateLimited` (HTTP 429) |
-| `Services/OpenAIService.swift` | DTO, mapping, prompts; делегирует transport/models |
-
-### OpenAIHTTPClient
-
-```text
-OpenAIHTTPClient
-  ├── trimmedToken(from:)     → sk- prefix validation
-  ├── get(path:apiKey:)       → GET /v1/*
-  ├── post(path:apiKey:body:) → POST /v1/*
-  └── decode(_:as:)           → JSONDecoder wrapper
-```
+## Инкремент 1 — OpenAIHTTPClient (PR 2 + PR 6)
 
 | HTTP | → `OpenAIServiceError` |
 |------|-------------------------|
@@ -66,54 +80,54 @@ OpenAIHTTPClient
 | other non-2xx | `unexpectedStatusCode` |
 | DNS / host | `hostNotFound` |
 | offline | `networkUnavailable` |
+| timed out | `timeout` |
+| cancelled | `cancelled` |
 
-Base URL: `https://api.openai.com/v1`. Заголовки: `Authorization: Bearer`, `Content-Type: application/json`.
+Base URL: `https://api.openai.com/v1`. Default timeout: 120s.
 
-### Методы `OpenAIServing` и HTTP
+## Инкремент 4 — Translation and Study (PR 5)
 
-| Метод | Реализация после PR 3 |
-|-------|------------------------|
-| `fetchModels` | `OpenAIModelsService` → `GET /models` |
-| `recognizeTextInImage` | `OpenAIService` → `POST /chat/completions` (vision) |
-| `formatRecognizedText` | `POST /chat/completions` |
-| `buildWordsStudyData` / phrases / grammar | `POST /chat/completions` via `performStructuredRequest` |
-
-`AppDependencyContainer.live()` по-прежнему: `OpenAIService()` → use cases.
+| Сервис | Поведение |
+|--------|-----------|
+| `OpenAIChatCompletionClient` | `POST /chat/completions`, JSON extract |
+| `OpenAITranslationService` | `formatRecognizedText`; temperature 0 |
+| `OpenAIStudyService` | words/phrases/grammar; temperature 0.2 |
 
 ## Покрытие тестами
 
 | Target | Файл | Сценарии |
 |--------|------|----------|
-| HTTP client | `Phase6OpenAIHTTPClientTests.swift` (8) | token; GET models + Bearer; 401, 429, 500; URLError |
+| HTTP client | `Phase6OpenAIHTTPClientTests.swift` (12) | token; GET; 401/429/500; URLError; timeout interval; timeout; cancelled; task cancellation |
 | Models service | `Phase6OpenAIModelsServiceTests.swift` (3) | сортировка; пустой `data`; 401 |
-| Shared stub | `OpenAIHTTPClientTestSupport.swift` | `URLProtocol` для Phase 6 |
-| Baseline | `RefactorBaselineTests` | `rateLimited` в error descriptions |
-| Use cases | `Phase3*` | без изменений; fakes → `OpenAIServing` |
+| OCR service | `Phase6OpenAIOCRServiceTests.swift` (4) | vision POST; normalize; empty; 401 |
+| Translation service | `Phase6OpenAITranslationServiceTests.swift` (4) | format POST; empty; 401 |
+| Study service | `Phase6OpenAIStudyServiceTests.swift` (3) | words POST; empty; 401 |
+| Baseline | `RefactorBaselineTests` | error descriptions incl. `timeout`, `cancelled` |
 
 ## Критерии выхода Phase 6 (roadmap)
 
 | Критерий | Статус |
 |----------|--------|
-| `OpenAIHTTPClient` — transport отдельно | выполнено (PR 2) |
-| Prompts centralized (`OpenAIPromptBuilder`) | выполнено (Phase 2) |
-| `OpenAIModelsService` | выполнено (PR 3) |
-| `OpenAITranslationService` / format split | **не сделано** |
-| `OpenAIOCRService` vs Vision boundary | **не сделано** (PR 4) |
-| `OpenAIStudyService` | **не сделано** |
-| `OpenAIService.swift` не монолит | частично (DTO/settings/keychain остаются) |
-| Responses API / structured outputs migration | **не сделано** (после Context7 review) |
-| Timeout / cancellation в HTTP client | **не сделано** |
+| `OpenAIHTTPClient` — transport отдельно | ✅ PR 2 |
+| Prompts centralized (`OpenAIPromptBuilder`) | ✅ Phase 2 |
+| `OpenAIModelsService` | ✅ PR 3 |
+| `OpenAITranslationService` / format split | ✅ PR 5 |
+| `OpenAIOCRService` vs Vision boundary | ✅ PR 4 |
+| `OpenAIStudyService` | ✅ PR 5 |
+| `OpenAIService.swift` не монолит | ✅ PR 6 (facade only) |
+| Settings/keychain вне HTTP-слоя | ✅ PR 6 |
+| Timeout / cancellation в HTTP client | ✅ PR 6 |
+| Responses API migration | **отложено** — Context7: Chat Completions supported; vision migration отдельно |
 
 ## Следующий шаг
 
-**Phase 6 PR 4** — `OpenAIOCRService`: вынести `recognizeTextInImage` за OCR boundary (`OCRServing` vs AI OCR).
-
-Далее PR 5: опциональная миграция endpoint (Responses API) после review документации.
+**Phase 7** — OCR/capture/permission polish (structured `OCRResult`, cancellation в use cases, off-main-thread). Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
 
 ## See Also
 
-- [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — `OpenAIPromptBuilder`, `OpenAIServiceError`, `OpenAIServing`, `Data/OpenAI`
-- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — `ManageOpenAISettingsUseCase` → `fetchModels`
-- [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — Phase 5 перед Phase 6
-- [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — карта OpenAI-вызовов
-- [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план Phase 6–10
+- [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI, repositories, `AppDependencyContainer`
+- [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md)
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md)
+- [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md)
+- [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md)
+- [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md)

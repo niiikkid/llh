@@ -12,12 +12,12 @@ Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. В�
 
 | Use case | OpenAI / infra |
 |----------|----------------|
-| `RecognizeTextUseCase` | Local `OCRServing` / `OpenAIServing` (AI OCR) |
+| `RecognizeTextUseCase` | Local `OCRServing` / `OpenAIOCRServing` (AI OCR, Phase 6 PR 4) |
 | `CaptureRegionUseCase` | Permission, region, screenshot + recognize |
-| `FormatCapturedTextUseCase` | `formatRecognizedText` |
+| `FormatCapturedTextUseCase` | `OpenAIServing.formatRecognizedText` → `OpenAITranslationService` (Phase 6 PR 5) |
 | `ManageHistoryUseCase` | `HistoryRepository` |
 | `ManageProfilesUseCase` | Профили + `ManageHistoryUseCase` |
-| `LoadWordStudyUseCase` | `buildWordsStudyData` |
+| `LoadWordStudyUseCase` | `OpenAIServing.buildWordsStudyData` → `OpenAIStudyService` (Phase 6 PR 5) |
 | `ManageOpenAISettingsUseCase` | `SettingsRepository`, `APIKeyRepository`, `fetchModels` |
 
 ## Инкремент 1 — capture и recognize
@@ -25,7 +25,7 @@ Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. В�
 | Файл | Назначение |
 |------|------------|
 | `Domain/Errors/RegionSelectionError.swift` | Ошибки выделения области (`cancelled`, `noScreen`) |
-| `Domain/UseCases/RecognizeTextUseCase.swift` | Local OCR vs AI OCR по `OCREngine` |
+| `Domain/UseCases/RecognizeTextUseCase.swift` | Local `OCRServing` vs `OpenAIOCRServing` по `OCREngine` |
 | `Domain/UseCases/CaptureRegionUseCase.swift` | Permission → region → screenshot → recognize |
 
 ### CaptureRegionOutcome
@@ -41,7 +41,7 @@ Use case не пишет в историю и не трогает overlay — э
 
 ### DI (capture)
 
-`AppDependencyContainer` содержит `recognizeTextUseCase` и `captureRegionUseCase`; сборка через `makeCaptureUseCases(...)`.
+`AppDependencyContainer` содержит `recognizeTextUseCase` и `captureRegionUseCase`; сборка через `makeCaptureUseCases(ocrService:openAIOCRService:)` (Phase 6 PR 4: AI OCR — `OpenAIOCRServing`, не `OpenAIServing`).
 
 `RegionSelectionService` бросает `RegionSelectionError` (раньше — вложенный `SelectionError`).
 
@@ -61,9 +61,9 @@ Use case не пишет в историю и не трогает overlay — э
 | `ready` | Можно вызывать `perform` |
 
 - `preflight` — синхронные проверки, без сети
-- `perform` — `formatRecognizedText`; ошибки пробрасываются в ViewModel
+- `perform` — `formatRecognizedText` через `OpenAIServing` (фасад → `OpenAITranslationService`); ошибки пробрасываются в ViewModel
 
-Use case не меняет `formattingStatus`, не пишет историю и не управляет overlay.
+Use case не меняет `formattingStatus`, не пишет историю и не управляет overlay. Граница use case не менялась с Phase 6 PR 5.
 
 ### DI (format)
 
@@ -289,11 +289,11 @@ Phase 3 завершена: `MainViewModel` делегирует все пере
 
 ## Следующий шаг
 
-`ManageHistoryUseCase` → `HistoryRepository` (SQLite) — [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6** (PR 2–3): `OpenAIHTTPClient` + `OpenAIModelsService`; `ManageOpenAISettingsUseCase` по-прежнему через `OpenAIServing.fetchModels` — [Phase 6](refactoring-phase-6-openai-integration.md).
+Phase 3 завершена; **Phase 6 завершена** — см. [Phase 6](refactoring-phase-6-openai-integration.md). Следующий этап — **Phase 7** (OCR/capture polish) в [roadmap](project-refactoring-roadmap.md).
 
 ## See Also
 
-- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — HTTP + models services; `OpenAIServing` boundary сохранён
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence за тем же protocol
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена (все 5 инкрементов)
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases

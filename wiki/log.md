@@ -1,5 +1,33 @@
 # Wiki Log
 
+## [2026-05-26] lint | 6 issues found, 6 auto-fixed
+
+## [2026-05-26] ingest | Refactoring Phase 6 OpenAI Integration (PR 6 Settings/Keychain/Timeout)
+- Updated: Refactoring Phase 0 Baseline
+- Updated: Refactoring Phase 1 Boundaries And DI
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 5 SQLite Persistence
+
+## [2026-05-26] ingest | Refactoring Phase 6 OpenAI Integration (PR 5 Translation and Study)
+- Updated: Refactoring Phase 0 Baseline
+- Updated: Refactoring Phase 1 Boundaries And DI
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 5 SQLite Persistence
+
+## [2026-05-26] lint | 5 issues found, 5 auto-fixed
+
+## [2026-05-26] ingest | Refactoring Phase 6 OpenAI Integration (PR 4 OpenAIOCRService)
+- Updated: Refactoring Phase 0 Baseline
+- Updated: Refactoring Phase 1 Boundaries And DI
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 5 SQLite Persistence
+
 ## [2026-05-26] ingest | Refactoring Phase 6 OpenAI Integration (PR 3 OpenAIModelsService)
 - Updated: Refactoring Phase 2 Domain Models
 - Updated: Refactoring Phase 3 Use Cases

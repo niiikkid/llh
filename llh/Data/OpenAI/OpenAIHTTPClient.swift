@@ -6,22 +6,27 @@
 import Foundation
 
 /// Low-level HTTP transport for OpenAI REST API (`/v1/*`).
-/// Handles auth headers, status codes and network error mapping.
+/// Handles auth headers, status codes, network error mapping, timeouts and task cancellation.
 struct OpenAIHTTPClient: Sendable {
     enum HTTPMethod: String, Sendable {
         case get = "GET"
         case post = "POST"
     }
 
+    static let defaultRequestTimeout: TimeInterval = 120
+
     private let session: URLSession
     private let baseURL: URL
+    private let requestTimeout: TimeInterval
 
     init(
         session: URLSession = .shared,
-        baseURL: URL = URL(string: "https://api.openai.com/v1")!
+        baseURL: URL = URL(string: "https://api.openai.com/v1")!,
+        requestTimeout: TimeInterval = OpenAIHTTPClient.defaultRequestTimeout
     ) {
         self.session = session
         self.baseURL = baseURL
+        self.requestTimeout = requestTimeout
     }
 
     func trimmedToken(from apiKey: String) throws -> String {
@@ -51,6 +56,8 @@ struct OpenAIHTTPClient: Sendable {
         apiKey: String,
         body: Data?
     ) async throws -> Data {
+        try Task.checkCancellation()
+
         let token = try trimmedToken(from: apiKey)
         guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL else {
             throw OpenAIServiceError.invalidResponse
@@ -61,20 +68,16 @@ struct OpenAIHTTPClient: Sendable {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
+        request.timeoutInterval = requestTimeout
 
         let data: Data
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
         } catch let error as URLError {
-            switch error.code {
-            case .cannotFindHost, .dnsLookupFailed:
-                throw OpenAIServiceError.hostNotFound
-            case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
-                throw OpenAIServiceError.networkUnavailable
-            default:
-                throw error
-            }
+            throw mapURLError(error)
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -90,6 +93,21 @@ struct OpenAIHTTPClient: Sendable {
             throw OpenAIServiceError.rateLimited
         default:
             throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
+        }
+    }
+
+    private func mapURLError(_ error: URLError) -> Error {
+        switch error.code {
+        case .cannotFindHost, .dnsLookupFailed:
+            return OpenAIServiceError.hostNotFound
+        case .notConnectedToInternet, .networkConnectionLost, .internationalRoamingOff:
+            return OpenAIServiceError.networkUnavailable
+        case .timedOut:
+            return OpenAIServiceError.timeout
+        case .cancelled:
+            return OpenAIServiceError.cancelled
+        default:
+            return error
         }
     }
 }

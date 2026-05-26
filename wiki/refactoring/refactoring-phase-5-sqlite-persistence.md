@@ -96,13 +96,13 @@ let historyRepository = HistoryRepositoryBootstrap.makeRepository()
 
 ## Следующий шаг
 
-**Phase 6** — OpenAI modernization — см. [Phase 6](refactoring-phase-6-openai-integration.md) (PR 2–3: HTTP + models; далее PR 4 AI OCR).
+**Phase 6 завершена** — см. [Phase 6](refactoring-phase-6-openai-integration.md). Следующий этап — Phase 7.
 
 Опционально в рамках Phase 5: async save/load, UX при битом JSON.
 
 ## See Also
 
-- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — следующий этап после persistence
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — OpenAI modernization (завершена)
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — presentation split до persistence
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — `ManageHistoryUseCase` как граница workflow
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — `HistoryRepository` protocol

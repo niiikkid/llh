@@ -66,13 +66,15 @@ struct Phase1RepositoryTests {
         let regionSelectionService = RegionSelectionService()
         let screenshotService = ScreenshotService()
         let ocrService = OCRService()
-        let openAIService = OpenAIService()
+        let httpClient = OpenAIHTTPClient()
+        let openAIOCRService = OpenAIOCRService(httpClient: httpClient)
+        let openAIService = OpenAIService(httpClient: httpClient, ocrService: openAIOCRService)
         let (recognizeTextUseCase, captureRegionUseCase) = AppDependencyContainer.makeCaptureUseCases(
             permissionService: permissionService,
             regionSelectionService: regionSelectionService,
             screenshotService: screenshotService,
             ocrService: ocrService,
-            openAIService: openAIService
+            openAIOCRService: openAIOCRService
         )
         let historyRepository = JSONHistoryRepository(
             persistence: HistoryPersistenceService(fileURL: fileURL)

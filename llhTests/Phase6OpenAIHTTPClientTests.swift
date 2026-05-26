@@ -121,4 +121,62 @@ struct Phase6OpenAIHTTPClientTests {
             _ = try await client.get(path: "/models", apiKey: "sk-test")
         }
     }
+
+    @Test
+    func get_models_appliesRequestTimeout() async throws {
+        let client = OpenAIHTTPClientTestSupport.makeClient(requestTimeout: 45)
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
+            #expect(request.timeoutInterval == 45)
+            let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
+            return (response, Data("{}".utf8))
+        }
+
+        _ = try await client.get(path: "/models", apiKey: "sk-test")
+    }
+
+    @Test
+    func get_models_mapsTimedOut() async {
+        let client = OpenAIHTTPClientTestSupport.makeClient()
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { _ in
+            throw URLError(.timedOut)
+        }
+
+        await #expect(throws: OpenAIServiceError.timeout) {
+            _ = try await client.get(path: "/models", apiKey: "sk-test")
+        }
+    }
+
+    @Test
+    func get_models_mapsCancelled() async {
+        let client = OpenAIHTTPClientTestSupport.makeClient()
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { _ in
+            throw URLError(.cancelled)
+        }
+
+        await #expect(throws: OpenAIServiceError.cancelled) {
+            _ = try await client.get(path: "/models", apiKey: "sk-test")
+        }
+    }
+
+    @Test
+    func get_models_propagatesTaskCancellation() async {
+        let client = OpenAIHTTPClientTestSupport.makeClient()
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { _ in
+            try await Task.sleep(nanoseconds: 5_000_000_000)
+            throw URLError(.unknown)
+        }
+
+        let task = Task {
+            try await client.get(path: "/models", apiKey: "sk-test")
+        }
+        task.cancel()
+
+        await #expect(throws: CancellationError.self) {
+            _ = try await task.value
+        }
+    }
 }

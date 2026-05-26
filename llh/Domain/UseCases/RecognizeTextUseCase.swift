@@ -15,11 +15,11 @@ struct RecognizeTextConfiguration: Sendable {
 @MainActor
 struct RecognizeTextUseCase {
     private let ocrService: OCRServing
-    private let openAIService: OpenAIServing
+    private let openAIOCRService: OpenAIOCRServing
 
-    init(ocrService: OCRServing, openAIService: OpenAIServing) {
+    init(ocrService: OCRServing, openAIOCRService: OpenAIOCRServing) {
         self.ocrService = ocrService
-        self.openAIService = openAIService
+        self.openAIOCRService = openAIOCRService
     }
 
     func execute(image: CGImage, configuration: RecognizeTextConfiguration) async throws -> String {
@@ -33,7 +33,7 @@ struct RecognizeTextUseCase {
             guard let modelID = configuration.selectedModelID else {
                 throw OpenAIServiceError.invalidResponse
             }
-            return try await openAIService.recognizeTextInImage(
+            return try await openAIOCRService.recognizeTextInImage(
                 apiKey: token,
                 modelID: modelID,
                 image: image

@@ -18,6 +18,8 @@ enum OpenAIServiceError: LocalizedError {
     case invalidStructuredResponse
     case invalidImageData
     case emptyRecognizedText
+    case timeout
+    case cancelled
 
     var errorDescription: String? {
         switch self {
@@ -45,6 +47,10 @@ enum OpenAIServiceError: LocalizedError {
             return "Не удалось подготовить изображение для распознавания."
         case .emptyRecognizedText:
             return "OpenAI не вернул распознанный текст."
+        case .timeout:
+            return "Превышено время ожидания ответа от OpenAI. Проверьте сеть и повторите попытку."
+        case .cancelled:
+            return "Запрос к OpenAI был отменён."
         }
     }
 }

@@ -33,10 +33,13 @@ final class OpenAIHTTPClientURLProtocolStub: URLProtocol, @unchecked Sendable {
 }
 
 enum OpenAIHTTPClientTestSupport {
-    static func makeClient() -> OpenAIHTTPClient {
+    static func makeClient(requestTimeout: TimeInterval = OpenAIHTTPClient.defaultRequestTimeout) -> OpenAIHTTPClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [OpenAIHTTPClientURLProtocolStub.self]
-        return OpenAIHTTPClient(session: URLSession(configuration: configuration))
+        return OpenAIHTTPClient(
+            session: URLSession(configuration: configuration),
+            requestTimeout: requestTimeout
+        )
     }
 
     static func httpResponse(for request: URLRequest, statusCode: Int) -> HTTPURLResponse {

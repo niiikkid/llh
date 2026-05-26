@@ -76,9 +76,9 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - `buildPhrasesStudyData`
 - `buildGrammarStudyData`
 
-Промпты: `OpenAIPromptBuilder` (Phase 2). HTTP: `OpenAIHTTPClient` (PR 2). Models listing: `OpenAIModelsService` (PR 3). `OpenAIService` — фасад `OpenAIServing` (DTO/mapping/settings).
+Промпты: `OpenAIPromptBuilder` (Phase 2). HTTP: `OpenAIHTTPClient` (PR 2 + PR 6 timeout/cancellation). Models: `OpenAIModelsService` (PR 3). AI OCR: `OpenAIOCRService` (PR 4). Format/study: `OpenAITranslationService`, `OpenAIStudyService` (PR 5). Settings/keychain: `OpenAISettingsStore`, `KeychainOpenAITokenStore` в `Data/OpenAI/` (PR 6). `OpenAIService` — чистый фасад `OpenAIServing`.
 
-**Phase 6:** transport + models в `Data/OpenAI/`; 429 → `rateLimited`; `GET /v1/models` для settings/validation ключа; endpoint без изменений.
+**Phase 6 завершена:** transport + models + AI OCR + translation/study + settings/keychain split; `OpenAIOCRServing` — граница для `RecognizeTextUseCase`; 429 → `rateLimited`, timeout/cancellation в HTTP client; endpoint без изменений (Responses API отложен).
 
 ### UI зависимости
 
@@ -93,7 +93,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - Default profile всегда на индексе 0 после load
 - Repair прерванного formatting / word study
 - Persistence OCR engine (`OpenAISettingsStore.selectedOCREngineRawValue`)
-- `OpenAIPromptBuilder.formattingRules` / `wordsAnalysisPrompt` / `OpenAIServiceError` descriptions (вкл. `rateLimited`)
+- `OpenAIPromptBuilder.formattingRules` / `wordsAnalysisPrompt` / `OpenAIServiceError` descriptions (вкл. `rateLimited`, `timeout`, `cancelled`)
 
 Ранее существующие тесты в `llhTests.swift` (overlay timing, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
 
@@ -107,7 +107,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ## See Also
 
-- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, `OpenAIModelsService`
+- [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain, timeout
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence после baseline
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
