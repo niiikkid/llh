@@ -104,7 +104,7 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
     }
 
     @Test
-    func loadSettingsSnapshot_keepsStoredSelection() {
+    func loadSettingsSnapshot_fallsBackWhenStoredSelectionNotInCache() {
         let settings = InMemorySettingsRepository()
         settings.cachedModels = [OpenAIModel(id: "gpt-4o")]
         settings.selectedModelID = "gpt-4o-mini"
@@ -112,7 +112,7 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
 
         let snapshot = useCase.loadSettingsSnapshot()
 
-        #expect(snapshot.selectedModelID == "gpt-4o-mini")
+        #expect(snapshot.selectedModelID == "gpt-4o")
     }
 
     @Test

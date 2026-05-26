@@ -28,6 +28,21 @@ struct Phase6OpenAIHTTPClientTests {
     }
 
     @Test
+    func post_chatCompletions_targetsV1Endpoint() async throws {
+        let client = OpenAIHTTPClientTestSupport.makeClient()
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
+            #expect(request.httpMethod == "POST")
+            #expect(request.url?.absoluteString == "https://api.openai.com/v1/chat/completions")
+            let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
+            return (response, Data(#"{"choices":[{"message":{"content":"{}"}}]}"#.utf8))
+        }
+
+        struct Body: Encodable { let model: String }
+        _ = try await client.post(path: "/chat/completions", apiKey: "sk-test", body: Body(model: "gpt-4o"))
+    }
+
+    @Test
     func get_models_sendsBearerAuthAndDecodesResponse() async throws {
         let client = OpenAIHTTPClientTestSupport.makeClient()
         let modelsJSON = """
@@ -36,7 +51,7 @@ struct Phase6OpenAIHTTPClientTests {
 
         OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
             #expect(request.httpMethod == "GET")
-            #expect(request.url?.absoluteString.hasSuffix("/v1/models") == true)
+            #expect(request.url?.absoluteString == "https://api.openai.com/v1/models")
             #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer sk-test")
             let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
             return (response, Data(modelsJSON.utf8))

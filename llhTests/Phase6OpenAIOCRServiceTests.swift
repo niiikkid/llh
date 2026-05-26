@@ -19,7 +19,7 @@ struct Phase6OpenAIOCRServiceTests {
 
         OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
             #expect(request.httpMethod == "POST")
-            #expect(request.url?.absoluteString.hasSuffix("/v1/chat/completions") == true)
+            #expect(request.url?.absoluteString == "https://api.openai.com/v1/chat/completions")
             #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer sk-test")
             let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
             return (response, Data(responseJSON.utf8))

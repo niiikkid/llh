@@ -59,9 +59,7 @@ struct OpenAIHTTPClient: Sendable {
         try Task.checkCancellation()
 
         let token = try trimmedToken(from: apiKey)
-        guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL else {
-            throw OpenAIServiceError.invalidResponse
-        }
+        let url = try endpointURL(path: path)
 
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
@@ -94,6 +92,16 @@ struct OpenAIHTTPClient: Sendable {
         default:
             throw OpenAIServiceError.unexpectedStatusCode(httpResponse.statusCode)
         }
+    }
+
+    /// Joins `baseURL` (`…/v1`) with a relative API segment. Leading slashes must not be passed to
+    /// `URL(string:relativeTo:)` — that resolves from the host root and drops `/v1`.
+    private func endpointURL(path: String) throws -> URL {
+        let trimmedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !trimmedPath.isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        return baseURL.appending(path: trimmedPath)
     }
 
     private func mapURLError(_ error: URLError) -> Error {

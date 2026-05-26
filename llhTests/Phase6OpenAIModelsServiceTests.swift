@@ -18,7 +18,7 @@ struct Phase6OpenAIModelsServiceTests {
 
         OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
             #expect(request.httpMethod == "GET")
-            #expect(request.url?.absoluteString.hasSuffix("/v1/models") == true)
+            #expect(request.url?.absoluteString == "https://api.openai.com/v1/models")
             let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
             return (response, Data(modelsJSON.utf8))
         }

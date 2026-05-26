@@ -47,10 +47,10 @@ final class ManageOpenAISettingsUseCase {
 
     func loadSettingsSnapshot() -> OpenAISettingsSnapshot {
         let cachedModels = settingsRepository.cachedModels
-        var selectedModelID = settingsRepository.selectedModelID
-        if selectedModelID == nil {
-            selectedModelID = cachedModels.first?.id
-        }
+        let selectedModelID = Self.resolveSelectedModelID(
+            models: cachedModels,
+            currentSelectedModelID: settingsRepository.selectedModelID
+        )
 
         return OpenAISettingsSnapshot(
             cachedModels: cachedModels,
