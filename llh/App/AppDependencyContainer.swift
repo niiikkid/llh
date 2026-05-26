@@ -74,7 +74,7 @@ struct AppDependencyContainer {
             openAIService: openAIService
         )
         let formatCapturedTextUseCase = FormatCapturedTextUseCase(openAIService: openAIService)
-        let historyRepository = JSONHistoryRepository()
+        let historyRepository = HistoryRepositoryBootstrap.makeRepository()
         let manageHistoryUseCase = ManageHistoryUseCase(historyRepository: historyRepository)
         let manageProfilesUseCase = ManageProfilesUseCase(manageHistoryUseCase: manageHistoryUseCase)
         let loadWordStudyUseCase = LoadWordStudyUseCase(openAIService: openAIService)

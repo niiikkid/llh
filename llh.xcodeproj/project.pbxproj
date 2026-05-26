@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		70A111001111111111111111 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 70A111031111111111111111 /* KeyboardShortcuts */; };
+		70A112001111111111111111 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 70A112031111111111111111 /* GRDB */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				70A111001111111111111111 /* KeyboardShortcuts in Frameworks */,
+				70A112001111111111111111 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +120,7 @@
 			name = llh;
 			packageProductDependencies = (
 				70A111031111111111111111 /* KeyboardShortcuts */,
+				70A112031111111111111111 /* GRDB */,
 			);
 			productName = llh;
 			productReference = 64D05CC82F83373B00478429 /* llh.app */;
@@ -203,6 +206,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				70A111021111111111111111 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				70A112021111111111111111 /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 64D05CC92F83373B00478429 /* Products */;
@@ -592,6 +596,14 @@
 				minimumVersion = 2.3.0;
 			};
 		};
+		70A112021111111111111111 /* XCRemoteSwiftPackageReference "GRDB" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -599,6 +611,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 70A111021111111111111111 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		70A112031111111111111111 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70A112021111111111111111 /* XCRemoteSwiftPackageReference "GRDB" */;
+			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

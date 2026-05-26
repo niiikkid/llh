@@ -11,10 +11,6 @@ struct ContentView: View {
     @ObservedObject var viewModel: MainViewModel
     @State private var selectedTextTab: TextTab = .formatted
     @State private var isSessionsPanelCollapsed = false
-    @State private var newProfileName = ""
-    @State private var newProfileLearningLanguage: LearningLanguage = .english
-    @State private var isCreateProfilePresented = false
-    @State private var isDeleteProfileConfirmationPresented = false
     @State private var isSettingsPresented = false
     @State private var sessionReadingFontSizePoints: CGFloat = 16
 
@@ -59,18 +55,18 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
             }
 
-            if viewModel.showPermissionHelp {
+            if viewModel.capture.showPermissionHelp {
                 GroupBox("Нужно разрешение Screen Recording") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Откройте System Settings -> Privacy & Security -> Screen Recording и включите доступ для приложения.")
                         HStack {
                             Button("Open System Settings") {
-                                viewModel.openSystemSettings()
+                                viewModel.capture.openSystemSettings()
                             }
                             Button("Проверить снова") {
-                                viewModel.refreshPermissionState()
+                                viewModel.capture.refreshPermissionState()
                             }
-                            .disabled(viewModel.isProcessing)
+                            .disabled(viewModel.capture.isProcessing)
                         }
                     }
                     .font(.callout)
@@ -91,122 +87,10 @@ struct ContentView: View {
                 HStack(alignment: .top, spacing: spacing) {
                     if !isSessionsPanelCollapsed {
                         GroupBox("Сессии") {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack(spacing: 8) {
-                                    Picker(
-                                        "Сессия",
-                                        selection: Binding(
-                                            get: { viewModel.selectedProfileID },
-                                            set: { viewModel.selectProfile($0) }
-                                        )
-                                    ) {
-                                        ForEach(viewModel.profiles) { profile in
-                                            Text(profile.name).tag(Optional(profile.id))
-                                        }
-                                    }
-                                    .labelsHidden()
-
-                                    sidebarActionButton(systemName: "plus", helpText: "Создать сессию") {
-                                        newProfileName = ""
-                                        newProfileLearningLanguage = viewModel.settings.defaultNewProfileLearningLanguage
-                                        isCreateProfilePresented = true
-                                    }
-
-                                    sidebarActionButton(
-                                        systemName: "trash",
-                                        helpText: "Удалить текущую сессию",
-                                        role: .destructive
-                                    ) {
-                                        isDeleteProfileConfirmationPresented = true
-                                    }
-                                    .disabled(!viewModel.canDeleteSelectedProfile)
-                                }
-
-                                HStack(spacing: 8) {
-                                    Text("Язык сессии:")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                    Text(viewModel.currentProfileLearningLanguage.title)
-                                        .font(.caption)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            Capsule(style: .continuous)
-                                                .fill(.background.secondary)
-                                        )
-                                    Spacer()
-                                }
-
-                                if viewModel.currentProfileLearningLanguage == .auto {
-                                    Text("Для этой сессии язык определяется автоматически, отображается только перевод.")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                if viewModel.history.isEmpty {
-                                    ContentUnavailableView(
-                                        "Пока пусто",
-                                        systemImage: "clock.arrow.circlepath",
-                                        description: Text("После захвата текста переводы появятся здесь.")
-                                    )
-                                } else {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 8) {
-                                            Button {
-                                                viewModel.toggleSessionReadingOverview()
-                                            } label: {
-                                                Label(
-                                                    viewModel.showsSessionReadingOverview
-                                                        ? "К списку переводов"
-                                                        : "Весь текст сессии",
-                                                    systemImage: viewModel.showsSessionReadingOverview
-                                                        ? "list.bullet.rectangle"
-                                                        : "doc.plaintext"
-                                                )
-                                            }
-                                            .buttonStyle(.bordered)
-                                            .help(
-                                                viewModel.showsSessionReadingOverview
-                                                    ? "Вернуться к выбранному переводу в списке."
-                                                    : "Показать все фрагменты сессии подряд: строка оригинала и строка перевода."
-                                            )
-                                            Spacer()
-                                        }
-
-                                        List(
-                                            viewModel.history,
-                                            selection: Binding(
-                                                get: { viewModel.selectedEntryID },
-                                                set: { viewModel.selectEntry($0) }
-                                            )
-                                        ) { item in
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                HStack(alignment: .firstTextBaseline) {
-                                                    Text(
-                                                        item.sessionListTitleLine(
-                                                            learningLanguage: viewModel.currentProfileLearningLanguage
-                                                        )
-                                                    )
-                                                        .font(.subheadline.weight(.semibold))
-                                                        .lineLimit(1)
-                                                    Spacer(minLength: 8)
-                                                    Text(viewModel.formattedDate(for: item.createdAt))
-                                                        .font(.caption2)
-                                                        .foregroundStyle(.secondary)
-                                                }
-                                                Text(item.sessionListPreviewLine())
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                                    .lineLimit(2)
-                                            }
-                                            .padding(.vertical, 4)
-                                            .tag(item.id)
-                                        }
-                                        .listStyle(.sidebar)
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    }
-                                }
-                            }
+                            HistoryView(
+                                viewModel: viewModel.history,
+                                defaultNewProfileLearningLanguage: viewModel.settings.defaultNewProfileLearningLanguage
+                            )
                         }
                         .groupBoxStyle(PanelGroupBoxStyle())
                         .frame(
@@ -218,8 +102,8 @@ struct ContentView: View {
                     }
 
                     GroupBox {
-                        if viewModel.showsSessionReadingOverview {
-                            if viewModel.history.isEmpty {
+                        if viewModel.history.showsSessionReadingOverview {
+                            if viewModel.history.history.isEmpty {
                                 centeredContent {
                                     ContentUnavailableView(
                                         "Пока пусто",
@@ -230,7 +114,7 @@ struct ContentView: View {
                             } else {
                                 sessionReadingOverviewPanel
                             }
-                        } else if viewModel.selectedEntryID == nil {
+                        } else if viewModel.history.selectedEntryID == nil {
                             centeredContent {
                                 ContentUnavailableView(
                                     "Выберите перевод",
@@ -251,8 +135,8 @@ struct ContentView: View {
                                     if selectedTextTab == .raw {
                                         TextEditor(
                                             text: Binding(
-                                                get: { viewModel.recognizedText },
-                                                set: { viewModel.updateSelectedText($0) }
+                                                get: { viewModel.editor.recognizedText },
+                                                set: { viewModel.editor.updateSelectedText($0) }
                                             )
                                         )
                                         .font(.system(.body, design: .monospaced))
@@ -265,17 +149,17 @@ struct ContentView: View {
                                 HStack {
                                     Spacer()
                                     Button(role: .destructive) {
-                                        viewModel.deleteSelectedEntry()
+                                        viewModel.history.deleteSelectedEntry()
                                     } label: {
                                         Label("Удалить перевод", systemImage: "trash")
                                     }
                                     .buttonStyle(.bordered)
-                                    .disabled(!viewModel.canDeleteSelectedEntry)
+                                    .disabled(!viewModel.history.canDeleteSelectedEntry)
                                 }
                             }
                         }
                     } label: {
-                        Text(viewModel.showsSessionReadingOverview ? "Вся сессия" : "Перевод")
+                        Text(viewModel.history.showsSessionReadingOverview ? "Вся сессия" : "Перевод")
                     }
                     .groupBoxStyle(PanelGroupBoxStyle())
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -284,66 +168,29 @@ struct ContentView: View {
             }
             .frame(minHeight: 320)
             .overlay {
-                if viewModel.isProcessing {
+                if viewModel.capture.isProcessing {
                     ProgressView()
                 }
             }
         }
         .padding(16)
         .frame(minWidth: 760, minHeight: 500)
-        .sheet(isPresented: $isCreateProfilePresented) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Новая сессия")
-                    .font(.headline)
-                TextField("Название сессии", text: $newProfileName)
-                Picker("Язык изучения", selection: $newProfileLearningLanguage) {
-                    ForEach(LearningLanguage.allCases.filter(\.supportsWordStudy)) { language in
-                        Text(language.title).tag(language)
-                    }
-                }
-                .pickerStyle(.segmented)
-                HStack {
-                    Spacer()
-                    Button("Отмена") {
-                        isCreateProfilePresented = false
-                    }
-                    Button("Создать") {
-                        viewModel.createProfile(
-                            named: newProfileName,
-                            learningLanguage: newProfileLearningLanguage
-                        )
-                        isCreateProfilePresented = false
-                    }
-                    .keyboardShortcut(.defaultAction)
-                }
-            }
-            .padding(16)
-            .frame(width: 360)
-        }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView(viewModel: viewModel.settings)
-        }
-        .alert("Удалить сессию?", isPresented: $isDeleteProfileConfirmationPresented) {
-            Button("Удалить", role: .destructive) {
-                viewModel.deleteSelectedProfile()
-            }
-            Button("Отмена", role: .cancel) {}
-        } message: {
-            Text("Сессия \"\(viewModel.selectedProfileName)\" будет удалена вместе со всеми переводами внутри нее.")
         }
     }
 
     @ViewBuilder
     private var formattedTextContent: some View {
-        if let formatted = viewModel.formattedRecognizedText, formatted.hasContent {
+        if let formatted = viewModel.editor.formattedRecognizedText, formatted.hasContent {
             VStack(spacing: 12) {
                 formattedTranslationBlock(formatted)
-                if viewModel.currentProfileSupportsWordStudy {
+                if viewModel.history.currentProfileSupportsWordStudy {
                     studyAssistantBlock
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        } else if viewModel.isFormattingRecognizedText || viewModel.selectedEntryFormattingStatus == .processing {
+        } else if viewModel.editor.isFormattingRecognizedText || viewModel.editor.selectedEntryFormattingStatus == .processing {
             centeredContent {
                 ContentUnavailableView(
                     "Форматирую текст",
@@ -351,7 +198,7 @@ struct ContentView: View {
                     description: Text("Подождите, запрос в OpenAI выполняется.")
                 )
             }
-        } else if viewModel.canRetryFormatting {
+        } else if viewModel.editor.canRetryFormatting {
             centeredContent {
                 VStack(alignment: .center, spacing: 10) {
                     ContentUnavailableView(
@@ -360,9 +207,9 @@ struct ContentView: View {
                         description: Text("Можно отправить запрос в OpenAI повторно.")
                     )
                     Button("Попробовать еще раз") {
-                        viewModel.retryFormattingForSelectedEntry()
+                        viewModel.editor.retryFormattingForSelectedEntry()
                     }
-                    .disabled(viewModel.isFormattingRecognizedText)
+                    .disabled(viewModel.editor.isFormattingRecognizedText)
                 }
             }
         } else {
@@ -381,7 +228,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Button {
-                    viewModel.copySessionReadingOverviewToPasteboard()
+                    viewModel.history.copySessionReadingOverviewToPasteboard()
                 } label: {
                     Label("Копировать весь текст", systemImage: "doc.on.doc")
                 }
@@ -413,7 +260,7 @@ struct ContentView: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 16) {
-                    ForEach(Array(viewModel.sessionReadingSequence.enumerated()), id: \.element.id) { index, item in
+                    ForEach(Array(viewModel.history.sessionReadingSequence.enumerated()), id: \.element.id) { index, item in
                         VStack(alignment: .leading, spacing: 8) {
                             if item.sourceLine.isEmpty {
                                 Text(item.displaySourceLine)
@@ -440,7 +287,7 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        if index < viewModel.sessionReadingSequence.count - 1 {
+                        if index < viewModel.history.sessionReadingSequence.count - 1 {
                             Divider()
                         }
                     }
@@ -455,7 +302,7 @@ struct ContentView: View {
     }
 
     private var hasSelectedStudyMaterialContent: Bool {
-        viewModel.studyMaterials.words?.hasContent == true
+        viewModel.study.studyMaterials.words?.hasContent == true
     }
 
     @ViewBuilder
@@ -502,7 +349,7 @@ struct ContentView: View {
                 )
             }
         } else if hasSelectedStudyMaterialContent {
-            wordsView(viewModel.studyMaterials.words)
+            wordsView(viewModel.study.studyMaterials.words)
         } else if viewModel.canRetryStudyAssistantData {
             centeredContent {
                 ContentUnavailableView(
@@ -627,26 +474,10 @@ struct ContentView: View {
     }
 
     private func shouldUsePinyinAsPrimary(for formatted: StructuredFormattedText) -> Bool {
-        if viewModel.currentProfileLearningLanguage == .chinese {
+        if viewModel.history.currentProfileLearningLanguage == .chinese {
             return true
         }
-        return viewModel.currentProfileLearningLanguage == .auto && !formatted.pinyinText.isEmpty
-    }
-
-    private func sidebarActionButton(
-        systemName: String,
-        helpText: String,
-        role: ButtonRole? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(role: role, action: action) {
-            Image(systemName: systemName)
-                .frame(width: 14, height: 14)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
-        .frame(width: 32, height: 30)
-        .help(helpText)
+        return viewModel.history.currentProfileLearningLanguage == .auto && !formatted.pinyinText.isEmpty
     }
 
     private func centeredContent<Content: View>(@ViewBuilder content: () -> Content) -> some View {

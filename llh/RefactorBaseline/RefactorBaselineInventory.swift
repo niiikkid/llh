@@ -24,17 +24,33 @@ enum RefactorBaselineInventory {
 
   /// `@Published` properties on `MainViewModel` (inventory count for regression detection).
   static let mainViewModelPublishedPropertyNames: [String] = [
+    "statusMessage",
+  ]
+
+  /// `@Published` properties on `EditorViewModel` (Phase 4 editor/format extraction).
+  static let editorViewModelPublishedPropertyNames: [String] = [
     "recognizedText",
     "formattedRecognizedText",
-    "studyMaterials",
     "capturedImage",
-    "statusMessage",
-    "showPermissionHelp",
+    "isFormattingRecognizedText",
+  ]
+
+  /// `@Published` properties on `StudyViewModel` (Phase 4 study extraction).
+  static let studyViewModelPublishedPropertyNames: [String] = [
+    "studyMaterials",
+  ]
+
+  /// `@Published` properties on `CaptureViewModel` (Phase 4 capture extraction).
+  static let captureViewModelPublishedPropertyNames: [String] = [
     "isProcessing",
+    "showPermissionHelp",
+  ]
+
+  /// `@Published` properties on `HistoryViewModel` (Phase 4 history extraction).
+  static let historyViewModelPublishedPropertyNames: [String] = [
     "profiles",
     "selectedProfileID",
     "selectedEntryID",
-    "isFormattingRecognizedText",
     "showsSessionReadingOverview",
   ]
 
@@ -51,26 +67,11 @@ enum RefactorBaselineInventory {
 
   /// Public actions on `MainViewModel` grouped by feature bucket.
   static let publicActionsByBucket: [FeatureBucket: [String]] = [
-    .capture: [
-      "triggerCapture",
-      "refreshPermissionState",
-      "openSystemSettings",
-    ],
+    .capture: [],
     .ocr: [],
-    .translationAndFormatting: [
-      "retryFormattingForSelectedEntry",
-      "calculatedTranslationOverlayDuration",
-    ],
-    .history: [
-      "deleteSelectedEntry",
-      "selectEntry",
-      "updateSelectedText",
-    ],
-    .profiles: [
-      "createProfile",
-      "selectProfile",
-      "deleteSelectedProfile",
-    ],
+    .translationAndFormatting: [],
+    .history: [],
+    .profiles: [],
     .settings: [],
     .overlay: [
       "closeTranslationOverlay",
@@ -80,12 +81,27 @@ enum RefactorBaselineInventory {
     .studyMaterial: [
       "retryStudyAssistantDataForSelectedEntry",
     ],
-    .sessionReading: [
-      "copySessionReadingOverviewToPasteboard",
-      "toggleSessionReadingOverview",
-      "plainTextForSessionReadingCopy",
-      "formattedDate",
-    ],
+    .sessionReading: [],
+  ]
+
+  /// Public actions on `CaptureViewModel` (Phase 4).
+  static let captureViewModelPublicActions: [String] = [
+    "triggerCapture",
+    "triggerCaptureFromHotkey",
+    "refreshPermissionState",
+    "openSystemSettings",
+  ]
+
+  /// Public actions on `HistoryViewModel` (Phase 4).
+  static let historyViewModelPublicActions: [String] = [
+    "deleteSelectedEntry",
+    "selectEntry",
+    "createProfile",
+    "selectProfile",
+    "deleteSelectedProfile",
+    "copySessionReadingOverviewToPasteboard",
+    "toggleSessionReadingOverview",
+    "formattedDate",
   ]
 
   /// Where `persistHistory()` is invoked from `MainViewModel` (user vs automatic workflow).
@@ -128,6 +144,28 @@ enum RefactorBaselineInventory {
     "buildGrammarStudyData",
   ]
 
+  /// Public actions on `TranslationOverlayCoordinator` (Phase 4).
+  static let translationOverlayCoordinatorPublicActions: [String] = [
+    "close",
+    "toggleLastTranslation",
+    "clearAwaitingFormattedEntry",
+    "markEntryAwaitingFormattedResult",
+    "handleFormattingPreflightFailure",
+    "handleFormattingSuccess",
+    "handleFormattingFailure",
+  ]
+
+  /// Public actions on `EditorViewModel` (Phase 4).
+  static let editorViewModelPublicActions: [String] = [
+    "updateSelectedText",
+    "retryFormattingForSelectedEntry",
+  ]
+
+  /// Public actions on `StudyViewModel` (Phase 4).
+  static let studyViewModelPublicActions: [String] = [
+    "retryStudyAssistantDataForSelectedEntry",
+  ]
+
   /// Public actions on `SettingsViewModel` (Phase 4).
   static let settingsViewModelPublicActions: [String] = [
     "validateAndSaveOpenAIToken",
@@ -147,5 +185,8 @@ enum RefactorBaselineInventory {
     "ContentView",
     "MenuBarPanelView",
     "SettingsView (via MainViewModel.settings)",
+    "HistoryView (via MainViewModel.history)",
+    "Capture permission UI (via MainViewModel.capture)",
+    "MenuBarPanelView (via MainViewModel.capture.triggerCapture)",
   ]
 }

@@ -108,7 +108,7 @@ struct Phase1RepositoryTests {
         let viewModel = dependencies.makeMainViewModel()
 
         #expect(viewModel.settings.hasOpenAIToken == false)
-        #expect(viewModel.profiles.isEmpty == false)
+        #expect(viewModel.history.profiles.isEmpty == false)
     }
 }
 

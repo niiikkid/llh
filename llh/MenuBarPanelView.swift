@@ -21,9 +21,9 @@ struct MenuBarPanelView: View {
 
             HStack {
                 Button("Capture") {
-                    viewModel.triggerCapture()
+                    viewModel.capture.triggerCapture()
                 }
-                .disabled(viewModel.isProcessing)
+                .disabled(viewModel.capture.isProcessing)
 
                 Button("Open Window") {
                     openWindow(id: "main-window")

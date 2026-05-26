@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2–3 завершены; Phase 4 добавляет feature ViewModels поверх того же контейнера — см. [Phase 4](refactoring-phase-4-presentation.md).
+Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2–4 завершены; Phase 4 композирует feature VMs (`Settings`, `History`, `Capture`, `Study`, `Editor`) и `TranslationOverlayCoordinator` из того же use cases и DI-графа; hotkeys — `AppShortcutsCoordinator` — см. [Phase 4](refactoring-phase-4-presentation.md).
 
 ## Направление зависимостей
 
@@ -47,11 +47,12 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 Точки входа: `llhApp` и SwiftUI preview в `ContentView` используют `AppDependencyContainer.live().makeMainViewModel()`.
 
-## MainViewModel (состояние после Phase 3)
+## MainViewModel (состояние после Phase 3 / Phase 4)
 
 - Единственный designated init: `init(dependencies: AppDependencyContainer)`.
 - Repositories и `OpenAIServing` не инжектируются напрямую — только use cases и overlay service.
-- `TranslationOverlayService` пока остаётся конкретным типом в контейнере (протокол overlay — Phase 4+).
+- `TranslationOverlayService` остаётся конкретным типом в контейнере; lifecycle overlay после format — `TranslationOverlayCoordinator` (Phase 4 inc. 4).
+- **Phase 4 (завершена):** `let settings`, `history`, `capture`, `study`, `editor`; private `TranslationOverlayCoordinator`; `AppShortcutsCoordinator` в `init`. Main ~157 строк, один `@Published` (`statusMessage`). `FormatCapturedTextUseCase` — в `EditorViewModel`, не в Main.
 
 ## Покрытие тестами (Phase 1)
 
@@ -60,7 +61,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 - Roundtrip `JSONHistoryRepository` через временный `history.json`
 - Persistence OCR engine через изолированный `UserDefaults` suite
 - `KeychainAPIKeyRepository` с in-memory `OpenAITokenStoring`
-- Smoke: `MainViewModel` с инжектированными repo/store без user Keychain
+- Smoke: `MainViewModel` с инжектированными repo/store без user Keychain (`viewModel.history.profiles` после Phase 4)
 
 ## Критерии выхода Phase 1
 
@@ -74,7 +75,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 ## See Also
 
-- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — presentation split
+- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена (включая `EditorViewModel`)
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — Domain/Models и Data/OpenAI границы
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь и safety net до DI

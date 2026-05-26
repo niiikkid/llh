@@ -129,7 +129,7 @@ struct llhTests {
             SessionReadingSequenceItem(id: id1, sourceLine: "Hello", translationLine: "Привет"),
             SessionReadingSequenceItem(id: id2, sourceLine: "", translationLine: "Только перевод"),
         ]
-        let plain = MainViewModel.plainTextForSessionReadingCopy(items: items)
+        let plain = HistoryViewModel.plainTextForSessionReadingCopy(items: items)
         let expected = """
         Hello
         Привет

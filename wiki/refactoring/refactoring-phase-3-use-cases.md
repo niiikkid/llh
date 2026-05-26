@@ -179,6 +179,8 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 - `.processing` и persist — в ViewModel после preflight `.ready`
 - Settings flow ещё во ViewModel — вынесен в инкременте 6
 
+> **После Phase 4 inc. 4:** `loadStudyMaterial` и `@Published studyMaterials` — в `StudyViewModel`; `LoadWordStudyUseCase` без изменений.
+
 ## Инкремент 6 — manage OpenAI settings
 
 | Файл | Назначение |
@@ -221,7 +223,13 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 - Capture/format/word study читают API key через `currentAPIKey()`
 - Overlay и shortcuts остаются во ViewModel (Phase 4)
 
-> **После Phase 4 inc. 1:** настройки вынесены в `SettingsViewModel` (~685 строк Main). Use case тот же; UI state settings — не в Main. См. [Phase 4](refactoring-phase-4-presentation.md).
+> **После Phase 4 inc. 1:** настройки вынесены в `SettingsViewModel` (~685 строк Main). Use case тот же; UI state settings — не в Main.
+>
+> **После Phase 4 inc. 2:** история/профили в `HistoryViewModel` (~509 строк Main). `ManageHistoryUseCase` / `ManageProfilesUseCase` вызываются из History VM; capture/format/study по-прежнему координирует Main.
+>
+> **После Phase 4 inc. 4:** захват в `CaptureViewModel`; study в `StudyViewModel`; overlay — `TranslationOverlayCoordinator`; format/editor ещё на Main (~307 строк).
+>
+> **После Phase 4 inc. 5:** format/editor в `EditorViewModel` → `FormatCapturedTextUseCase`; Main ~157 строк (фасад). См. [Phase 4](refactoring-phase-4-presentation.md).
 
 ## Покрытие тестами
 
@@ -281,11 +289,11 @@ Phase 3 завершена: `MainViewModel` делегирует все пере
 
 ## Следующий шаг
 
-**Phase 4** — в процессе: инкремент 1 (Settings) завершён — см. [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md). Далее History, Capture + `AppShortcutsCoordinator`.
+**Phase 5** — миграция истории на SQLite — см. [Roadmap](project-refactoring-roadmap.md). Phase 4 завершена — [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md).
 
 ## See Also
 
-- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — split UI; settings increment завершён
+- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена (все 5 инкрементов)
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — протоколы и контейнер
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь MainViewModel

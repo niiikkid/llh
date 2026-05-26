@@ -57,8 +57,11 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 - После Phase 3: ~783 строк; все workflows делегированы use cases; `HistorySessionState` в `Domain/Models`
 - После Phase 4 inc. 1: ~685 строк Main + `SettingsViewModel`; settings UI state в `Presentation/Settings/`
+- После Phase 4 inc. 2: ~509 строк Main + `HistoryViewModel` + `SettingsViewModel`; history UI state в `Presentation/History/`
+- После Phase 4 inc. 3: ~439 строк Main + `CaptureViewModel` + `AppShortcutsCoordinator`; capture/permission UI state в `Presentation/Capture/`
+- После Phase 4 inc. 4: ~307 строк Main + `StudyViewModel` + `TranslationOverlayCoordinator`; study UI state в `Presentation/Study/`
+- После Phase 4 inc. 5: ~157 строк Main + `EditorViewModel` (~198 строк); editor/format UI state в `Presentation/Editor/`
 - DI из Phase 1: `AppDependencyContainer` → `init(dependencies:)`
-- Остальное во Main: overlay, shortcuts, history/capture orchestration — Phase 4 продолжается ([Phase 4](refactoring-phase-4-presentation.md))
 
 ## Покрытие тестами
 
@@ -87,7 +90,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## See Also
 
-- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 в процессе
+- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI и repositories
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь и safety net

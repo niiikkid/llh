@@ -1,12 +1,12 @@
 # Refactoring Phase 4 Presentation
 
 > Sources: llh project, 2026-05-26
-> Raw: [Phase 4 settings ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-settings-viewmodel-completion.md)
+> Raw: [Phase 4 settings ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-settings-viewmodel-completion.md); [Phase 4 history ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-history-viewmodel-completion.md); [Phase 4 capture ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-capture-viewmodel-completion.md); [Phase 4 study and overlay completion](../../raw/refactoring/2026-05-26-phase-4-study-overlay-completion.md); [Phase 4 editor ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-editor-viewmodel-completion.md)
 > Updated: 2026-05-26
 
 ## Overview
 
-Phase 4 («Split Presentation Into Feature ViewModels») **в процессе**. Цель — слой `Presentation/` с feature ViewModels, разбиение `ContentView`, `MainViewModel` как композиционный фасад (или удаление на финальном PR).
+Phase 4 («Split Presentation Into Feature ViewModels») **завершена** по критериям roadmap. Слой `Presentation/` содержит feature ViewModels; `MainViewModel` — тонкий композиционный фасад (~157 строк, один `@Published` — `statusMessage`).
 
 Целевая структура (roadmap):
 
@@ -14,10 +14,28 @@ Phase 4 («Split Presentation Into Feature ViewModels») **в процессе**
 Presentation/
   Main/ContentView.swift
   Settings/SettingsView.swift + SettingsViewModel.swift
-  History/…
-  Capture/…
-  Study/…
+  History/HistoryView.swift + HistoryViewModel.swift
+  Capture/CaptureViewModel.swift
+  Editor/EditorViewModel.swift
+  Study/StudyViewModel.swift
+  Overlay/TranslationOverlayCoordinator.swift
   MenuBar/…
+App/
+  AppDependencyContainer.swift
+  AppShortcutsCoordinator.swift
+```
+
+Композиция `MainViewModel` (inc. 5):
+
+```text
+MainViewModel
+  ├── settings: SettingsViewModel
+  ├── history: HistoryViewModel
+  ├── capture: CaptureViewModel
+  ├── study: StudyViewModel
+  ├── editor: EditorViewModel
+  ├── overlay: TranslationOverlayCoordinator (private)
+  └── shortcutsCoordinator (private, удерживается в init)
 ```
 
 ## Инкремент 1 — Settings (завершён)
@@ -25,73 +43,214 @@ Presentation/
 | Файл | Строк (≈) | Назначение |
 |------|-----------|------------|
 | `Presentation/Settings/SettingsViewModel.swift` | 147 | Состояние и действия настроек |
-| `Presentation/Settings/SettingsView.swift` | 221 | Sheet: вкладки «Общие» (shortcuts + overlay timing) и «OpenAI» |
-| `MainViewModel.swift` | 685 | Фасад: `let settings`, подписка `objectWillChange` |
-| `ContentView.swift` | 682 | Toolbar OCR + sheet через `viewModel.settings` |
+| `Presentation/Settings/SettingsView.swift` | 221 | Sheet: вкладки «Общие» и «OpenAI» |
+| `MainViewModel.swift` | — | Фасад: `let settings` |
 
-### Состояние в SettingsViewModel (7 `@Published`)
+7 `@Published` на Settings; OCR hotkey toast в Settings VM.
+
+## Инкремент 2 — History (завершён)
+
+| Файл | Строк (≈) | Назначение |
+|------|-----------|------------|
+| `Presentation/History/HistoryViewModel.swift` | 253 | Профили, выбор записи, load/persist/mutate session |
+| `Presentation/History/HistoryView.swift` | 188 | Sidebar: сессии, список переводов, create/delete profile |
+| `MainViewModel.swift` | 509 | Фасад: `let history`; capture/format/study/editor |
+| `ContentView.swift` | 513 | Sidebar через `HistoryView`; detail — editor + session reading |
+
+### Состояние в HistoryViewModel (4 `@Published`)
 
 | Свойство | Назначение |
 |----------|------------|
-| `availableOpenAIModels` | Кэш списка моделей |
-| `selectedOpenAIModelID` | Выбранная модель |
-| `selectedOCREngine` | local / AI |
-| `defaultNewProfileLearningLanguage` | Язык по умолчанию для новых профилей |
-| `translationOverlayMinimumDuration` | Минимум показа compact overlay |
-| `translationOverlaySecondsPerWord` | Секунд на слово в формуле длительности |
-| `isLoadingOpenAIModels` | Validate / refresh token |
+| `profiles` | Все learning-профили |
+| `selectedProfileID` | Активная сессия |
+| `selectedEntryID` | Выбранный перевод |
+| `showsSessionReadingOverview` | Режим «весь текст сессии» |
 
-### Публичные действия SettingsViewModel
+### Публичные действия HistoryViewModel
 
-`validateAndSaveOpenAIToken`, `refreshOpenAIModels`, `deleteOpenAIToken`, `selectOpenAIModel`, `selectOCREngine`, `switchToNextOCREngine`, `setDefaultNewProfileLearningLanguage`, `setTranslationOverlayMinimumDuration`, `setTranslationOverlaySecondsPerWord`, `currentAPIKey()`, `calculatedTranslationOverlayDuration(for:)`.
+`deleteSelectedEntry`, `selectEntry`, `createProfile`, `selectProfile`, `deleteSelectedProfile`, `toggleSessionReadingOverview`, `copySessionReadingOverviewToPasteboard`, `formattedDate`.
+
+API для Main: `session`, `applySession`, `persist`, `loadFromDisk`, `mutateEntry`, `insertEntry`, `updateSelectedEntryText`, индексы `selectedProfileIndex` / `selectedEntryIndex`.
 
 ### Границы и DI
 
-- Domain: `ManageOpenAISettingsUseCase` (без изменений с Phase 3).
-- `statusMessage` остаётся в `MainViewModel`; settings вызывает `configureStatusReporting { … }` после init.
-- OCR toast при hotkey switch: `TranslationOverlayService` внутри `SettingsViewModel` (проверка `!NSApp.isActive`).
-- **Hotkey registration** — по-прежнему в `MainViewModel.init`; handler OCR вызывает `settings.switchToNextOCREngine(triggeredByHotkey: true)` (PR 3: `AppShortcutsCoordinator`).
-- Capture / format / word study в `MainViewModel` читают `settings.selectedOCREngine`, `settings.currentAPIKey()`, `settings.selectedOpenAIModelID`, `settings.calculatedTranslationOverlayDuration`.
+- Domain: `ManageHistoryUseCase`, `ManageProfilesUseCase` (без изменений с Phase 3).
+- `statusMessage` на `MainViewModel`; history — `configureStatusReporting`.
+- Синхронизация editor при смене выбора: `configureSelectionSync` → `EditorViewModel.syncSelectionFromHistory` (после inc. 5).
+- `createProfile` → `configureNewProfileLanguagePersistence` → `settings.setDefaultNewProfileLearningLanguage`.
+- Capture/format/word study читают `history.profiles`, `history.session`, `history.mutateEntry`, `history.persist`.
 
-### MainViewModel после инкремента 1
+### MainViewModel после инкремента 2
 
-| Метрика | Phase 3 (конец) | Phase 4 inc. 1 |
-|---------|-----------------|----------------|
-| `@Published` на Main | 19 | **12** |
-| `@Published` на Settings | — | **7** |
-| Строк `MainViewModel` | ~783 | **~685** |
+| Метрика | Phase 4 inc. 1 | Phase 4 inc. 2 |
+|---------|----------------|----------------|
+| `@Published` на Main | 12 | **8** |
+| `@Published` на History | — | **4** |
+| `@Published` на Settings | 7 | **7** |
+| Строк `MainViewModel` | ~685 | **~509** |
+| Строк `ContentView` | ~682 | **~513** |
 
-Settings-related методы удалены с `MainViewModel`; `createProfile` вызывает `settings.setDefaultNewProfileLearningLanguage`.
+History/profiles/session-reading методы удалены с `MainViewModel`; computed `currentProfileLearningLanguage` / `currentProfileSupportsWordStudy` — тонкие прокси к `history`.
 
 ### Тесты и инвентарь
 
-- `RefactorBaselineInventory`: `mainViewModelPublishedPropertyNames` (12) + `settingsViewModelPublishedPropertyNames` (7); buckets `.ocr` / `.settings` на Main пустые; действия settings — в `settingsViewModelPublicActions`.
-- `RefactorBaselineTests`: locks 12 + 7.
-- `Phase1RepositoryTests`: `viewModel.settings.hasOpenAIToken`.
+- `RefactorBaselineInventory`: 8 + 4 + 7 `@Published`; `historyViewModelPublicActions`.
+- `RefactorBaselineTests`: locks 8 + 4 + 7.
+- `Phase1RepositoryTests`: `viewModel.history.profiles`.
+- `llhTests`: `HistoryViewModel.plainTextForSessionReadingCopy`.
 
 Поведение для пользователя не менялось.
 
-## Следующие инкременты (roadmap PR 2–5)
+## Инкремент 3 — Capture + shortcuts (завершён)
 
-| PR | Содержание |
-|----|------------|
-| 2 | `HistoryViewModel` + `HistoryView` (profiles, entries, sidebar) |
-| 3 | `CaptureViewModel` + `AppShortcutsCoordinator` |
-| 4 | Study / overlay presentation state |
-| 5 | Убрать или минимизировать `MainViewModel` |
+| Файл | Строк (≈) | Назначение |
+|------|-----------|------------|
+| `Presentation/Capture/CaptureViewModel.swift` | 161 | Захват области, permission state, hotkey/interface capture |
+| `App/AppShortcutsCoordinator.swift` | 42 | Регистрация global shortcuts через closures |
+| `MainViewModel.swift` | 439 | Фасад: `let capture`; format/study/overlay/editor |
+
+### Состояние в CaptureViewModel (2 `@Published`)
+
+| Свойство | Назначение |
+|----------|------------|
+| `isProcessing` | Идёт выделение области / OCR |
+| `showPermissionHelp` | Нужен Screen Recording |
+
+### Публичные действия CaptureViewModel
+
+`triggerCapture`, `triggerCaptureFromHotkey`, `refreshPermissionState`, `openSystemSettings`.
+
+API для Main: `configureStatusReporting`, `configurePrepareForInterfaceCapture`, `configureSelectionSync`, `configureCapturePreviewWithoutEntry`, `configureOverlayAwaitingFormatReset`, `configurePostCapture`.
+
+`CaptureViewModel` получает `permissionService` и `captureRegionUseCase` из `AppDependencyContainer`; читает OCR/API key из `settings`, пишет в историю через `history.insertEntry` / `persist`.
+
+### AppShortcutsCoordinator
+
+Четыре hotkey → `AppShortcutHandlers` (capture, switch OCR, close overlay, toggle last translation). Main передаёт weak-замыкания на `capture`, `settings`, overlay-методы.
+
+### MainViewModel после инкремента 3
+
+| Метрика | inc. 2 | inc. 3 |
+|---------|--------|--------|
+| `@Published` на Main | 8 | **6** |
+| `@Published` на Capture | — | **2** |
+| `@Published` на History | 4 | **4** |
+| `@Published` на Settings | 7 | **7** |
+| Строк `MainViewModel` | ~509 | **~439** |
+
+Format/study/overlay и editor state остаются на Main (до inc. 5); после capture Main запускает format через `configurePostCapture`.
+
+### Тесты и инвентарь
+
+- `RefactorBaselineInventory`: 6 + 2 + 4 + 7 `@Published`; `captureViewModelPublicActions`.
+- `RefactorBaselineTests`: locks 6 + 2 + 4 + 7.
+
+Поведение для пользователя не менялось.
+
+## Инкремент 4 — Study + overlay (завершён)
+
+| Файл | Строк (≈) | Назначение |
+|------|-----------|------------|
+| `Presentation/Study/StudyViewModel.swift` | 151 | Word study materials, `LoadWordStudyUseCase`, retry |
+| `Presentation/Overlay/TranslationOverlayCoordinator.swift` | 92 | Overlay после format, toggle last translation, awaiting entry ID |
+| `MainViewModel.swift` | 307 | Фасад: `let study`; format/editor на Main |
+| `ContentView.swift` | 513 | Study block читает `viewModel.study.studyMaterials` |
+
+### Состояние в StudyViewModel (1 `@Published`)
+
+| Свойство | Назначение |
+|----------|------------|
+| `studyMaterials` | Word study payload и status для выбранной записи |
+
+### TranslationOverlayCoordinator
+
+Не `ObservableObject`. Методы: `close`, `toggleLastTranslation`, `clearAwaitingFormattedEntry`, `markEntryAwaitingFormattedResult`, `handleFormattingPreflightFailure` / `Success` / `Failure`.
+
+Main сохраняет публичные прокси `closeTranslationOverlay`, `toggleLastTranslationOverlay` для shortcuts. Capture сбрасывает awaiting через `configureOverlayAwaitingFormatReset` → `overlay.clearAwaitingFormattedEntry()`.
+
+### MainViewModel после инкремента 4
+
+| Метрика | inc. 3 | inc. 4 |
+|---------|--------|--------|
+| `@Published` на Main | 6 | **5** |
+| `@Published` на Study | — | **1** |
+| `@Published` на Capture | 2 | **2** |
+| `@Published` на History | 4 | **4** |
+| `@Published` на Settings | 7 | **7** |
+| Строк `MainViewModel` | ~439 | **~307** |
+
+На Main остаются: `recognizedText`, `formattedRecognizedText`, `capturedImage`, `statusMessage`, `isFormattingRecognizedText`, `FormatCapturedTextUseCase`.
+
+### Тесты и инвентарь
+
+- `RefactorBaselineInventory`: 5 + 1 + 2 + 4 + 7 `@Published`; `studyViewModelPublicActions`, `translationOverlayCoordinatorPublicActions`.
+- `RefactorBaselineTests`: locks 5 + 1 + 2 + 4 + 7.
+
+Поведение для пользователя не менялось.
+
+## Инкремент 5 — Editor/format (завершён)
+
+| Файл | Строк (≈) | Назначение |
+|------|-----------|------------|
+| `Presentation/Editor/EditorViewModel.swift` | 198 | Editor state, `FormatCapturedTextUseCase`, selection sync, post-capture format |
+| `MainViewModel.swift` | 157 | Фасад: `statusMessage`, overlay shortcuts, study retry proxies |
+| `ContentView.swift` | 513 | Editor UI через `viewModel.editor`; язык профиля — `viewModel.history` |
+
+### Состояние в EditorViewModel (4 `@Published`)
+
+| Свойство | Назначение |
+|----------|------------|
+| `recognizedText` | Сырой текст выбранной записи |
+| `formattedRecognizedText` | Форматированный перевод для UI |
+| `capturedImage` | Превью скриншота in-memory |
+| `isFormattingRecognizedText` | Идёт запрос format в OpenAI |
+
+### Публичные действия EditorViewModel
+
+`updateSelectedText`, `retryFormattingForSelectedEntry`, `syncSelectionFromHistory`, `applyCapturePreviewWithoutEntry`, `handlePostCapture`.
+
+### MainViewModel после инкремента 5
+
+| Метрика | inc. 4 | inc. 5 |
+|---------|--------|--------|
+| `@Published` на Main | 5 | **1** |
+| `@Published` на Editor | — | **4** |
+| `@Published` на Study | 1 | **1** |
+| `@Published` на Capture | 2 | **2** |
+| `@Published` на History | 4 | **4** |
+| `@Published` на Settings | 7 | **7** |
+| Строк `MainViewModel` | ~307 | **~157** |
+
+Итого `@Published`: **1 + 4 + 1 + 2 + 4 + 7 = 19** (как в Phase 0, распределены по feature VMs).
+
+### Тесты и инвентарь
+
+- `RefactorBaselineInventory`: `editorViewModelPublishedPropertyNames`, `editorViewModelPublicActions`.
+- `RefactorBaselineTests`: locks 1 + 4 + 1 + 2 + 4 + 7.
+
+Поведение для пользователя не менялось.
 
 ## Критерии выхода Phase 4 (roadmap)
 
 | Критерий | Статус |
 |----------|--------|
 | `SettingsView` + `SettingsViewModel` | выполнено |
-| `HistoryView` + `HistoryViewModel` | ожидает PR 2 |
-| `ContentView` разбит по feature views | частично |
-| Feature ViewModels владеют своим UI state | частично (settings) |
-| Shortcuts вне feature ViewModels | ожидает PR 3 |
+| `HistoryView` + `HistoryViewModel` | выполнено |
+| `CaptureViewModel` + `AppShortcutsCoordinator` | выполнено |
+| `StudyViewModel` + overlay coordinator | выполнено |
+| `EditorViewModel` (format/editor state) | выполнено |
+| `MainViewModel` минимизирован | выполнено |
+| `ContentView` разбит по feature views | частично (History/Settings views; editor UI в ContentView) |
+| Feature ViewModels владеют своим UI state | выполнено |
+| Shortcuts вне feature ViewModels | выполнено |
+
+## Следующий шаг
+
+**Phase 5** — миграция истории на SQLite ([Roadmap](project-refactoring-roadmap.md)).
 
 ## See Also
 
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
+- [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план
