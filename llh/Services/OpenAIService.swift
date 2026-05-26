@@ -849,7 +849,6 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
     private let selectedOCREngineKey: String
     private let translationOverlayMinimumDurationKey: String
     private let translationOverlaySecondsPerWordKey: String
-    private let pauseMediaDuringHotkeyCaptureEnabledKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -858,8 +857,7 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         cachedModelsKey: String = "openai.cached.model.ids",
         selectedOCREngineKey: String = "ocr.selected.engine",
         translationOverlayMinimumDurationKey: String = "overlay.translation.minimum.duration",
-        translationOverlaySecondsPerWordKey: String = "overlay.translation.seconds.per.word",
-        pauseMediaDuringHotkeyCaptureEnabledKey: String = "capture.pause.media.on.hotkey"
+        translationOverlaySecondsPerWordKey: String = "overlay.translation.seconds.per.word"
     ) {
         self.userDefaults = userDefaults
         self.selectedModelKey = selectedModelKey
@@ -868,7 +866,6 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         self.selectedOCREngineKey = selectedOCREngineKey
         self.translationOverlayMinimumDurationKey = translationOverlayMinimumDurationKey
         self.translationOverlaySecondsPerWordKey = translationOverlaySecondsPerWordKey
-        self.pauseMediaDuringHotkeyCaptureEnabledKey = pauseMediaDuringHotkeyCaptureEnabledKey
     }
 
     var selectedModelID: String? {
@@ -920,11 +917,6 @@ struct OpenAISettingsStore: OpenAISettingsStoring {
         set {
             userDefaults.set(newValue.clamped(to: 0.1...2), forKey: translationOverlaySecondsPerWordKey)
         }
-    }
-
-    var pauseMediaDuringHotkeyCaptureEnabled: Bool {
-        get { userDefaults.bool(forKey: pauseMediaDuringHotkeyCaptureEnabledKey) }
-        set { userDefaults.set(newValue, forKey: pauseMediaDuringHotkeyCaptureEnabledKey) }
     }
 }
 

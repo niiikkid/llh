@@ -342,10 +342,6 @@ struct llhTests {
         #expect(store.translationOverlaySecondsPerWord == 0.5)
         store.translationOverlaySecondsPerWord = 10
         #expect(store.translationOverlaySecondsPerWord == 2)
-
-        #expect(store.pauseMediaDuringHotkeyCaptureEnabled == false)
-        store.pauseMediaDuringHotkeyCaptureEnabled = true
-        #expect(store.pauseMediaDuringHotkeyCaptureEnabled == true)
     }
 
     @Test
@@ -544,47 +540,4 @@ struct llhTests {
         #expect(LearningLanguage.english.supportsWordStudy == true)
     }
 
-    @Test
-    func mainViewModel_shouldPauseMediaDuringCapture_whenFeatureEnabledForAnyTriggerSource() {
-        #expect(
-            MainViewModel.shouldPauseMediaDuringCapture(
-                triggeredBy: .hotkey,
-                isEnabled: true
-            ) == true
-        )
-        #expect(
-            MainViewModel.shouldPauseMediaDuringCapture(
-                triggeredBy: .interface,
-                isEnabled: true
-            ) == true
-        )
-        #expect(
-            MainViewModel.shouldPauseMediaDuringCapture(
-                triggeredBy: .hotkey,
-                isEnabled: false
-            ) == false
-        )
-    }
-
-    @Test
-    func mediaPlaybackInterruptionService_buildsBrowserScriptsForSupportedApps() {
-        let safariScript = MediaPlaybackInterruptionService.browserPlaybackScript(
-            for: "Safari",
-            action: .pause
-        )
-        let chromeScript = MediaPlaybackInterruptionService.browserPlaybackScript(
-            for: "Google Chrome",
-            action: .play
-        )
-        let unsupportedScript = MediaPlaybackInterruptionService.browserPlaybackScript(
-            for: "Finder",
-            action: .pause
-        )
-
-        #expect(safariScript?.contains("do JavaScript") == true)
-        #expect(safariScript?.contains("media.pause()") == true)
-        #expect(chromeScript?.contains("execute activeTab javascript") == true)
-        #expect(chromeScript?.contains("media.play()") == true)
-        #expect(unsupportedScript == nil)
-    }
 }
