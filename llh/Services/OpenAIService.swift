@@ -8,84 +8,6 @@ import Foundation
 import ImageIO
 import Security
 
-struct OpenAIModel: Identifiable, Equatable {
-    let id: String
-}
-
-protocol OpenAIServing {
-    func fetchModels(apiKey: String) async throws -> [OpenAIModel]
-    func recognizeTextInImage(
-        apiKey: String,
-        modelID: String,
-        image: CGImage
-    ) async throws -> String
-    func formatRecognizedText(
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        rawText: String
-    ) async throws -> StructuredFormattedText
-    func buildWordsStudyData(
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) async throws -> WordStudyPayload
-    func buildPhrasesStudyData(
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) async throws -> PhraseStudyPayload
-    func buildGrammarStudyData(
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) async throws -> GrammarExplanationPayload
-}
-
-enum OpenAIServiceError: LocalizedError {
-    case invalidTokenFormat
-    case unauthorized
-    case unexpectedStatusCode(Int)
-    case invalidResponse
-    case noModelsFound
-    case hostNotFound
-    case networkUnavailable
-    case emptyFormattedText
-    case invalidStructuredResponse
-    case invalidImageData
-    case emptyRecognizedText
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidTokenFormat:
-            return "Токен пустой или имеет неверный формат."
-        case .unauthorized:
-            return "Не удалось авторизоваться в OpenAI. Проверьте API token."
-        case .unexpectedStatusCode(let code):
-            return "OpenAI вернул ошибку (\(code))."
-        case .invalidResponse:
-            return "Получен некорректный ответ от OpenAI."
-        case .noModelsFound:
-            return "OpenAI не вернул доступные модели."
-        case .hostNotFound:
-            return "Не удается найти сервер OpenAI (DNS). Проверьте интернет, VPN/прокси и сетевые права приложения."
-        case .networkUnavailable:
-            return "Нет сетевого подключения. Проверьте интернет и повторите попытку."
-        case .emptyFormattedText:
-            return "OpenAI вернул пустой форматированный текст."
-        case .invalidStructuredResponse:
-            return "OpenAI вернул некорректную структуру форматированного текста."
-        case .invalidImageData:
-            return "Не удалось подготовить изображение для распознавания."
-        case .emptyRecognizedText:
-            return "OpenAI не вернул распознанный текст."
-        }
-    }
-}
-
 struct OpenAIService: OpenAIServing {
     private let session: URLSession
 
@@ -121,7 +43,7 @@ struct OpenAIService: OpenAIServing {
                 VisionChatMessage(
                     role: "user",
                     content: [
-                        .init(type: "text", text: "Распознай текст на изображении. Верни только распознанный текст без пояснений и markdown."),
+                        .init(type: "text", text: OpenAIPromptBuilder.recognizeTextInImageUserPrompt()),
                         .init(type: "image_url", imageURL: .init(url: "data:image/jpeg;base64,\(imageBase64)"))
                     ]
                 )
@@ -246,35 +168,14 @@ struct OpenAIService: OpenAIServing {
             messages: [
                 .init(
                     role: "system",
-                    content: """
-                    You clean OCR text for language learning and return JSON only.
-                    Do not add any content that is absent in source except Russian translation.
-                    Keep original symbols exactly for kept source fragments.
-                    Remove noise and foreign language fragments.
-                    Output strict JSON object with exactly 3 string fields:
-                    cleaned_text
-                    pinyin_text
-                    russian_translation
-                    No markdown, no code fences, no extra keys.
-                    """
+                    content: OpenAIPromptBuilder.formatRecognizedTextSystemPrompt()
                 ),
                 .init(
                     role: "user",
-                    content: """
-                    Target language: \(targetLanguage.openAIInstructionName)
-                    Rules:
-                    \(targetLanguage.formattingRules)
-
-                    Additional rules:
-                    1) cleaned_text: cleaned meaningful source text after OCR cleanup.
-                    2) pinyin_text: if the cleaned_text is Chinese, provide pinyin for it; otherwise return empty string.
-                    \(Self.pinyinTonePromptLine(for: targetLanguage))
-                    3) russian_translation: concise Russian translation of cleaned_text.
-                    4) If target language is Auto-detect, first detect the main language of the text and then apply the same rules.
-
-                    Raw OCR text:
-                    \(rawText)
-                    """
+                    content: OpenAIPromptBuilder.formatRecognizedTextUserPrompt(
+                        targetLanguage: targetLanguage,
+                        rawText: rawText
+                    )
                 )
             ]
         )
@@ -339,7 +240,7 @@ struct OpenAIService: OpenAIServing {
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
     ) async throws -> WordStudyPayload {
-        let prompt = Self.wordsAnalysisPrompt(for: targetLanguage)
+        let prompt = OpenAIPromptBuilder.wordsAnalysisPrompt(for: targetLanguage)
         let dto: WordsResponseDTO = try await performStructuredRequest(
             apiKey: apiKey,
             modelID: modelID,
@@ -367,109 +268,6 @@ struct OpenAIService: OpenAIServing {
         return result
     }
 
-    static func wordsAnalysisPrompt(for targetLanguage: LearningLanguage) -> (system: String, user: (String, String, String) -> String) {
-        if targetLanguage == .chinese {
-            return (
-                system: """
-                You produce JSON only for word-by-word study.
-                Never use hieroglyphs or source script in the response.
-                Use only pinyin/transliteration and Russian.
-                When using pinyin, always include tone marks on every syllable.
-                Return JSON object with key `entries`.
-                Each entry has `term_pinyin`, `term_translation`, and `character_breakdown`.
-                Each `character_breakdown` item has `pinyin_text` and `russian_translation`.
-                No markdown. No extra keys.
-                """,
-                user: { cleanedText, pinyinText, russianTranslation in
-                    """
-                    Target language: \(targetLanguage.openAIInstructionName)
-                    Cleaned text:
-                    \(cleanedText)
-
-                    Pronunciation:
-                    \(pinyinText)
-
-                    Translation:
-                    \(russianTranslation)
-
-                    Extract useful study entries from the text.
-                    Return short words or fixed short expressions, not full sentences.
-                    Prefer entries that are usually 1 to 3 characters long. Use 4 only for a natural fixed expression.
-                    Include useful standalone words such as pronouns or particles.
-                    If several characters form one word, keep them in one entry.
-                    If an entry has multiple characters or meaningful parts, explain each part separately in `character_breakdown`.
-                    Keep the result compact.
-                    """
-                }
-            )
-        }
-
-        if targetLanguage == .spanish {
-            return (
-                system: """
-                You produce JSON only for word-by-word study.
-                Keep Spanish words in original spelling (include accents: á, ñ, etc.).
-                Return JSON object with key `entries`.
-                Each entry has `term_pinyin`, `term_translation`, `russian_pronunciation`, and `character_breakdown`.
-                - `term_pinyin`: the Spanish word or short fixed expression exactly as it appears in the cleaned text.
-                - `term_translation`: concise Russian translation of the meaning.
-                - `russian_pronunciation`: short hint IN RUSSIAN (Cyrillic) for how a Russian speaker should read this Spanish aloud—like phrasebook transcription, not IPA. Use familiar Russian letters and hyphens between syllables if helpful; mark stress with an acute accent on the vowel (e.g. ó) when it helps. Do not repeat the Spanish word here—only the reading guide.
-                - `character_breakdown`: always an empty array
-                No markdown. No extra keys.
-                """,
-                user: { cleanedText, _, russianTranslation in
-                    """
-                    Target language: \(targetLanguage.openAIInstructionName)
-                    Cleaned text:
-                    \(cleanedText)
-
-                    Translation:
-                    \(russianTranslation)
-
-                    Extract useful study entries from the text.
-                    Return words or short fixed expressions, not full sentences.
-                    Keep each Spanish term exactly as written in the text.
-                    For every entry you MUST fill `russian_pronunciation` with a Cyrillic reading guide for a Russian learner.
-                    Always return `character_breakdown` as an empty array.
-                    Keep the result compact.
-                    """
-                }
-            )
-        }
-
-        return (
-            system: """
-            You produce JSON only for word-by-word study.
-            Keep the target-language words in their original writing.
-            Use Russian only for translations.
-            Return JSON object with key `entries`.
-            Each entry has `term_pinyin`, `term_translation`, and `character_breakdown`.
-            For non-Chinese languages:
-            - `term_pinyin`: original word or short expression
-            - `term_translation`: concise Russian translation
-            - `character_breakdown`: always an empty array
-            No markdown. No extra keys.
-            """,
-            user: { cleanedText, _, russianTranslation in
-                """
-                Target language: \(targetLanguage.openAIInstructionName)
-                Cleaned text:
-                \(cleanedText)
-
-                Translation:
-                \(russianTranslation)
-
-                Extract useful study entries from the text.
-                Return words or short fixed expressions, not full sentences.
-                Keep each entry exactly as written in the text.
-                Do not split entries into parts.
-                Always return `character_breakdown` as an empty array.
-                Keep the result compact.
-                """
-            }
-        )
-    }
-
     func buildPhrasesStudyData(
         apiKey: String,
         modelID: String,
@@ -480,30 +278,11 @@ struct OpenAIService: OpenAIServing {
             apiKey: apiKey,
             modelID: modelID,
             temperature: 0.2,
-            systemPrompt: """
-            You produce JSON only for stable phrase extraction.
-            Never use hieroglyphs or source script.
-            Use only pinyin/transliteration and Russian.
-            \(Self.pinyinTonePromptParagraph(for: targetLanguage))
-            Return JSON object with key `entries`.
-            Each item has:
-            pinyin_text
-            russian_translation
-            Keep only stable or useful phrases, not isolated words.
-            """,
-            userPrompt: """
-            Target language: \(targetLanguage.openAIInstructionName)
-            Cleaned text:
-            \(formattedText.cleanedText)
-
-            Pronunciation:
-            \(formattedText.pinyinText)
-
-            Translation:
-            \(formattedText.russianTranslation)
-
-            Extract stable phrases or reusable chunks.
-            """
+            systemPrompt: OpenAIPromptBuilder.phrasesStudySystemPrompt(for: targetLanguage),
+            userPrompt: OpenAIPromptBuilder.phrasesStudyUserPrompt(
+                targetLanguage: targetLanguage,
+                formattedText: formattedText
+            )
         )
         let result = PhraseStudyPayload(entries: dto.entries.map { StudyListItem(pinyinText: $0.pinyinText.trimmed, russianTranslation: $0.russianTranslation.trimmed) })
         guard result.hasContent else { throw OpenAIServiceError.invalidStructuredResponse }
@@ -520,40 +299,11 @@ struct OpenAIService: OpenAIServing {
             apiKey: apiKey,
             modelID: modelID,
             temperature: 0.2,
-            systemPrompt: """
-            You produce JSON only for grammar explanation.
-            Never use hieroglyphs or source script.
-            Use only pinyin/transliteration and Russian.
-            \(Self.pinyinTonePromptParagraph(for: targetLanguage))
-            Return JSON object with key `structures`.
-            Each structure has:
-            title
-            explanation
-            usage_notes
-            examples
-            `examples` is an array of objects with:
-            pinyin_text
-            russian_translation
-            Explain simply, compactly, and clearly.
-            """,
-            userPrompt: """
-            Target language: \(targetLanguage.openAIInstructionName)
-            Cleaned text:
-            \(formattedText.cleanedText)
-
-            Pronunciation:
-            \(formattedText.pinyinText)
-
-            Translation:
-            \(formattedText.russianTranslation)
-
-            Find grammar structures that may confuse a learner.
-            For each structure:
-            - explain what it means in simple Russian
-            - explain where else it can be used
-            - give short examples with transliteration only
-            If there are multiple structures, return several.
-            """
+            systemPrompt: OpenAIPromptBuilder.grammarStudySystemPrompt(for: targetLanguage),
+            userPrompt: OpenAIPromptBuilder.grammarStudyUserPrompt(
+                targetLanguage: targetLanguage,
+                formattedText: formattedText
+            )
         )
         let result = GrammarExplanationPayload(
             structures: dto.structures.map {
@@ -965,22 +715,6 @@ private extension String {
 }
 
 private extension OpenAIService {
-    static func pinyinTonePromptLine(for targetLanguage: LearningLanguage) -> String {
-        guard targetLanguage == .chinese || targetLanguage == .auto else {
-            return "2a) If pinyin_text is empty, return empty string."
-        }
-
-        return "2a) If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
-    }
-
-    static func pinyinTonePromptParagraph(for targetLanguage: LearningLanguage) -> String {
-        guard targetLanguage == .chinese || targetLanguage == .auto else {
-            return "If transliteration is used, keep it readable and consistent."
-        }
-
-        return "If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
-    }
-
     static func jpegData(from image: CGImage, compressionQuality: CGFloat = 0.9) -> Data? {
         let mutableData = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(

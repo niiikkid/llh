@@ -121,11 +121,11 @@ enum RefactorBaselineInventory {
   }
 
   static let openAIPromptBuilders: [OpenAICallSite: String] = [
-    .formatRecognizedText: "inline system/user messages in OpenAIService.formatRecognizedText",
-    .recognizeTextInImage: "inline messages in OpenAIService.recognizeTextInImage",
-    .buildWordsStudyData: "OpenAIService.wordsAnalysisPrompt(for:)",
-    .buildPhrasesStudyData: "inline system/user in OpenAIService.buildPhrasesStudyData",
-    .buildGrammarStudyData: "inline system/user in OpenAIService.buildGrammarStudyData",
+    .formatRecognizedText: "OpenAIPromptBuilder.formatRecognizedTextSystemPrompt/UserPrompt",
+    .recognizeTextInImage: "OpenAIPromptBuilder.recognizeTextInImageUserPrompt",
+    .buildWordsStudyData: "OpenAIPromptBuilder.wordsAnalysisPrompt(for:)",
+    .buildPhrasesStudyData: "OpenAIPromptBuilder.phrasesStudySystem/UserPrompt",
+    .buildGrammarStudyData: "OpenAIPromptBuilder.grammarStudySystem/UserPrompt",
     .fetchModels: "GET /v1/models (no prompt)",
   ]
 

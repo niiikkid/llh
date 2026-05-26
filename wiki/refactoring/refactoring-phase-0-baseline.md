@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. Поведение приложения для пользователя не менялось. Phase 1 (протоколы и DI) выполнена отдельно — см. [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md).
+Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. Поведение приложения для пользователя не менялось. Phase 1 (протоколы и DI) и Phase 2 (domain models + Data/OpenAI границы) выполнены отдельно — см. [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md), [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md).
 
 ## Артефакты в коде
 
@@ -66,7 +66,7 @@ Capture/editor: `recognizedText`, `formattedRecognizedText`, `studyMaterials`, `
 - Default profile всегда на индексе 0 после load
 - Repair прерванного formatting / word study
 - Persistence OCR engine (`OpenAISettingsStore.selectedOCREngineRawValue`)
-- `formattingRules` / words prompt / `OpenAIServiceError` descriptions
+- `OpenAIPromptBuilder.formattingRules` / `wordsAnalysisPrompt` / `OpenAIServiceError` descriptions
 
 Ранее существующие тесты в `llhTests.swift` (overlay timing, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
 
@@ -80,5 +80,6 @@ Capture/editor: `recognizedText`, `formattedRecognizedText`, `studyMaterials`, `
 
 ## See Also
 
+- [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — завершённый Phase 1
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный пофазный план (архивный snapshot на 2026-05-26)

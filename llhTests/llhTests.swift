@@ -438,7 +438,7 @@ struct llhTests {
 
     @Test
     func openAIService_wordsAnalysisPrompt_keepsChineseBreakdownRules() {
-        let prompt = OpenAIService.wordsAnalysisPrompt(for: .chinese)
+        let prompt = OpenAIPromptBuilder.wordsAnalysisPrompt(for: .chinese)
         let userPrompt = prompt.user("你好", "ni hao", "привет")
 
         #expect(prompt.system.contains("Never use hieroglyphs or source script in the response."))
@@ -451,7 +451,7 @@ struct llhTests {
 
     @Test
     func openAIService_wordsAnalysisPrompt_usesSimplerRulesForNonChineseLanguages() {
-        let prompt = OpenAIService.wordsAnalysisPrompt(for: .english)
+        let prompt = OpenAIPromptBuilder.wordsAnalysisPrompt(for: .english)
         let userPrompt = prompt.user("hello world", "hello world", "привет мир")
 
         #expect(prompt.system.contains("Keep the target-language words in their original writing."))
@@ -473,7 +473,7 @@ struct llhTests {
 
     @Test
     func openAIService_wordsAnalysisPrompt_spanishIncludesRussianPronunciationGuide() {
-        let prompt = OpenAIService.wordsAnalysisPrompt(for: .spanish)
+        let prompt = OpenAIPromptBuilder.wordsAnalysisPrompt(for: .spanish)
         let userPrompt = prompt.user("Hola", "", "привет")
 
         #expect(prompt.system.contains("russian_pronunciation"))

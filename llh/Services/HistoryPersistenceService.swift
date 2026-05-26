@@ -5,11 +5,6 @@
 
 import Foundation
 
-struct HistoryStoreSnapshot: Codable {
-    var profiles: [LearningProfile]
-    var selectedProfileID: LearningProfile.ID?
-}
-
 struct HistoryPersistenceService {
     private let fileManager: FileManager
     private let fileURL: URL

@@ -28,7 +28,7 @@ struct RefactorBaselineTests {
   @Test
   func inventory_openAICallSites_coverAllOpenAIServingMethods() {
     #expect(RefactorBaselineInventory.OpenAICallSite.allCases.count == 6)
-    #expect(RefactorBaselineInventory.openAIPromptBuilders[.buildWordsStudyData] == "OpenAIService.wordsAnalysisPrompt(for:)")
+    #expect(RefactorBaselineInventory.openAIPromptBuilders[.buildWordsStudyData] == "OpenAIPromptBuilder.wordsAnalysisPrompt(for:)")
   }
 
   // MARK: - History persistence
@@ -214,16 +214,16 @@ struct RefactorBaselineTests {
   // MARK: - Prompt construction
 
   @Test
-  func learningLanguage_formattingRules_areNonEmptyForAllCases() {
+  func openAIPromptBuilder_formattingRules_areNonEmptyForAllCases() {
     for language in [LearningLanguage.auto, .english, .chinese, .spanish] {
-      #expect(!language.formattingRules.isEmpty)
-      #expect(!language.openAIInstructionName.isEmpty)
+      #expect(!OpenAIPromptBuilder.formattingRules(for: language).isEmpty)
+      #expect(!OpenAIPromptBuilder.openAIInstructionName(for: language).isEmpty)
     }
   }
 
   @Test
-  func openAIService_wordsAnalysisPrompt_chineseIncludesToneRules() {
-    let prompt = OpenAIService.wordsAnalysisPrompt(for: .chinese)
+  func openAIPromptBuilder_wordsAnalysisPrompt_chineseIncludesToneRules() {
+    let prompt = OpenAIPromptBuilder.wordsAnalysisPrompt(for: .chinese)
     #expect(prompt.system.contains("tone"))
     #expect(prompt.system.contains("pinyin"))
   }
