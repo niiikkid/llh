@@ -36,7 +36,7 @@ struct FormattedTranslationContentView: View {
                     VStack(alignment: .center, spacing: 10) {
                         ContentUnavailableView(
                             "Форматирование не удалось",
-                            systemImage: "exclamationmark.arrow.trianglehead.counterclockwise",
+                            systemImage: "exclamationmark.arrow.circlepath",
                             description: Text("Можно отправить запрос в OpenAI повторно.")
                         )
                         Button("Попробовать еще раз") {
