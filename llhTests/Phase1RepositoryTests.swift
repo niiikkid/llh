@@ -64,8 +64,8 @@ struct Phase1RepositoryTests {
         let defaults = UserDefaults(suiteName: "llh.tests.\(UUID().uuidString)")!
         let permissionService = ScreenRecordingPermissionService()
         let regionSelectionService = RegionSelectionService()
-        let screenshotService = ScreenshotService()
-        let ocrService = OCRService()
+        let screenshotService = ScreenCaptureKitCaptureService()
+        let ocrService = VisionOCRService()
         let httpClient = OpenAIHTTPClient()
         let openAIOCRService = OpenAIOCRService(httpClient: httpClient)
         let openAIService = OpenAIService(httpClient: httpClient, ocrService: openAIOCRService)

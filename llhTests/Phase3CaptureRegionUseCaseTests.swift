@@ -12,6 +12,7 @@ import Testing
 private final class FakeRegionSelecting: RegionSelecting {
     var rectToReturn = CGRect(x: 0, y: 0, width: 100, height: 100)
     var errorToThrow: Error?
+    private(set) var cancelCallCount = 0
 
     func selectRegion() async throws -> CGRect {
         if let errorToThrow {
@@ -19,12 +20,16 @@ private final class FakeRegionSelecting: RegionSelecting {
         }
         return rectToReturn
     }
+
+    func cancelActiveSelection() {
+        cancelCallCount += 1
+    }
 }
 
 private struct FakePermissionService: ScreenRecordingPermissionChecking {
-    var hasPermission: Bool
+    var permissionStatus: ScreenRecordingPermissionStatus
 
-    func requestPermission() -> Bool { hasPermission }
+    func requestPermission() -> Bool { permissionStatus.isAuthorized }
 
     func openSystemSettings() {}
 }
@@ -33,23 +38,28 @@ private struct FakeScreenCapturing: ScreenCapturing {
     let image: CGImage
 
     func capture(region: CGRect) async throws -> CGImage {
-        image
+        try Task.checkCancellation()
+        return image
     }
 }
 
 private struct FakeOCRServing: OCRServing {
-    var recognizedText: String
+    var result: OCRResult
+    var shouldCancel = false
 
-    func recognizeText(in image: CGImage) async throws -> String {
-        recognizedText
+    func recognizeText(in image: CGImage) async throws -> OCRResult {
+        if shouldCancel {
+            try Task.checkCancellation()
+        }
+        return result
     }
 }
 
 private struct FakeOpenAIOCRServing: OpenAIOCRServing {
-    var recognizedText: String
+    var result: OCRResult
 
-    func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> String {
-        recognizedText
+    func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> OCRResult {
+        result
     }
 }
 
@@ -123,12 +133,12 @@ struct Phase3CaptureRegionUseCaseTests {
     @MainActor
     func captureRegionUseCase_returnsPermissionDeniedWithoutServices() async throws {
         let useCase = CaptureRegionUseCase(
-            permissionService: FakePermissionService(hasPermission: false),
+            permissionService: FakePermissionService(permissionStatus: .denied),
             regionSelectionService: FakeRegionSelecting(),
             screenshotService: FakeScreenCapturing(image: TestImageFactory.makeCGImage()),
             recognizeTextUseCase: RecognizeTextUseCase(
-                ocrService: FakeOCRServing(recognizedText: "你好"),
-                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "你好")
+                ocrService: FakeOCRServing(result: OCRResult(normalizedText: "你好")),
+                openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: "你好"))
             )
         )
 
@@ -152,12 +162,12 @@ struct Phase3CaptureRegionUseCaseTests {
     func captureRegionUseCase_returnsCapturedText() async throws {
         let image = TestImageFactory.makeCGImage()
         let useCase = CaptureRegionUseCase(
-            permissionService: FakePermissionService(hasPermission: true),
+            permissionService: FakePermissionService(permissionStatus: .authorized),
             regionSelectionService: FakeRegionSelecting(),
             screenshotService: FakeScreenCapturing(image: image),
             recognizeTextUseCase: RecognizeTextUseCase(
-                ocrService: FakeOCRServing(recognizedText: "你好"),
-                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "你好")
+                ocrService: FakeOCRServing(result: OCRResult(normalizedText: "你好")),
+                openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: "你好"))
             )
         )
 
@@ -182,12 +192,12 @@ struct Phase3CaptureRegionUseCaseTests {
     func captureRegionUseCase_returnsNoTextFound() async throws {
         let image = TestImageFactory.makeCGImage()
         let useCase = CaptureRegionUseCase(
-            permissionService: FakePermissionService(hasPermission: true),
+            permissionService: FakePermissionService(permissionStatus: .authorized),
             regionSelectionService: FakeRegionSelecting(),
             screenshotService: FakeScreenCapturing(image: image),
             recognizeTextUseCase: RecognizeTextUseCase(
-                ocrService: FakeOCRServing(recognizedText: ""),
-                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "")
+                ocrService: FakeOCRServing(result: OCRResult(normalizedText: "")),
+                openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: ""))
             )
         )
 
@@ -212,12 +222,12 @@ struct Phase3CaptureRegionUseCaseTests {
         let regionSelector = FakeRegionSelecting()
         regionSelector.errorToThrow = RegionSelectionError.cancelled
         let useCase = CaptureRegionUseCase(
-            permissionService: FakePermissionService(hasPermission: true),
+            permissionService: FakePermissionService(permissionStatus: .authorized),
             regionSelectionService: regionSelector,
             screenshotService: FakeScreenCapturing(image: TestImageFactory.makeCGImage()),
             recognizeTextUseCase: RecognizeTextUseCase(
-                ocrService: FakeOCRServing(recognizedText: "你好"),
-                openAIOCRService: FakeOpenAIOCRServing(recognizedText: "你好")
+                ocrService: FakeOCRServing(result: OCRResult(normalizedText: "你好")),
+                openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: "你好"))
             )
         )
 
@@ -238,13 +248,30 @@ struct Phase3CaptureRegionUseCaseTests {
 
     @Test
     @MainActor
-    func recognizeTextUseCase_usesLocalOCR() async throws {
-        let useCase = RecognizeTextUseCase(
-            ocrService: FakeOCRServing(recognizedText: "local"),
-            openAIOCRService: FakeOpenAIOCRServing(recognizedText: "ai")
+    func captureRegionUseCase_cancelActiveCaptureForwardsToRegionSelector() {
+        let regionSelector = FakeRegionSelecting()
+        let useCase = CaptureRegionUseCase(
+            permissionService: FakePermissionService(permissionStatus: .authorized),
+            regionSelectionService: regionSelector,
+            screenshotService: FakeScreenCapturing(image: TestImageFactory.makeCGImage()),
+            recognizeTextUseCase: RecognizeTextUseCase(
+                ocrService: FakeOCRServing(result: OCRResult(normalizedText: "")),
+                openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: ""))
+            )
         )
 
-        let text = try await useCase.execute(
+        useCase.cancelActiveCapture()
+        #expect(regionSelector.cancelCallCount == 1)
+    }
+
+    @Test
+    func recognizeTextUseCase_usesLocalOCR() async throws {
+        let useCase = RecognizeTextUseCase(
+            ocrService: FakeOCRServing(result: OCRResult(normalizedText: "local")),
+            openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: "ai"))
+        )
+
+        let result = try await useCase.execute(
             image: TestImageFactory.makeCGImage(),
             configuration: RecognizeTextConfiguration(
                 ocrEngine: .local,
@@ -253,18 +280,18 @@ struct Phase3CaptureRegionUseCaseTests {
             )
         )
 
-        #expect(text == "local")
+        #expect(result.text == "local")
+        #expect(result.lines == ["local"])
     }
 
     @Test
-    @MainActor
     func recognizeTextUseCase_usesOpenAIWhenAIEngineSelected() async throws {
         let useCase = RecognizeTextUseCase(
-            ocrService: FakeOCRServing(recognizedText: "local"),
-            openAIOCRService: FakeOpenAIOCRServing(recognizedText: "ai")
+            ocrService: FakeOCRServing(result: OCRResult(normalizedText: "local")),
+            openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: "ai"))
         )
 
-        let text = try await useCase.execute(
+        let result = try await useCase.execute(
             image: TestImageFactory.makeCGImage(),
             configuration: RecognizeTextConfiguration(
                 ocrEngine: .ai,
@@ -273,15 +300,14 @@ struct Phase3CaptureRegionUseCaseTests {
             )
         )
 
-        #expect(text == "ai")
+        #expect(result.text == "ai")
     }
 
     @Test
-    @MainActor
     func recognizeTextUseCase_requiresAPIKeyForAIEngine() async {
         let useCase = RecognizeTextUseCase(
-            ocrService: FakeOCRServing(recognizedText: "local"),
-            openAIOCRService: FakeOpenAIOCRServing(recognizedText: "ai")
+            ocrService: FakeOCRServing(result: OCRResult(normalizedText: "local")),
+            openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: "ai"))
         )
 
         do {
@@ -302,6 +328,35 @@ struct Phase3CaptureRegionUseCaseTests {
             }
         } catch {
             Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test
+    func recognizeTextUseCase_propagatesCancellation() async {
+        let useCase = RecognizeTextUseCase(
+            ocrService: FakeOCRServing(result: OCRResult(normalizedText: "local"), shouldCancel: true),
+            openAIOCRService: FakeOpenAIOCRServing(result: OCRResult(normalizedText: "ai"))
+        )
+
+        let task = Task {
+            try await useCase.execute(
+                image: TestImageFactory.makeCGImage(),
+                configuration: RecognizeTextConfiguration(
+                    ocrEngine: .local,
+                    apiKey: nil,
+                    selectedModelID: nil
+                )
+            )
+        }
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            Issue.record("Expected CancellationError")
+        } catch is CancellationError {
+            #expect(Bool(true))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
         }
     }
 }

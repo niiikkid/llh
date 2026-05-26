@@ -44,6 +44,7 @@ enum RefactorBaselineInventory {
   static let captureViewModelPublishedPropertyNames: [String] = [
     "isProcessing",
     "showPermissionHelp",
+    "permissionStatus",
   ]
 
   /// `@Published` properties on `HistoryViewModel` (Phase 4 history extraction).

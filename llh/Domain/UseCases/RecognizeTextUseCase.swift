@@ -12,8 +12,7 @@ struct RecognizeTextConfiguration: Sendable {
     let selectedModelID: String?
 }
 
-@MainActor
-struct RecognizeTextUseCase {
+struct RecognizeTextUseCase: Sendable {
     private let ocrService: OCRServing
     private let openAIOCRService: OpenAIOCRServing
 
@@ -22,7 +21,9 @@ struct RecognizeTextUseCase {
         self.openAIOCRService = openAIOCRService
     }
 
-    func execute(image: CGImage, configuration: RecognizeTextConfiguration) async throws -> String {
+    func execute(image: CGImage, configuration: RecognizeTextConfiguration) async throws -> OCRResult {
+        try Task.checkCancellation()
+
         switch configuration.ocrEngine {
         case .local:
             return try await ocrService.recognizeText(in: image)

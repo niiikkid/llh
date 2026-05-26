@@ -5,7 +5,7 @@
 
 import Foundation
 
-enum OpenAIServiceError: LocalizedError {
+enum OpenAIServiceError: LocalizedError, Equatable {
     case invalidTokenFormat
     case unauthorized
     case rateLimited

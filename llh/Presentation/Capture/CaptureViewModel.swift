@@ -16,6 +16,7 @@ final class CaptureViewModel: ObservableObject {
 
     @Published private(set) var isProcessing = false
     @Published private(set) var showPermissionHelp = false
+    @Published private(set) var permissionStatus: ScreenRecordingPermissionStatus = .denied
 
     private let permissionService: ScreenRecordingPermissionChecking
     private let captureRegionUseCase: CaptureRegionUseCase
@@ -23,6 +24,8 @@ final class CaptureViewModel: ObservableObject {
     private let history: HistoryViewModel
     private let translationOverlayService: TranslationOverlayService
     private let shouldUseCompactOverlay: () -> Bool
+
+    private var activeCaptureTask: Task<Void, Never>?
 
     private var reportStatus: (String) -> Void = { _ in }
     private var prepareForInterfaceCapture: () -> Void = {}
@@ -45,6 +48,7 @@ final class CaptureViewModel: ObservableObject {
         self.history = history
         self.translationOverlayService = translationOverlayService
         self.shouldUseCompactOverlay = shouldUseCompactOverlay
+        refreshPermissionState()
     }
 
     func configureStatusReporting(_ reportStatus: @escaping (String) -> Void) {
@@ -72,28 +76,61 @@ final class CaptureViewModel: ObservableObject {
     }
 
     func triggerCapture() {
-        Task {
+        startCaptureTask(triggeredBy: .interface) { [self] in
             prepareForInterfaceCapture()
-            await startCaptureFlow(triggeredBy: .interface)
         }
     }
 
     func triggerCaptureFromHotkey() {
-        Task {
-            await startCaptureFlow(triggeredBy: .hotkey)
+        if isProcessing {
+            cancelActiveCapture()
+            return
         }
+        startCaptureTask(triggeredBy: .hotkey)
     }
 
     func refreshPermissionState() {
-        let granted = permissionService.hasPermission
-        showPermissionHelp = !granted
-        if granted {
+        permissionStatus = permissionService.permissionStatus
+        showPermissionHelp = !permissionStatus.isAuthorized
+        if permissionStatus.isAuthorized {
             reportStatus("Готово к захвату.")
+        }
+    }
+
+    func requestScreenRecordingAccess() {
+        _ = permissionService.requestPermission()
+        refreshPermissionState()
+        if permissionStatus.isAuthorized {
+            reportStatus("Доступ к Screen Recording предоставлен.")
+        } else {
+            reportStatus("Доступ не предоставлен. Включите приложение в System Settings.")
         }
     }
 
     func openSystemSettings() {
         permissionService.openSystemSettings()
+    }
+
+    func cancelActiveCapture() {
+        captureRegionUseCase.cancelActiveCapture()
+        activeCaptureTask?.cancel()
+        activeCaptureTask = nil
+        isProcessing = false
+        reportStatus("Захват отменён.")
+        clearOverlayAwaitingFormat()
+    }
+
+    private func startCaptureTask(
+        triggeredBy source: TriggerSource,
+        prepare: @escaping () -> Void = {}
+    ) {
+        guard !isProcessing else { return }
+
+        activeCaptureTask?.cancel()
+        activeCaptureTask = Task {
+            prepare()
+            await startCaptureFlow(triggeredBy: source)
+        }
     }
 
     private func startCaptureFlow(triggeredBy source: TriggerSource) async {
@@ -104,6 +141,7 @@ final class CaptureViewModel: ObservableObject {
 
         defer {
             isProcessing = false
+            activeCaptureTask = nil
         }
 
         let configuration = CaptureRegionConfiguration(
@@ -116,7 +154,7 @@ final class CaptureViewModel: ObservableObject {
             switch try await captureRegionUseCase.execute(configuration: configuration) {
             case .permissionDenied:
                 showPermissionHelp = true
-                reportStatus("Нет доступа к Screen Recording. Откройте System Settings и включите доступ.")
+                reportStatus("Нет доступа к Screen Recording. Запросите доступ или откройте System Settings.")
             case .selectionCancelled:
                 showPermissionHelp = false
                 reportStatus("Выделение отменено.")
@@ -145,6 +183,13 @@ final class CaptureViewModel: ObservableObject {
                     translationOverlayService.showLoading()
                 }
                 onPostCapture(entry.id, source)
+            }
+        } catch is CancellationError {
+            showPermissionHelp = false
+            reportStatus("Захват отменён.")
+            clearOverlayAwaitingFormat()
+            if source == .hotkey, shouldUseCompactOverlay() {
+                translationOverlayService.hide()
             }
         } catch {
             showPermissionHelp = false

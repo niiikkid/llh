@@ -35,11 +35,12 @@ struct OpenAIService: OpenAIServing {
         modelID: String,
         image: CGImage
     ) async throws -> String {
-        try await ocrService.recognizeTextInImage(
+        let result = try await ocrService.recognizeTextInImage(
             apiKey: apiKey,
             modelID: modelID,
             image: image
         )
+        return result.text
     }
 
     func fetchModels(apiKey: String) async throws -> [OpenAIModel] {

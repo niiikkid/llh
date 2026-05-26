@@ -11,7 +11,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 1. **Инкремент 1** — product-модели из `MainViewModel.swift` → `llh/Domain/Models/` (`MainViewModel` ~1316 → ~744 строк).
 2. **Инкремент 2** — JSON snapshot и OpenAI-границы в Data: `HistoryStoreSnapshot`, `OpenAIModel`, `OpenAIServiceError`, `OpenAIPromptBuilder`; протокол `OpenAIServing` → `Domain/Services/`. Промпты убраны из `LearningLanguage`.
 
-Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 5** — SQLite в `Data/Persistence/` — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6 завершена** — `OpenAIHTTPClient`, models/OCR/translation/study services, `OpenAITokenStore`, `OpenAISettingsStore` — см. [Phase 6](refactoring-phase-6-openai-integration.md).
+Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 5** — SQLite в `Data/Persistence/` — см. [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6 завершена** — `OpenAIHTTPClient`, models/OCR/translation/study services, `OpenAITokenStore`, `OpenAISettingsStore` — см. [Phase 6](refactoring-phase-6-openai-integration.md). **Phase 7 завершена** — `OCRResult`, `VisionOCRService`, `OCRImagePreprocessor` — см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md).
 
 ## Инкремент 1 — Domain/Models
 
@@ -20,6 +20,8 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 | `FormattingStatus.swift` | Статусы форматирования и study |
 | `LearningLanguage.swift` | Язык сессии (UI: `title`, `supportsWordStudy`) |
 | `OCREngine.swift` | local / AI |
+| `OCRResult.swift` | Structured OCR: `text`, `lines`, `isEmpty` (Phase 7) |
+| `ScreenRecordingPermissionStatus.swift` | `.authorized` / `.denied` (Phase 7) |
 | `StructuredFormattedText.swift` | Очищенный текст, пиньинь, перевод |
 | `StudyMaterials.swift` | Study payloads, legacy `StudyAssistantData` decode |
 | `CapturedTextEntry.swift` | Запись истории, legacy `Codable`, `NSImage?` только in-memory |
@@ -58,7 +60,15 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 | Файл | Содержимое |
 |------|------------|
 | `OpenAIServing.swift` | Протокол OpenAI-операций (format, study, models, OCR facade) |
-| `OpenAIOCRServing.swift` | Протокол AI OCR (Phase 6 PR 4); `RecognizeTextUseCase` при `.ai` |
+| `OpenAIOCRServing.swift` | Протокол AI OCR (Phase 6 PR 4); возвращает `OCRResult` (Phase 7) |
+
+### Infrastructure (Phase 7)
+
+| Путь | Содержимое |
+|------|------------|
+| `Infrastructure/OCR/VisionOCRService.swift` | Локальный Vision OCR |
+| `Infrastructure/OCR/OCRImagePreprocessor.swift` | JPEG для AI OCR |
+| `Infrastructure/Capture/ScreenCaptureKitCaptureService.swift` | ScreenCaptureKit capture |
 
 `OpenAIService` — чистый фасад `OpenAIServing`: `fetchModels` → `OpenAIModelsService`; `recognizeTextInImage` → `OpenAIOCRService`; format → `OpenAITranslationService`; study → `OpenAIStudyService`. Settings/keychain — `OpenAISettingsStore` / `KeychainOpenAITokenStore` в `Data/OpenAI/` (PR 6).
 
@@ -99,6 +109,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## See Also
 
+- [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, Infrastructure OCR/capture (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, models/OCR/translation/study services
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — SQLite слой для snapshot
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена

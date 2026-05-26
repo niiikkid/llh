@@ -69,7 +69,7 @@ Repositories (`KeychainAPIKeyRepository`, `UserDefaultsSettingsRepository`) по
 | Request | `POST /chat/completions`, text prompt + `image_url` |
 | Response | `choices[0].message.content` → normalize |
 
-`RecognizeTextUseCase`: `.local` → `OCRServing`; `.ai` → `OpenAIOCRServing`.
+`RecognizeTextUseCase`: `.local` → `OCRServing` (`VisionOCRService`); `.ai` → `OpenAIOCRServing`; оба возвращают `OCRResult` (Phase 7).
 
 ## Инкремент 1 — OpenAIHTTPClient (PR 2 + PR 6)
 
@@ -121,10 +121,11 @@ Base URL: `https://api.openai.com/v1`. Default timeout: 120s.
 
 ## Следующий шаг
 
-**Phase 7** — OCR/capture/permission polish (structured `OCRResult`, cancellation в use cases, off-main-thread). Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
+**Phase 7 завершена** — см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md). **Phase 8** — UI decomposition. Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
 
 ## See Also
 
+- [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Vision vs OpenAI OCR polish, `OCRResult` (завершена)
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI, repositories, `AppDependencyContainer`
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md)
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md)

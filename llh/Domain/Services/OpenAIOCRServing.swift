@@ -12,5 +12,5 @@ protocol OpenAIOCRServing: Sendable {
         apiKey: String,
         modelID: String,
         image: CGImage
-    ) async throws -> String
+    ) async throws -> OCRResult
 }

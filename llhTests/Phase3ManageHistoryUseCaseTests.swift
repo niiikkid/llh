@@ -147,7 +147,7 @@ struct Phase3ManageHistoryUseCaseTests {
         var entry = CapturedTextEntry(text: "old")
         entry.formattedText = StructuredFormattedText(
             cleanedText: "x",
-            pinyinText: nil,
+            pinyinText: "",
             russianTranslation: "y"
         )
         entry.formattingStatus = .succeeded

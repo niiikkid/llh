@@ -38,7 +38,13 @@ struct CaptureRegionUseCase {
         self.recognizeTextUseCase = recognizeTextUseCase
     }
 
+    func cancelActiveCapture() {
+        regionSelectionService.cancelActiveSelection()
+    }
+
     func execute(configuration: CaptureRegionConfiguration) async throws -> CaptureRegionOutcome {
+        try Task.checkCancellation()
+
         guard permissionService.hasPermission else {
             return .permissionDenied
         }
@@ -50,8 +56,13 @@ struct CaptureRegionUseCase {
             return .selectionCancelled
         }
 
+        try Task.checkCancellation()
+
         let image = try await screenshotService.capture(region: selectedRect)
-        let text = try await recognizeTextUseCase.execute(
+
+        try Task.checkCancellation()
+
+        let ocrResult = try await recognizeTextUseCase.execute(
             image: image,
             configuration: RecognizeTextConfiguration(
                 ocrEngine: configuration.ocrEngine,
@@ -60,10 +71,10 @@ struct CaptureRegionUseCase {
             )
         )
 
-        guard !text.isEmpty else {
+        guard !ocrResult.isEmpty else {
             return .noTextFound(image: image)
         }
 
-        return .captured(image: image, text: text)
+        return .captured(image: image, text: ocrResult.text)
     }
 }

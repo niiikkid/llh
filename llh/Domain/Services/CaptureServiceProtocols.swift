@@ -6,29 +6,38 @@
 import CoreGraphics
 import Foundation
 
-protocol ScreenRecordingPermissionChecking {
+protocol ScreenRecordingPermissionChecking: Sendable {
+    var permissionStatus: ScreenRecordingPermissionStatus { get }
     var hasPermission: Bool { get }
     @discardableResult
     func requestPermission() -> Bool
     func openSystemSettings()
 }
 
-protocol RegionSelecting: AnyObject {
-    func selectRegion() async throws -> CGRect
+extension ScreenRecordingPermissionChecking {
+    var hasPermission: Bool {
+        permissionStatus.isAuthorized
+    }
 }
 
-protocol ScreenCapturing {
+@MainActor
+protocol RegionSelecting: AnyObject {
+    func selectRegion() async throws -> CGRect
+    func cancelActiveSelection()
+}
+
+protocol ScreenCapturing: Sendable {
     func capture(region: CGRect) async throws -> CGImage
 }
 
-protocol OCRServing {
-    func recognizeText(in image: CGImage) async throws -> String
+protocol OCRServing: Sendable {
+    func recognizeText(in image: CGImage) async throws -> OCRResult
 }
 
 extension ScreenRecordingPermissionService: ScreenRecordingPermissionChecking {}
 
 extension RegionSelectionService: RegionSelecting {}
 
-extension ScreenshotService: ScreenCapturing {}
+extension ScreenCaptureKitCaptureService: ScreenCapturing {}
 
-extension OCRService: OCRServing {}
+extension VisionOCRService: OCRServing {}

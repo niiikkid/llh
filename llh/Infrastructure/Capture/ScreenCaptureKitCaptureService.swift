@@ -1,5 +1,5 @@
 //
-//  ScreenshotService.swift
+//  ScreenCaptureKitCaptureService.swift
 //  llh
 //
 
@@ -8,7 +8,10 @@ import CoreGraphics
 import Foundation
 import ScreenCaptureKit
 
-struct ScreenshotService {
+/// ScreenCaptureKit-backed region capture. Hides framework details behind `ScreenCapturing`.
+struct ScreenCaptureKitCaptureService: Sendable {
+    nonisolated init() {}
+
     enum CaptureError: LocalizedError {
         case failed
         case noDisplayForRegion
@@ -23,7 +26,9 @@ struct ScreenshotService {
         }
     }
 
-    func capture(region: CGRect) async throws -> CGImage {
+    nonisolated func capture(region: CGRect) async throws -> CGImage {
+        try Task.checkCancellation()
+
         if #available(macOS 15.2, *) {
             return try await captureWithRectAPI(region: region)
         }
@@ -31,7 +36,8 @@ struct ScreenshotService {
     }
 
     @available(macOS 15.2, *)
-    private func captureWithRectAPI(region: CGRect) async throws -> CGImage {
+    private nonisolated func captureWithRectAPI(region: CGRect) async throws -> CGImage {
+        try Task.checkCancellation()
         let screenKitRect = convertToScreenKitGlobalRect(region)
 
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<CGImage, Error>) in
@@ -49,7 +55,8 @@ struct ScreenshotService {
         }
     }
 
-    private func captureWithContentFilter(region: CGRect) async throws -> CGImage {
+    private nonisolated func captureWithContentFilter(region: CGRect) async throws -> CGImage {
+        try Task.checkCancellation()
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         let center = CGPoint(x: region.midX, y: region.midY)
 
@@ -58,7 +65,6 @@ struct ScreenshotService {
         }
 
         let localX = region.origin.x - display.frame.origin.x
-        // ScreenCaptureKit expects top-left display-local coordinates.
         let localY = display.frame.maxY - region.maxY
         let sourceRect = CGRect(
             x: localX,
@@ -73,6 +79,8 @@ struct ScreenshotService {
         configuration.width = Int(sourceRect.width.rounded())
         configuration.height = Int(sourceRect.height.rounded())
         configuration.capturesAudio = false
+
+        try Task.checkCancellation()
 
         return try await withCheckedThrowingContinuation { continuation in
             SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration) { image, error in
@@ -89,7 +97,7 @@ struct ScreenshotService {
         }
     }
 
-    private func convertToScreenKitGlobalRect(_ region: CGRect) -> CGRect {
+    private nonisolated func convertToScreenKitGlobalRect(_ region: CGRect) -> CGRect {
         let desktopFrame = NSScreen.screens.map(\.frame).reduce(CGRect.null) { partial, frame in
             partial.union(frame)
         }

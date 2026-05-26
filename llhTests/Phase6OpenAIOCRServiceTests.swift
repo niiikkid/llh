@@ -25,13 +25,14 @@ struct Phase6OpenAIOCRServiceTests {
             return (response, Data(responseJSON.utf8))
         }
 
-        let text = try await service.recognizeTextInImage(
+        let result = try await service.recognizeTextInImage(
             apiKey: "sk-test",
             modelID: "gpt-4o",
             image: makeTestCGImage()
         )
 
-        #expect(text == "line one\nline two")
+        #expect(result.text == "line one\nline two")
+        #expect(result.lines == ["line one", "line two"])
     }
 
     @Test

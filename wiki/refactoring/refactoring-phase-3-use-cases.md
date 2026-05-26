@@ -12,7 +12,7 @@ Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. В�
 
 | Use case | OpenAI / infra |
 |----------|----------------|
-| `RecognizeTextUseCase` | Local `OCRServing` / `OpenAIOCRServing` (AI OCR, Phase 6 PR 4) |
+| `RecognizeTextUseCase` | `OCRServing` / `OpenAIOCRServing` → `OCRResult` (Phase 7); `Sendable`, off main actor |
 | `CaptureRegionUseCase` | Permission, region, screenshot + recognize |
 | `FormatCapturedTextUseCase` | `OpenAIServing.formatRecognizedText` → `OpenAITranslationService` (Phase 6 PR 5) |
 | `ManageHistoryUseCase` | `HistoryRepository` |
@@ -25,8 +25,8 @@ Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. В�
 | Файл | Назначение |
 |------|------------|
 | `Domain/Errors/RegionSelectionError.swift` | Ошибки выделения области (`cancelled`, `noScreen`) |
-| `Domain/UseCases/RecognizeTextUseCase.swift` | Local `OCRServing` vs `OpenAIOCRServing` по `OCREngine` |
-| `Domain/UseCases/CaptureRegionUseCase.swift` | Permission → region → screenshot → recognize |
+| `Domain/UseCases/RecognizeTextUseCase.swift` | Local vs AI OCR по `OCREngine`; возвращает `OCRResult` |
+| `Domain/UseCases/CaptureRegionUseCase.swift` | Permission → region → screenshot → recognize; `cancelActiveCapture()` |
 
 ### CaptureRegionOutcome
 
@@ -34,14 +34,14 @@ Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. В�
 |-------|--------|
 | `permissionDenied` | Нет Screen Recording |
 | `selectionCancelled` | Пользователь отменил выделение |
-| `noTextFound(image:)` | OCR вернул пустую строку |
+| `noTextFound(image:)` | `OCRResult.isEmpty` |
 | `captured(image:text:)` | Успех |
 
 Use case не пишет в историю и не трогает overlay — это остаётся в `MainViewModel.startCaptureFlow`.
 
 ### DI (capture)
 
-`AppDependencyContainer` содержит `recognizeTextUseCase` и `captureRegionUseCase`; сборка через `makeCaptureUseCases(ocrService:openAIOCRService:)` (Phase 6 PR 4: AI OCR — `OpenAIOCRServing`, не `OpenAIServing`).
+`AppDependencyContainer` содержит `recognizeTextUseCase` и `captureRegionUseCase`; сборка через `makeCaptureUseCases(ocrService:openAIOCRService:)` — `VisionOCRService` + `OpenAIOCRServing` (Phase 7).
 
 `RegionSelectionService` бросает `RegionSelectionError` (раньше — вложенный `SelectionError`).
 
@@ -289,10 +289,11 @@ Phase 3 завершена: `MainViewModel` делегирует все пере
 
 ## Следующий шаг
 
-Phase 3 завершена; **Phase 6 завершена** — см. [Phase 6](refactoring-phase-6-openai-integration.md). Следующий этап — **Phase 7** (OCR/capture polish) в [roadmap](project-refactoring-roadmap.md).
+Phase 3 завершена; **Phase 6–7 завершены** — см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md). Следующий этап — **Phase 8** (UI decomposition) в [roadmap](project-refactoring-roadmap.md).
 
 ## See Also
 
+- [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, cancellation, Infrastructure adapters (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence за тем же protocol
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена (все 5 инкрементов)

@@ -60,6 +60,10 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Откройте System Settings -> Privacy & Security -> Screen Recording и включите доступ для приложения.")
                         HStack {
+                            Button("Запросить доступ") {
+                                viewModel.capture.requestScreenRecordingAccess()
+                            }
+                            .disabled(viewModel.capture.isProcessing)
                             Button("Open System Settings") {
                                 viewModel.capture.openSystemSettings()
                             }

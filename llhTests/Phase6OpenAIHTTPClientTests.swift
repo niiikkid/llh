@@ -166,7 +166,7 @@ struct Phase6OpenAIHTTPClientTests {
         let client = OpenAIHTTPClientTestSupport.makeClient()
 
         OpenAIHTTPClientURLProtocolStub.requestHandler = { _ in
-            try await Task.sleep(nanoseconds: 5_000_000_000)
+            Thread.sleep(forTimeInterval: 5)
             throw URLError(.unknown)
         }
 

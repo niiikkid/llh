@@ -7,9 +7,9 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-struct ScreenRecordingPermissionService {
-    var hasPermission: Bool {
-        CGPreflightScreenCaptureAccess()
+struct ScreenRecordingPermissionService: Sendable {
+    var permissionStatus: ScreenRecordingPermissionStatus {
+        CGPreflightScreenCaptureAccess() ? .authorized : .denied
     }
 
     @discardableResult

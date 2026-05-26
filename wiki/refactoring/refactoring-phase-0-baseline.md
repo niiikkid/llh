@@ -107,6 +107,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ## See Also
 
+- [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Phase 7 завершена: `OCRResult`, Infrastructure OCR/capture, cancellation
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain, timeout
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — persistence после baseline
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 завершена

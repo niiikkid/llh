@@ -1,5 +1,5 @@
 //
-//  OCRService.swift
+//  VisionOCRService.swift
 //  llh
 //
 
@@ -7,9 +7,12 @@ import CoreGraphics
 import Foundation
 import Vision
 
-struct OCRService {
-    func recognizeText(in image: CGImage) async throws -> String {
+/// Local OCR via Apple Vision (`VNRecognizeTextRequest`).
+struct VisionOCRService: Sendable {
+    nonisolated func recognizeText(in image: CGImage) async throws -> OCRResult {
         try await Task.detached(priority: .userInitiated) {
+            try Task.checkCancellation()
+
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
@@ -19,12 +22,14 @@ struct OCRService {
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             try handler.perform([request])
+            try Task.checkCancellation()
 
             let observations = request.results as? [VNRecognizedTextObservation] ?? []
             let lines = observations.compactMap { observation in
                 observation.topCandidates(1).first?.string
             }
-            return TextFormatter.normalizeRecognizedLines(lines)
+            let text = TextFormatter.normalizeRecognizedLines(lines)
+            return OCRResult(text: text, lines: lines)
         }.value
     }
 }

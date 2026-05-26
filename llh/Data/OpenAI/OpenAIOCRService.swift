@@ -5,7 +5,6 @@
 
 import CoreGraphics
 import Foundation
-import ImageIO
 
 /// AI OCR via OpenAI Chat Completions vision (`POST /v1/chat/completions`).
 struct OpenAIOCRService: OpenAIOCRServing, Sendable {
@@ -19,14 +18,15 @@ struct OpenAIOCRService: OpenAIOCRServing, Sendable {
         apiKey: String,
         modelID: String,
         image: CGImage
-    ) async throws -> String {
+    ) async throws -> OCRResult {
+        try Task.checkCancellation()
+
         guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw OpenAIServiceError.invalidResponse
         }
-        guard let imageData = Self.jpegData(from: image),
-              !imageData.isEmpty else {
-            throw OpenAIServiceError.invalidImageData
-        }
+
+        let imageData = try await OCRImagePreprocessor.jpegData(from: image)
+        try Task.checkCancellation()
 
         let imageBase64 = imageData.base64EncodedString()
         let requestBody = VisionChatCompletionsRequest(
@@ -48,37 +48,17 @@ struct OpenAIOCRService: OpenAIOCRServing, Sendable {
             apiKey: apiKey,
             body: requestBody
         )
+        try Task.checkCancellation()
+
         let decoded = try httpClient.decode(data, as: VisionChatCompletionsResponse.self)
         let recognizedText = decoded.choices.first?.message.content
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !recognizedText.isEmpty else {
             throw OpenAIServiceError.emptyRecognizedText
         }
-        return TextFormatter.normalizeRecognizedLines(
-            recognizedText.components(separatedBy: .newlines)
-        )
-    }
-}
-
-private extension OpenAIOCRService {
-    static func jpegData(from image: CGImage, compressionQuality: CGFloat = 0.9) -> Data? {
-        let mutableData = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(
-            mutableData,
-            "public.jpeg" as CFString,
-            1,
-            nil
-        ) else {
-            return nil
-        }
-        let options: CFDictionary = [
-            kCGImageDestinationLossyCompressionQuality: compressionQuality
-        ] as CFDictionary
-        CGImageDestinationAddImage(destination, image, options)
-        guard CGImageDestinationFinalize(destination) else {
-            return nil
-        }
-        return mutableData as Data
+        let lines = recognizedText.components(separatedBy: .newlines)
+        let text = TextFormatter.normalizeRecognizedLines(lines)
+        return OCRResult(text: text, lines: lines)
     }
 }
 

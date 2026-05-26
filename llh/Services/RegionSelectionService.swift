@@ -21,6 +21,11 @@ final class RegionSelectionService {
         }
     }
 
+    func cancelActiveSelection() {
+        guard continuation != nil else { return }
+        finish(with: .failure(RegionSelectionError.cancelled))
+    }
+
     private func showOverlayWindows() {
         windows = NSScreen.screens.map { screen in
             let window = SelectionOverlayPanel(

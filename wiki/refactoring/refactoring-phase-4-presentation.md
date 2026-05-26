@@ -105,20 +105,21 @@ History/profiles/session-reading методы удалены с `MainViewModel`;
 
 | Файл | Строк (≈) | Назначение |
 |------|-----------|------------|
-| `Presentation/Capture/CaptureViewModel.swift` | 161 | Захват области, permission state, hotkey/interface capture |
+| `Presentation/Capture/CaptureViewModel.swift` | ~200 | Захват, permission status/request, hotkey cancel (Phase 7) |
 | `App/AppShortcutsCoordinator.swift` | 42 | Регистрация global shortcuts через closures |
 | `MainViewModel.swift` | 439 | Фасад: `let capture`; format/study/overlay/editor |
 
-### Состояние в CaptureViewModel (2 `@Published`)
+### Состояние в CaptureViewModel (3 `@Published`, Phase 7)
 
 | Свойство | Назначение |
 |----------|------------|
 | `isProcessing` | Идёт выделение области / OCR |
 | `showPermissionHelp` | Нужен Screen Recording |
+| `permissionStatus` | `.authorized` / `.denied` (Phase 7) |
 
 ### Публичные действия CaptureViewModel
 
-`triggerCapture`, `triggerCaptureFromHotkey`, `refreshPermissionState`, `openSystemSettings`.
+`triggerCapture`, `triggerCaptureFromHotkey`, `refreshPermissionState`, `requestScreenRecordingAccess`, `openSystemSettings`, `cancelActiveCapture` (Phase 7: повторный hotkey во время захвата).
 
 API для Main: `configureStatusReporting`, `configurePrepareForInterfaceCapture`, `configureSelectionSync`, `configureCapturePreviewWithoutEntry`, `configureOverlayAwaitingFormatReset`, `configurePostCapture`.
 
@@ -246,10 +247,11 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 
 ## Следующий шаг
 
-Phase 5 — [Phase 5](refactoring-phase-5-sqlite-persistence.md). **Phase 6 завершена** — [Phase 6](refactoring-phase-6-openai-integration.md). Следующий этап — Phase 7.
+Phase 5–7 завершены — [Phase 7](refactoring-phase-7-ocr-capture-permission.md). **Следующий этап — Phase 8** (UI decomposition, [roadmap](project-refactoring-roadmap.md)).
 
 ## See Also
 
+- [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — CaptureViewModel permission/cancel polish (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена (HTTP, models, OCR, translation/study, settings/keychain, timeout)
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — GRDB, миграция JSON→SQLite, bootstrap
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
