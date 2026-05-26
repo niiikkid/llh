@@ -18,6 +18,11 @@ struct AppDependencyContainer {
     let translationOverlayService: TranslationOverlayService
     let recognizeTextUseCase: RecognizeTextUseCase
     let captureRegionUseCase: CaptureRegionUseCase
+    let formatCapturedTextUseCase: FormatCapturedTextUseCase
+    let manageHistoryUseCase: ManageHistoryUseCase
+    let manageProfilesUseCase: ManageProfilesUseCase
+    let loadWordStudyUseCase: LoadWordStudyUseCase
+    let manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
 
     init(
         historyRepository: HistoryRepository,
@@ -30,7 +35,12 @@ struct AppDependencyContainer {
         openAIService: OpenAIServing,
         translationOverlayService: TranslationOverlayService,
         recognizeTextUseCase: RecognizeTextUseCase,
-        captureRegionUseCase: CaptureRegionUseCase
+        captureRegionUseCase: CaptureRegionUseCase,
+        formatCapturedTextUseCase: FormatCapturedTextUseCase,
+        manageHistoryUseCase: ManageHistoryUseCase,
+        manageProfilesUseCase: ManageProfilesUseCase,
+        loadWordStudyUseCase: LoadWordStudyUseCase,
+        manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
     ) {
         self.historyRepository = historyRepository
         self.settingsRepository = settingsRepository
@@ -43,6 +53,11 @@ struct AppDependencyContainer {
         self.translationOverlayService = translationOverlayService
         self.recognizeTextUseCase = recognizeTextUseCase
         self.captureRegionUseCase = captureRegionUseCase
+        self.formatCapturedTextUseCase = formatCapturedTextUseCase
+        self.manageHistoryUseCase = manageHistoryUseCase
+        self.manageProfilesUseCase = manageProfilesUseCase
+        self.loadWordStudyUseCase = loadWordStudyUseCase
+        self.manageOpenAISettingsUseCase = manageOpenAISettingsUseCase
     }
 
     static func live() -> AppDependencyContainer {
@@ -58,11 +73,23 @@ struct AppDependencyContainer {
             ocrService: ocrService,
             openAIService: openAIService
         )
+        let formatCapturedTextUseCase = FormatCapturedTextUseCase(openAIService: openAIService)
+        let historyRepository = JSONHistoryRepository()
+        let manageHistoryUseCase = ManageHistoryUseCase(historyRepository: historyRepository)
+        let manageProfilesUseCase = ManageProfilesUseCase(manageHistoryUseCase: manageHistoryUseCase)
+        let loadWordStudyUseCase = LoadWordStudyUseCase(openAIService: openAIService)
+        let settingsRepository = UserDefaultsSettingsRepository()
+        let apiKeyRepository = KeychainAPIKeyRepository()
+        let manageOpenAISettingsUseCase = ManageOpenAISettingsUseCase(
+            settingsRepository: settingsRepository,
+            apiKeyRepository: apiKeyRepository,
+            openAIService: openAIService
+        )
 
         return AppDependencyContainer(
-            historyRepository: JSONHistoryRepository(),
-            settingsRepository: UserDefaultsSettingsRepository(),
-            apiKeyRepository: KeychainAPIKeyRepository(),
+            historyRepository: historyRepository,
+            settingsRepository: settingsRepository,
+            apiKeyRepository: apiKeyRepository,
             permissionService: permissionService,
             regionSelectionService: regionSelectionService,
             screenshotService: screenshotService,
@@ -70,7 +97,12 @@ struct AppDependencyContainer {
             openAIService: openAIService,
             translationOverlayService: TranslationOverlayService(),
             recognizeTextUseCase: recognizeTextUseCase,
-            captureRegionUseCase: captureRegionUseCase
+            captureRegionUseCase: captureRegionUseCase,
+            formatCapturedTextUseCase: formatCapturedTextUseCase,
+            manageHistoryUseCase: manageHistoryUseCase,
+            manageProfilesUseCase: manageProfilesUseCase,
+            loadWordStudyUseCase: loadWordStudyUseCase,
+            manageOpenAISettingsUseCase: manageOpenAISettingsUseCase
         )
     }
 

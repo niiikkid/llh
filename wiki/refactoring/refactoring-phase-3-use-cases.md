@@ -1,14 +1,26 @@
 # Refactoring Phase 3 Use Cases
 
 > Sources: llh project, 2026-05-26
-> Raw: [Phase 3 capture use cases completion](../../raw/refactoring/2026-05-26-phase-3-capture-use-cases-completion.md)
+> Raw: [Phase 3 capture use cases completion](../../raw/refactoring/2026-05-26-phase-3-capture-use-cases-completion.md); [Phase 3 format captured text completion](../../raw/refactoring/2026-05-26-phase-3-format-captured-text-completion.md); [Phase 3 manage history use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-history-use-case-completion.md); [Phase 3 manage profiles use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-profiles-use-case-completion.md); [Phase 3 load word study use case completion](../../raw/refactoring/2026-05-26-phase-3-load-word-study-use-case-completion.md); [Phase 3 manage OpenAI settings use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-openai-settings-use-case-completion.md)
 > Updated: 2026-05-26
 
 ## Overview
 
-Phase 3 («Extract Use Cases Workflow By Workflow») **в процессе**. Первый инкремент завершён без изменения продуктового поведения: capture + OCR вынесены в `RecognizeTextUseCase` и `CaptureRegionUseCase`. `MainViewModel` по-прежнему координирует UI, историю, overlay и форматирование.
+Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. Все 7 use cases зарегистрированы в контейнере. `MainViewModel` (~783 строк) координирует UI, overlay и shortcuts; не вызывает `OpenAIServing`, `SettingsRepository` или `APIKeyRepository` напрямую.
 
-## Завершённый инкремент — capture и recognize
+### Use cases в `AppDependencyContainer`
+
+| Use case | OpenAI / infra |
+|----------|----------------|
+| `RecognizeTextUseCase` | Local `OCRServing` / `OpenAIServing` (AI OCR) |
+| `CaptureRegionUseCase` | Permission, region, screenshot + recognize |
+| `FormatCapturedTextUseCase` | `formatRecognizedText` |
+| `ManageHistoryUseCase` | `HistoryRepository` |
+| `ManageProfilesUseCase` | Профили + `ManageHistoryUseCase` |
+| `LoadWordStudyUseCase` | `buildWordsStudyData` |
+| `ManageOpenAISettingsUseCase` | `SettingsRepository`, `APIKeyRepository`, `fetchModels` |
+
+## Инкремент 1 — capture и recognize
 
 | Файл | Назначение |
 |------|------------|
@@ -27,24 +39,231 @@ Phase 3 («Extract Use Cases Workflow By Workflow») **в процессе**. П
 
 Use case не пишет в историю и не трогает overlay — это остаётся в `MainViewModel.startCaptureFlow`.
 
-### DI
+### DI (capture)
 
 `AppDependencyContainer` содержит `recognizeTextUseCase` и `captureRegionUseCase`; сборка через `makeCaptureUseCases(...)`.
 
 `RegionSelectionService` бросает `RegionSelectionError` (раньше — вложенный `SelectionError`).
 
-## MainViewModel после инкремента
+## Инкремент 2 — format captured text
 
-- ~721 строк
-- Capture: `captureRegionUseCase.execute` + mapping outcomes → `@Published`, history, `formatEntryText`
-- Ещё в ViewModel: `formatEntryText`, study load, profiles/history CRUD, settings, overlay, shortcuts
+| Файл | Назначение |
+|------|------------|
+| `Domain/UseCases/FormatCapturedTextUseCase.swift` | Preflight + OpenAI format через `OpenAIServing` |
+
+### FormatCapturedTextPreflight
+
+| Исход | Смысл |
+|-------|--------|
+| `missingAPIKey` | Нет токена |
+| `missingModel` | Не выбрана модель |
+| `skipped` | Уже готово, processing без retry, или пустой текст |
+| `ready` | Можно вызывать `perform` |
+
+- `preflight` — синхронные проверки, без сети
+- `perform` — `formatRecognizedText`; ошибки пробрасываются в ViewModel
+
+Use case не меняет `formattingStatus`, не пишет историю и не управляет overlay.
+
+### DI (format)
+
+`AppDependencyContainer.formatCapturedTextUseCase` — `FormatCapturedTextUseCase(openAIService:)`.
+
+## Инкремент 3 — manage history
+
+| Файл | Назначение |
+|------|------------|
+| `Domain/Models/HistorySessionState.swift` | In-memory сессия: profiles, active profile, selected entry |
+| `Domain/UseCases/ManageHistoryUseCase.swift` | Load/save, нормализация, CRUD записей, `mutateEntry` |
+
+### Операции ManageHistoryUseCase
+
+| Метод | Назначение |
+|-------|------------|
+| `loadSession()` | `HistoryRepository.loadStore` + `normalizeLoadedStore` |
+| `saveSession(_:)` | Snapshot → `saveStore` |
+| `normalizeLoadedStore` | Repair, default profile на индексе 0, валидный `selectedProfileID` |
+| `resolveEntrySelectionForSelectedProfile` | Persisted или первая запись |
+| `selectEntry` / `deleteEntry` / `insertEntry` | Выбор и CRUD в активном профиле |
+| `updateSelectedEntryText` | Текст + сброс format/study |
+| `mutateEntry` | Точечные изменения записи по `profileID` + `entryID` |
+
+### Границы (history)
+
+- Use case не трогает SwiftUI, overlay, status messages
+- На диске `HistoryStoreSnapshot` без глобального `selectedEntryID` (как раньше)
+
+### DI (history)
+
+`AppDependencyContainer.manageHistoryUseCase` — общий `historyRepository` с контейнером в `live()`.
+
+## Инкремент 4 — manage profiles
+
+| Файл | Назначение |
+|------|------------|
+| `Domain/UseCases/ManageProfilesUseCase.swift` | Create/select/delete профилей, защита Default |
+
+### ManageProfilesDeleteOutcome
+
+| Исход | Смысл |
+|-------|--------|
+| `deleted(removedName:)` | Профиль удалён; выбран первый в списке |
+| `cannotDeleteDefaultProfile` | Default нельзя удалить |
+| `noSelectedProfile` | Нет активного профиля |
+
+### Операции ManageProfilesUseCase
+
+| Метод | Назначение |
+|-------|------------|
+| `normalizedProfileName(from:)` | Trim; пустое имя → `"Новый профиль"` |
+| `createProfile` | Insert at 0, select profile, resolve entry |
+| `selectProfile` | Смена профиля + resolve/clear entry |
+| `deleteSelectedProfile` | Удаление с защитой Default |
+| `canDeleteSelectedProfile` | `false` для Default |
+
+После create/select/delete вызывается `ManageHistoryUseCase.resolveEntrySelectionForSelectedProfile`.
+
+### Границы (profiles)
+
+- Use case не трогает status messages, overlay, `SettingsRepository`
+- `setDefaultNewProfileLearningLanguage` при создании профиля — в ViewModel
+
+### DI (profiles)
+
+`AppDependencyContainer.manageProfilesUseCase` — `ManageProfilesUseCase(manageHistoryUseCase:)`.
+
+### MainViewModel после profiles-инкремента
+
+- `historySession` / `applyHistorySession` — мост `@Published` ↔ use cases
+- Profiles: `manageProfilesUseCase`; entries: `manageHistoryUseCase`
+- Удалён `syncProfileSelectionToEditor` (логика в `selectProfile` + use cases)
+
+## Инкремент 5 — load word study
+
+| Файл | Назначение |
+|------|------------|
+| `Domain/UseCases/LoadWordStudyUseCase.swift` | Preflight + OpenAI word study через `OpenAIServing` |
+
+### Типы запроса
+
+- `LoadWordStudyRequest` — язык профиля, `profileSupportsWordStudy`, `forceReload`, `formattedText`, `wordsStatus`, `words`
+- `LoadWordStudyConfiguration` — `apiKey`, `modelID`
+
+### LoadWordStudyPreflight
+
+| Исход | Смысл |
+|-------|--------|
+| `missingAPIKey` | Нет токена |
+| `missingModel` | Не выбрана модель |
+| `skipped` | Профиль без word study, нет formatted text, уже готово/processing без forceReload |
+| `ready` | Можно вызывать `perform` |
+
+- `preflight` — синхронные проверки, без сети
+- `perform` — `buildWordsStudyData`; ошибки пробрасываются в ViewModel
+
+Use case не меняет `wordsStatus`, не пишет историю и не обновляет `@Published studyMaterials`.
+
+### Границы (word study)
+
+- Phrase/grammar study (`buildPhrasesStudyData`, `buildGrammarStudyData`) вне scope — API не подключены к UI
+- Загрузка только по запросу пользователя (`retryStudyAssistantDataForSelectedEntry` с `forceReload: true`)
+
+### DI (word study)
+
+`AppDependencyContainer.loadWordStudyUseCase` — `LoadWordStudyUseCase(openAIService:)`.
+
+### MainViewModel после word-study-инкремента
+
+- ~799 строк (до инкремента 6)
+- `loadStudyMaterial` → preflight/perform use case; helpers `applyWordStudySuccess` / `applyWordStudyFailure`
+- `.processing` и persist — в ViewModel после preflight `.ready`
+- Settings flow ещё во ViewModel — вынесен в инкременте 6
+
+## Инкремент 6 — manage OpenAI settings
+
+| Файл | Назначение |
+|------|------------|
+| `Domain/UseCases/ManageOpenAISettingsUseCase.swift` | Load/persist settings, validate API key, fetch models |
+
+### Типы
+
+- `OpenAISettingsSnapshot` — startup read: models, selected model, OCR, language, overlay timing
+- `ValidateAndSaveAPIKeyPreflight` — `emptyToken`, `ready(trimmedToken:)`
+- `RefreshModelsPreflight` — `missingAPIKey`, `ready(trimmedToken:)`
+- `FetchAndPersistModelsResult` — models + resolved selected model ID
+
+### Операции ManageOpenAISettingsUseCase
+
+| Метод | Назначение |
+|-------|------------|
+| `loadSettingsSnapshot()` | Read from repositories; fallback selected model to first cached |
+| `hasAPIKey()` / `currentAPIKey()` | Keychain read for UI and other use case configurations |
+| `preflightValidateAndSaveAPIKey` / `performValidateAndSaveAPIKey` | Trim, fetch models, save key, cache models, resolve selection |
+| `preflightRefreshModels` / `performRefreshModels` | Refresh with stored key |
+| `deleteAPIKey()` | Keychain delete |
+| `persistSelectedModelID` / `persistOCREngine` / `persistDefaultNewProfileLearningLanguage` | Settings writes |
+| `persistTranslationOverlayMinimumDuration` / `persistTranslationOverlaySecondsPerWord` | Clamped overlay timing writes |
+
+### Границы (OpenAI settings)
+
+- Use case не трогает status messages, loading flags, OCR overlay on hotkey
+- Token validation через `GET /v1/models` (существующий `OpenAIServing.fetchModels`)
+
+### DI (OpenAI settings)
+
+`AppDependencyContainer.manageOpenAISettingsUseCase` — shared `settingsRepository` и `apiKeyRepository` с контейнером в `live()`.
+
+### MainViewModel после settings-инкремента (финальное состояние Phase 3)
+
+- ~783 строк
+- `applySettingsSnapshot(_:)` при init
+- Нет прямых зависимостей от `OpenAIServing`, `SettingsRepository`, `APIKeyRepository`
+- Capture/format/word study читают API key через `currentAPIKey()`
+- Overlay и shortcuts остаются во ViewModel (Phase 4)
+
+> **После Phase 4 inc. 1:** настройки вынесены в `SettingsViewModel` (~685 строк Main). Use case тот же; UI state settings — не в Main. См. [Phase 4](refactoring-phase-4-presentation.md).
 
 ## Покрытие тестами
 
-`llhTests/Phase3CaptureRegionUseCaseTests.swift` (7 тестов, fakes):
+`llhTests/Phase3CaptureRegionUseCaseTests.swift` (7 тестов):
 
 - permission denied / selection cancelled / no text / captured
 - local vs AI recognize; AI без API key → `OpenAIServiceError.invalidTokenFormat`
+
+`llhTests/Phase3FormatCapturedTextUseCaseTests.swift` (8 тестов):
+
+- preflight: missing key/model, skip (succeeded/processing/empty), ready при forceRetry
+- perform: success, propagation `OpenAIServiceError`
+
+`llhTests/Phase3ManageHistoryUseCaseTests.swift` (10 тестов):
+
+- normalize: default profile insert/move, repair processing→failed
+- load fallback `selectedProfileID`, delete/insert/resolve selection, update text reset
+- save roundtrip, `mutateEntry`
+
+`llhTests/Phase3ManageProfilesUseCaseTests.swift` (8 тестов):
+
+- normalized name; createProfile insert/select
+- selectProfile resolve/clear entry
+- canDelete false for Default; delete custom/default/no selection
+
+`llhTests/Phase3LoadWordStudyUseCaseTests.swift` (9 тестов):
+
+- preflight: unsupported profile, missing key/model, skip без formatted text, skip succeeded/processing, ready при forceReload
+- perform: success, propagation `OpenAIServiceError`
+
+**Итого Phase 3 unit-тестов:** 56 (7 + 8 + 10 + 8 + 9 + 14).
+
+`llhTests/Phase3ManageOpenAISettingsUseCaseTests.swift` (14 тестов):
+
+- loadSettingsSnapshot: fallback model, stored selection
+- hasAPIKey / currentAPIKey
+- preflight validate: emptyToken, ready
+- perform validate: persist models/key, keep valid selection, fallback model, propagate error
+- preflight/perform refresh
+- deleteAPIKey
+- persist settings with clamping
+- resolveSelectedModelID
 
 ## Критерии выхода Phase 3 (roadmap)
 
@@ -52,20 +271,21 @@ Use case не пишет в историю и не трогает overlay — э
 |----------|--------|
 | `CaptureRegionUseCase` | выполнено |
 | `RecognizeTextUseCase` | выполнено (в составе capture) |
-| `FormatCapturedTextUseCase` | следующий шаг |
-| `ManageHistoryUseCase` | не начато |
-| `ManageProfilesUseCase` | не начато |
-| `LoadWordStudyUseCase` | не начато |
-| `ManageOpenAISettingsUseCase` | не начато |
+| `FormatCapturedTextUseCase` | выполнено |
+| `ManageHistoryUseCase` | выполнено |
+| `ManageProfilesUseCase` | выполнено |
+| `LoadWordStudyUseCase` | выполнено |
+| `ManageOpenAISettingsUseCase` | выполнено |
 
-Полный Phase 3 завершён, когда `MainViewModel` делегирует все перечисленные workflows, а use cases покрыты fake-driven тестами.
+Phase 3 завершена: `MainViewModel` делегирует все перечисленные workflows; use cases покрыты fake-driven тестами.
 
 ## Следующий шаг
 
-**`FormatCapturedTextUseCase`** — вынести `formatEntryText` и связанное состояние форматирования из `MainViewModel`.
+**Phase 4** — в процессе: инкремент 1 (Settings) завершён — см. [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md). Далее History, Capture + `AppShortcutsCoordinator`.
 
 ## See Also
 
+- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — split UI; settings increment завершён
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — протоколы и контейнер
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь MainViewModel

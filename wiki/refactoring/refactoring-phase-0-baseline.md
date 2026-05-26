@@ -6,13 +6,13 @@
 
 ## Overview
 
-Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. Поведение приложения для пользователя не менялось. Phase 1–2 завершены; Phase 3 (use cases) в процессе — см. [Phase 1](refactoring-phase-1-boundaries.md), [Phase 2](refactoring-phase-2-domain-models.md), [Phase 3](refactoring-phase-3-use-cases.md).
+Phase 0 («Baseline And Safety Net») завершена: зафиксирована поверхность `MainViewModel`, добавлены characterization-тесты и один чистый extract для repair при загрузке истории. Поведение приложения для пользователя не менялось. Phase 1–3 завершены; **Phase 4 в процессе** (инкремент 1: settings) — см. [Phase 4](refactoring-phase-4-presentation.md).
 
 ## Артефакты в коде
 
 | Файл | Назначение |
 |------|------------|
-| `llh/RefactorBaseline/RefactorBaselineInventory.swift` | Инвентарь: 19 `@Published`, публичные действия по feature buckets, триггеры `persistHistory`, карта OpenAI, UI-потребители |
+| `llh/RefactorBaseline/RefactorBaselineInventory.swift` | Инвентарь: 12 `@Published` на Main + 7 на Settings (Phase 4), actions по buckets, триггеры `persistHistory`, карта OpenAI, UI-потребители |
 | `llh/RefactorBaseline/HistoryEntryLoadRepair.swift` | Pure repair: `processing` → `failed` после прерванной сессии; очистка пустых formatted/study payloads |
 | `llhTests/RefactorBaselineTests.swift` | Тесты-предохранители и inventory locks |
 
@@ -20,18 +20,23 @@ Phase 0 («Baseline And Safety Net») завершена: зафиксирова
 
 ## Инвентарь MainViewModel
 
-### Состояние UI (19 `@Published`)
+### Состояние UI
 
-Capture/editor: `recognizedText`, `formattedRecognizedText`, `studyMaterials`, `capturedImage`, `isProcessing`. History/profiles: `profiles`, `selectedProfileID`, `selectedEntryID`. Settings: `selectedOpenAIModelID`, `availableOpenAIModels`, `selectedOCREngine`, `defaultNewProfileLearningLanguage`, overlay timing. Chrome: `statusMessage`, `showPermissionHelp`, loading flags, `showsSessionReadingOverview`.
+**Исходный снимок Phase 0:** 19 `@Published` на одном `MainViewModel`.
+
+**После Phase 4 inc. 1:** 12 на `MainViewModel` + 7 на `SettingsViewModel` (`RefactorBaselineInventory`).
+
+Main: capture/editor (`recognizedText`, `formattedRecognizedText`, `studyMaterials`, `capturedImage`, `isProcessing`), history (`profiles`, `selectedProfileID`, `selectedEntryID`), chrome (`statusMessage`, `showPermissionHelp`, `isFormattingRecognizedText`, `showsSessionReadingOverview`).
+
+Settings VM: OpenAI models/token, OCR engine, default profile language, overlay timing, `isLoadingOpenAIModels`.
 
 ### Feature buckets (публичные действия)
 
 - **Capture / permissions:** `triggerCapture`, `refreshPermissionState`, `openSystemSettings`
-- **OCR:** `selectOCREngine`, `switchToNextOCREngine`
-- **Formatting:** `retryFormattingForSelectedEntry`, `calculatedTranslationOverlayDuration`
+- **OCR / settings UI:** перенесены в `SettingsViewModel` (`selectOCREngine`, `switchToNextOCREngine`, token/model/overlay setters)
+- **Formatting:** `retryFormattingForSelectedEntry` (на Main); длительность overlay — `SettingsViewModel.calculatedTranslationOverlayDuration`
 - **History:** `deleteSelectedEntry`, `selectEntry`, `updateSelectedText`
-- **Profiles:** `createProfile`, `selectProfile`, `deleteSelectedProfile`, `setDefaultNewProfileLearningLanguage`
-- **OpenAI / overlay settings:** token/model/OCR/overlay setters
+- **Profiles:** `createProfile`, `selectProfile`, `deleteSelectedProfile` (`setDefaultNewProfileLearningLanguage` — на Settings VM, вызывается из `createProfile`)
 - **Overlay:** `closeTranslationOverlay`, `toggleLastTranslationOverlay`
 - **Study (words):** `retryStudyAssistantDataForSelectedEntry`
 - **Session reading:** overview toggle, copy to pasteboard, `plainTextForSessionReadingCopy`
@@ -44,9 +49,15 @@ Capture/editor: `recognizedText`, `formattedRecognizedText`, `studyMaterials`, `
 
 ### OpenAI
 
-Все шесть методов `OpenAIServing` существуют в `OpenAIService`. Из `MainViewModel` вызываются четыре: models, AI OCR, format, words study.
+Все шесть методов `OpenAIServing` существуют в `OpenAIService`.
 
-**Не подключены к UI / ViewModel:**
+**Исходный инвентарь Phase 0:** из `MainViewModel` напрямую вызывались models, AI OCR, format, words study.
+
+**После Phase 3:** workflows за use cases; `ManageOpenAISettingsUseCase` вызывался из `MainViewModel`.
+
+**После Phase 4 inc. 1:** UI настроек и 7 `@Published` — в `SettingsViewModel` → `ManageOpenAISettingsUseCase`. `MainViewModel` координирует capture/format/study и читает `settings.*` для конфигурации.
+
+**Не подключены к UI:**
 
 - `buildPhrasesStudyData`
 - `buildGrammarStudyData`
@@ -55,7 +66,7 @@ Capture/editor: `recognizedText`, `formattedRecognizedText`, `studyMaterials`, `
 
 ### UI зависимости
 
-`llhApp` владеет `StateObject` ViewModel; `ContentView` и `MenuBarPanelView` — основные наблюдатели; settings tabs (`OpenAISettingsTab`, `OverlayTimingSettingsTab`) внутри `ContentView`.
+`llhApp` владеет `StateObject` `MainViewModel`; `ContentView` и `MenuBarPanelView` наблюдают Main; настройки — `SettingsView(viewModel: main.settings)` в sheet (`Presentation/Settings/`).
 
 ## Покрытие тестами (Phase 0)
 
@@ -80,7 +91,8 @@ Capture/editor: `recognizedText`, `formattedRecognizedText`, `studyMaterials`, `
 
 ## See Also
 
-- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — capture/recognize (текущая работа)
+- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 в процессе (settings готов)
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — завершённый Phase 1
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный пофазный план (архивный snapshot на 2026-05-26)

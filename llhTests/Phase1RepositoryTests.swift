@@ -74,14 +74,23 @@ struct Phase1RepositoryTests {
             ocrService: ocrService,
             openAIService: openAIService
         )
+        let historyRepository = JSONHistoryRepository(
+            persistence: HistoryPersistenceService(fileURL: fileURL)
+        )
+        let manageHistoryUseCase = ManageHistoryUseCase(historyRepository: historyRepository)
+        let settingsRepository = UserDefaultsSettingsRepository(
+            store: OpenAISettingsStore(userDefaults: defaults)
+        )
+        let apiKeyRepository = KeychainAPIKeyRepository(tokenStore: InMemoryOpenAITokenStore())
+        let manageOpenAISettingsUseCase = ManageOpenAISettingsUseCase(
+            settingsRepository: settingsRepository,
+            apiKeyRepository: apiKeyRepository,
+            openAIService: openAIService
+        )
         let dependencies = AppDependencyContainer(
-            historyRepository: JSONHistoryRepository(
-                persistence: HistoryPersistenceService(fileURL: fileURL)
-            ),
-            settingsRepository: UserDefaultsSettingsRepository(
-                store: OpenAISettingsStore(userDefaults: defaults)
-            ),
-            apiKeyRepository: KeychainAPIKeyRepository(tokenStore: InMemoryOpenAITokenStore()),
+            historyRepository: historyRepository,
+            settingsRepository: settingsRepository,
+            apiKeyRepository: apiKeyRepository,
             permissionService: permissionService,
             regionSelectionService: regionSelectionService,
             screenshotService: screenshotService,
@@ -89,11 +98,16 @@ struct Phase1RepositoryTests {
             openAIService: openAIService,
             translationOverlayService: TranslationOverlayService(),
             recognizeTextUseCase: recognizeTextUseCase,
-            captureRegionUseCase: captureRegionUseCase
+            captureRegionUseCase: captureRegionUseCase,
+            formatCapturedTextUseCase: FormatCapturedTextUseCase(openAIService: openAIService),
+            manageHistoryUseCase: manageHistoryUseCase,
+            manageProfilesUseCase: ManageProfilesUseCase(manageHistoryUseCase: manageHistoryUseCase),
+            loadWordStudyUseCase: LoadWordStudyUseCase(openAIService: openAIService),
+            manageOpenAISettingsUseCase: manageOpenAISettingsUseCase
         )
         let viewModel = dependencies.makeMainViewModel()
 
-        #expect(viewModel.hasOpenAIToken == false)
+        #expect(viewModel.settings.hasOpenAIToken == false)
         #expect(viewModel.profiles.isEmpty == false)
     }
 }

@@ -25,33 +25,32 @@ final class MainViewModel: ObservableObject {
     @Published private(set) var profiles: [LearningProfile] = []
     @Published var selectedProfileID: LearningProfile.ID?
     @Published var selectedEntryID: CapturedTextEntry.ID?
-    @Published private(set) var availableOpenAIModels: [OpenAIModel] = []
-    @Published var selectedOpenAIModelID: String?
-    @Published var selectedOCREngine: OCREngine = .local
-    @Published var defaultNewProfileLearningLanguage: LearningLanguage = .english
-    @Published var translationOverlayMinimumDuration: Double = 3
-    @Published var translationOverlaySecondsPerWord: Double = 0.33
-    @Published private(set) var isLoadingOpenAIModels = false
     @Published private(set) var isFormattingRecognizedText = false
     @Published private(set) var showsSessionReadingOverview = false
 
     private let permissionService: ScreenRecordingPermissionChecking
     private let captureRegionUseCase: CaptureRegionUseCase
-    private let historyRepository: HistoryRepository
-    private let openAIService: OpenAIServing
+    private let formatCapturedTextUseCase: FormatCapturedTextUseCase
+    private let manageHistoryUseCase: ManageHistoryUseCase
+    private let manageProfilesUseCase: ManageProfilesUseCase
+    private let loadWordStudyUseCase: LoadWordStudyUseCase
+    let settings: SettingsViewModel
     private let translationOverlayService: TranslationOverlayService
-    private var settingsRepository: SettingsRepository
-    private let apiKeyRepository: APIKeyRepository
     private var overlayEntryAwaitingFormattedResult: CapturedTextEntry.ID?
+    private var cancellables = Set<AnyCancellable>()
 
     init(dependencies: AppDependencyContainer) {
         permissionService = dependencies.permissionService
         captureRegionUseCase = dependencies.captureRegionUseCase
-        historyRepository = dependencies.historyRepository
-        openAIService = dependencies.openAIService
+        formatCapturedTextUseCase = dependencies.formatCapturedTextUseCase
+        manageHistoryUseCase = dependencies.manageHistoryUseCase
+        manageProfilesUseCase = dependencies.manageProfilesUseCase
+        loadWordStudyUseCase = dependencies.loadWordStudyUseCase
         translationOverlayService = dependencies.translationOverlayService
-        settingsRepository = dependencies.settingsRepository
-        apiKeyRepository = dependencies.apiKeyRepository
+        settings = SettingsViewModel(
+            manageOpenAISettingsUseCase: dependencies.manageOpenAISettingsUseCase,
+            translationOverlayService: dependencies.translationOverlayService
+        )
         KeyboardShortcuts.onKeyUp(for: .captureArea) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.closeTranslationOverlay()
@@ -61,7 +60,7 @@ final class MainViewModel: ObservableObject {
         KeyboardShortcuts.onKeyUp(for: .switchOCREngine) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.closeTranslationOverlay(cancelPendingResult: false)
-                self?.switchToNextOCREngine(triggeredByHotkey: true)
+                self?.settings.switchToNextOCREngine(triggeredByHotkey: true)
             }
         }
         KeyboardShortcuts.onKeyUp(for: .closeTranslationOverlay) { [weak self] in
@@ -74,128 +73,21 @@ final class MainViewModel: ObservableObject {
                 self?.toggleLastTranslationOverlay()
             }
         }
-        loadHistory()
-        availableOpenAIModels = settingsRepository.cachedModels
-        selectedOpenAIModelID = settingsRepository.selectedModelID
-        selectedOCREngine = OCREngine(rawValue: settingsRepository.selectedOCREngineRawValue) ?? .local
-        if selectedOpenAIModelID == nil {
-            selectedOpenAIModelID = availableOpenAIModels.first?.id
+        settings.configureStatusReporting { [weak self] message in
+            self?.statusMessage = message
         }
-        defaultNewProfileLearningLanguage = LearningLanguage(rawValue: settingsRepository.selectedLearningLanguageRawValue) ?? .english
-        translationOverlayMinimumDuration = settingsRepository.translationOverlayMinimumDuration
-        translationOverlaySecondsPerWord = settingsRepository.translationOverlaySecondsPerWord
+        settings.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+
+        loadHistory()
         refreshPermissionState()
     }
 
-    var hasOpenAIToken: Bool {
-        apiKeyRepository.loadAPIKey() != nil
-    }
-
-    func validateAndSaveOpenAIToken(_ token: String) async {
-        let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedToken.isEmpty else {
-            statusMessage = "Введите OpenAI token."
-            return
-        }
-
-        isLoadingOpenAIModels = true
-        defer { isLoadingOpenAIModels = false }
-
-        do {
-            let models = try await openAIService.fetchModels(apiKey: trimmedToken)
-            try apiKeyRepository.saveAPIKey(trimmedToken)
-            availableOpenAIModels = models
-            settingsRepository.cachedModels = models
-
-            if let selectedOpenAIModelID,
-               models.contains(where: { $0.id == selectedOpenAIModelID }) {
-                // Keep current selection.
-            } else {
-                selectedOpenAIModelID = models.first?.id
-            }
-            settingsRepository.selectedModelID = selectedOpenAIModelID
-
-            statusMessage = "Подключение к OpenAI успешно. Моделей: \(models.count)."
-        } catch {
-            statusMessage = "OpenAI: \(error.localizedDescription)"
-        }
-    }
-
-    func refreshOpenAIModels() async {
-        guard let token = apiKeyRepository.loadAPIKey() else {
-            statusMessage = "Сначала сохраните OpenAI token."
-            return
-        }
-        await validateAndSaveOpenAIToken(token)
-    }
-
-    func deleteOpenAIToken() {
-        do {
-            try apiKeyRepository.deleteAPIKey()
-            statusMessage = "Токен OpenAI удален."
-        } catch {
-            statusMessage = "Не удалось удалить OpenAI token: \(error.localizedDescription)"
-        }
-    }
-
-    func selectOpenAIModel(_ id: String?) {
-        selectedOpenAIModelID = id
-        settingsRepository.selectedModelID = id
-        if let id {
-            statusMessage = "Выбрана модель OpenAI: \(id)"
-        }
-    }
-
-    func selectOCREngine(_ engine: OCREngine, showOverlay: Bool = false) {
-        let previousEngine = selectedOCREngine
-        selectedOCREngine = engine
-        settingsRepository.selectedOCREngineRawValue = engine.rawValue
-        statusMessage = "Движок распознавания: \(engine.title)."
-        guard showOverlay, shouldUseCompactOverlay else { return }
-        translationOverlayService.showMessage(
-            title: previousEngine.title + " ->",
-            subtitle: engine.title,
-            duration: 1.5
-        )
-    }
-
-    func switchToNextOCREngine(triggeredByHotkey: Bool = false) {
-        guard let currentIndex = OCREngine.allCases.firstIndex(of: selectedOCREngine) else {
-            selectOCREngine(.local, showOverlay: triggeredByHotkey)
-            return
-        }
-        let nextIndex = OCREngine.allCases.index(after: currentIndex)
-        let wrappedIndex = nextIndex == OCREngine.allCases.endIndex ? OCREngine.allCases.startIndex : nextIndex
-        selectOCREngine(OCREngine.allCases[wrappedIndex], showOverlay: triggeredByHotkey)
-    }
-
-    func setDefaultNewProfileLearningLanguage(_ language: LearningLanguage) {
-        defaultNewProfileLearningLanguage = language
-        settingsRepository.selectedLearningLanguageRawValue = language.rawValue
-    }
-
-    func setTranslationOverlayMinimumDuration(_ duration: Double) {
-        let clampedDuration = min(max(duration, 1), 15)
-        translationOverlayMinimumDuration = clampedDuration
-        settingsRepository.translationOverlayMinimumDuration = clampedDuration
-    }
-
-    func setTranslationOverlaySecondsPerWord(_ value: Double) {
-        let clampedValue = min(max(value, 0.1), 2)
-        translationOverlaySecondsPerWord = clampedValue
-        settingsRepository.translationOverlaySecondsPerWord = clampedValue
-    }
-
-    func calculatedTranslationOverlayDuration(for formattedText: StructuredFormattedText) -> Double {
-        TranslationOverlayTiming.duration(
-            for: formattedText,
-            minimumDuration: translationOverlayMinimumDuration,
-            secondsPerWord: translationOverlaySecondsPerWord
-        )
-    }
-
     var currentProfileLearningLanguage: LearningLanguage {
-        activeProfile?.learningLanguage ?? defaultNewProfileLearningLanguage
+        activeProfile?.learningLanguage ?? settings.defaultNewProfileLearningLanguage
     }
 
     var currentProfileSupportsWordStudy: Bool {
@@ -245,54 +137,62 @@ final class MainViewModel: ObservableObject {
     }
 
     func deleteSelectedEntry() {
-        guard let profileIndex = selectedProfileIndex, let selectedEntryID else { return }
-        guard profiles[profileIndex].deleteEntry(with: selectedEntryID) else { return }
-        self.selectedEntryID = profiles[profileIndex].selectedEntryID
+        guard let selectedEntryID else { return }
+        var session = historySession
+        guard manageHistoryUseCase.deleteEntry(state: &session, entryID: selectedEntryID) else { return }
+        applyHistorySession(session)
         syncSelectionToEditor()
         persistHistory()
         statusMessage = "Перевод удален."
     }
 
     func createProfile(named rawName: String, learningLanguage: LearningLanguage) {
-        let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = trimmed.isEmpty ? "Новый профиль" : trimmed
-        let profile = LearningProfile(name: name, learningLanguage: learningLanguage)
-        profiles.insert(profile, at: 0)
-        setDefaultNewProfileLearningLanguage(learningLanguage)
-        selectProfile(profile.id)
+        var session = historySession
+        let profile = manageProfilesUseCase.createProfile(
+            state: &session,
+            named: rawName,
+            learningLanguage: learningLanguage
+        )
+        settings.setDefaultNewProfileLearningLanguage(learningLanguage)
+        applyHistorySession(session)
+        syncSelectionToEditor()
         persistHistory()
-        statusMessage = "Профиль \"\(name)\" создан для языка \(learningLanguage.title.lowercased())."
+        statusMessage = "Профиль \"\(profile.name)\" создан для языка \(learningLanguage.title.lowercased())."
     }
 
     func selectProfile(_ id: LearningProfile.ID?) {
-        selectedProfileID = id
-        syncProfileSelectionToEditor()
+        showsSessionReadingOverview = false
+        var session = historySession
+        manageProfilesUseCase.selectProfile(state: &session, profileID: id)
+        applyHistorySession(session)
+        syncSelectionToEditor()
         if let activeProfile {
             statusMessage = "Выбрана история \"\(activeProfile.name)\" (\(activeProfile.learningLanguage.title.lowercased()))."
+        } else {
+            recognizedText = ""
+            formattedRecognizedText = nil
+            studyMaterials = StudyMaterials()
+            capturedImage = nil
         }
     }
 
     func deleteSelectedProfile() {
-        guard let currentProfileID = selectedProfileID,
-              let profileIndex = profiles.firstIndex(where: { $0.id == currentProfileID }) else { return }
-        guard !profiles[profileIndex].isDefaultProfile else {
+        var session = historySession
+        switch manageProfilesUseCase.deleteSelectedProfile(state: &session) {
+        case .deleted(let removedName):
+            applyHistorySession(session)
+            syncSelectionToEditor()
+            persistHistory()
+            statusMessage = "Профиль \"\(removedName)\" удален."
+        case .cannotDeleteDefaultProfile:
             statusMessage = "Сессию Default удалить нельзя."
-            return
+        case .noSelectedProfile:
+            break
         }
-        let removedName = profiles[profileIndex].name
-        profiles.remove(at: profileIndex)
-
-        if let firstID = profiles.first?.id {
-            selectedProfileID = firstID
-        }
-
-        syncProfileSelectionToEditor()
-        persistHistory()
-        statusMessage = "Профиль \"\(removedName)\" удален."
     }
 
     var canDeleteSelectedProfile: Bool {
-        activeProfile?.isDefaultProfile == false
+        manageProfilesUseCase.canDeleteSelectedProfile(state: historySession)
     }
 
     var history: [CapturedTextEntry] {
@@ -348,23 +248,19 @@ final class MainViewModel: ObservableObject {
 
     func selectEntry(_ id: CapturedTextEntry.ID?) {
         showsSessionReadingOverview = false
-        selectedEntryID = id
-        if let selectedProfileIndex {
-            profiles[selectedProfileIndex].selectedEntryID = id
-        }
+        var session = historySession
+        manageHistoryUseCase.selectEntry(state: &session, entryID: id)
+        applyHistorySession(session)
         syncSelectionToEditor()
     }
 
     func updateSelectedText(_ newText: String) {
         recognizedText = newText
-        guard let profileIndex = selectedProfileIndex, let entryIndex = selectedEntryIndex else { return }
-        profiles[profileIndex].history[entryIndex].text = newText
-        profiles[profileIndex].history[entryIndex].formattedText = nil
-        profiles[profileIndex].history[entryIndex].formattingStatus = .notRequested
-        profiles[profileIndex].history[entryIndex].studyMaterials = StudyMaterials()
+        var session = historySession
+        guard manageHistoryUseCase.updateSelectedEntryText(state: &session, newText: newText) else { return }
+        applyHistorySession(session)
         formattedRecognizedText = nil
         studyMaterials = StudyMaterials()
-        profiles[profileIndex].selectedEntryID = selectedEntryID
         persistHistory()
     }
 
@@ -401,9 +297,9 @@ final class MainViewModel: ObservableObject {
         }
 
         let configuration = CaptureRegionConfiguration(
-            ocrEngine: selectedOCREngine,
-            apiKey: apiKeyRepository.loadAPIKey(),
-            selectedModelID: selectedOpenAIModelID
+            ocrEngine: settings.selectedOCREngine,
+            apiKey: settings.currentAPIKey(),
+            selectedModelID: settings.selectedOpenAIModelID
         )
 
         do {
@@ -433,9 +329,13 @@ final class MainViewModel: ObservableObject {
                 let imagePreview = NSImage(cgImage: image, size: .zero)
                 let entry = CapturedTextEntry(text: text, image: imagePreview)
                 guard let selectedProfileIndex else { return }
-                profiles[selectedProfileIndex].history.insert(entry, at: 0)
-                profiles[selectedProfileIndex].selectedEntryID = entry.id
-                selectedEntryID = entry.id
+                var session = historySession
+                manageHistoryUseCase.insertEntry(
+                    state: &session,
+                    profileIndex: selectedProfileIndex,
+                    entry: entry
+                )
+                applyHistorySession(session)
                 syncSelectionToEditor()
                 persistHistory()
                 statusMessage = "Готово. Запись добавлена в историю. Форматирую текст..."
@@ -489,44 +389,12 @@ final class MainViewModel: ObservableObject {
         capturedImage = profiles[profileIndex].history[entryIndex].image
     }
 
-    private func syncProfileSelectionToEditor() {
-        showsSessionReadingOverview = false
-        guard let selectedProfileIndex else {
-            selectedEntryID = nil
-            recognizedText = ""
-            formattedRecognizedText = nil
-            studyMaterials = StudyMaterials()
-            capturedImage = nil
-            return
-        }
-
-        if let persistedSelection = profiles[selectedProfileIndex].selectedEntryID,
-           profiles[selectedProfileIndex].history.contains(where: { $0.id == persistedSelection }) {
-            selectedEntryID = persistedSelection
-        } else {
-            selectedEntryID = profiles[selectedProfileIndex].history.first?.id
-            profiles[selectedProfileIndex].selectedEntryID = selectedEntryID
-        }
-        syncSelectionToEditor()
-    }
-
     private func loadHistory() {
         do {
-            var store = try historyRepository.loadStore()
-            store.profiles = store.profiles.map(HistoryEntryLoadRepair.repairProfile)
-            if !store.profiles.contains(where: \.isDefaultProfile) {
-                store.profiles.insert(.defaultProfile(), at: 0)
-            }
-            if let defaultIndex = store.profiles.firstIndex(where: \.isDefaultProfile), defaultIndex != 0 {
-                let defaultProfile = store.profiles.remove(at: defaultIndex)
-                store.profiles.insert(defaultProfile, at: 0)
-            }
-            profiles = store.profiles
-            selectedProfileID = store.selectedProfileID
-            if selectedProfileIndex == nil {
-                selectedProfileID = profiles.first?.id
-            }
-            syncProfileSelectionToEditor()
+            var session = try manageHistoryUseCase.loadSession()
+            manageHistoryUseCase.resolveEntrySelectionForSelectedProfile(state: &session)
+            applyHistorySession(session)
+            syncSelectionToEditor()
         } catch {
             statusMessage = "Не удалось загрузить историю: \(error.localizedDescription)"
         }
@@ -534,165 +402,262 @@ final class MainViewModel: ObservableObject {
 
     private func persistHistory() {
         do {
-            let store = HistoryStoreSnapshot(profiles: profiles, selectedProfileID: selectedProfileID)
-            try historyRepository.saveStore(store)
+            try manageHistoryUseCase.saveSession(historySession)
         } catch {
             statusMessage = "Не удалось сохранить историю: \(error.localizedDescription)"
         }
     }
 
+    private var historySession: HistorySessionState {
+        HistorySessionState(
+            profiles: profiles,
+            selectedProfileID: selectedProfileID,
+            selectedEntryID: selectedEntryID
+        )
+    }
+
+    private func applyHistorySession(_ session: HistorySessionState) {
+        profiles = session.profiles
+        selectedProfileID = session.selectedProfileID
+        selectedEntryID = session.selectedEntryID
+    }
+
+    @discardableResult
+    private func mutateHistoryEntry(
+        profileID: LearningProfile.ID,
+        entryID: CapturedTextEntry.ID,
+        _ body: (inout CapturedTextEntry) -> Void
+    ) -> Bool {
+        var session = historySession
+        guard manageHistoryUseCase.mutateEntry(
+            state: &session,
+            profileID: profileID,
+            entryID: entryID,
+            body
+        ) else {
+            return false
+        }
+        applyHistorySession(session)
+        return true
+    }
+
     private func formatEntryText(entryID: CapturedTextEntry.ID, forceRetry: Bool) async {
         guard !isFormattingRecognizedText else { return }
-        guard let token = apiKeyRepository.loadAPIKey() else {
-            statusMessage = "Сначала сохраните OpenAI token."
-            if overlayEntryAwaitingFormattedResult == entryID {
-                translationOverlayService.showMessage(title: "Сначала сохраните OpenAI token", duration: 3)
-                overlayEntryAwaitingFormattedResult = nil
-            }
-            return
-        }
-        guard let modelID = selectedOpenAIModelID else {
-            statusMessage = "Выберите модель OpenAI."
-            if overlayEntryAwaitingFormattedResult == entryID {
-                translationOverlayService.showMessage(title: "Выберите модель OpenAI", duration: 3)
-                overlayEntryAwaitingFormattedResult = nil
-            }
-            return
-        }
         guard let profileIndex = selectedProfileIndex else { return }
         guard let entryIndex = profiles[profileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
 
-        let currentStatus = profiles[profileIndex].history[entryIndex].formattingStatus
-        let currentFormattedText = profiles[profileIndex].history[entryIndex].formattedText
-        if !forceRetry, currentStatus == .succeeded, currentFormattedText?.hasContent == true {
+        let entry = profiles[profileIndex].history[entryIndex]
+        let request = FormatCapturedTextRequest(
+            rawText: entry.text,
+            targetLanguage: profiles[profileIndex].learningLanguage,
+            forceRetry: forceRetry,
+            currentStatus: entry.formattingStatus,
+            currentFormattedText: entry.formattedText
+        )
+
+        let configuration = FormatCapturedTextConfiguration(
+            apiKey: settings.currentAPIKey(),
+            modelID: settings.selectedOpenAIModelID
+        )
+
+        switch formatCapturedTextUseCase.preflight(request: request, configuration: configuration) {
+        case .missingAPIKey:
+            statusMessage = "Сначала сохраните OpenAI token."
+            clearOverlayAwaitingFormat(entryID: entryID, title: "Сначала сохраните OpenAI token")
             return
-        }
-        if !forceRetry, currentStatus == .processing {
+        case .missingModel:
+            statusMessage = "Выберите модель OpenAI."
+            clearOverlayAwaitingFormat(entryID: entryID, title: "Выберите модель OpenAI")
             return
+        case .skipped:
+            return
+        case .ready:
+            break
         }
 
-        let rawText = profiles[profileIndex].history[entryIndex].text
-        guard !rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-
-        isFormattingRecognizedText = true
-        profiles[profileIndex].history[entryIndex].formattingStatus = .processing
-        persistHistory()
-
-        defer {
-            isFormattingRecognizedText = false
-        }
+        guard beginFormattingEntry(entryID: entryID) else { return }
+        defer { endFormattingEntry() }
 
         do {
-            let formatted = try await openAIService.formatRecognizedText(
-                apiKey: token,
-                modelID: modelID,
-                targetLanguage: profiles[profileIndex].learningLanguage,
-                rawText: rawText
+            let formatted = try await formatCapturedTextUseCase.perform(
+                request: request,
+                configuration: configuration
             )
-
-            guard let latestProfileIndex = selectedProfileIndex,
-                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
-                return
-            }
-
-            profiles[latestProfileIndex].history[latestEntryIndex].formattedText = formatted
-            profiles[latestProfileIndex].history[latestEntryIndex].formattingStatus = .succeeded
-            if selectedEntryID == entryID {
-                formattedRecognizedText = formatted
-            }
-            persistHistory()
-            statusMessage = "Форматирование завершено."
-            if overlayEntryAwaitingFormattedResult == entryID {
-                if shouldUseCompactOverlay {
-                    translationOverlayService.showTranslation(
-                        formatted,
-                        duration: calculatedTranslationOverlayDuration(for: formatted)
-                    )
-                } else {
-                    translationOverlayService.hide()
-                }
-                overlayEntryAwaitingFormattedResult = nil
-            }
+            applyFormattingSuccess(entryID: entryID, formatted: formatted)
         } catch {
-            guard let latestProfileIndex = selectedProfileIndex,
-                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
-                return
-            }
-            profiles[latestProfileIndex].history[latestEntryIndex].formattedText = nil
-            profiles[latestProfileIndex].history[latestEntryIndex].formattingStatus = .failed
-            if selectedEntryID == entryID {
-                formattedRecognizedText = nil
-            }
-            persistHistory()
-            statusMessage = "Не удалось отформатировать текст: \(error.localizedDescription)"
-            if overlayEntryAwaitingFormattedResult == entryID {
-                if shouldUseCompactOverlay {
-                    translationOverlayService.showMessage(
-                        title: "Не удалось получить перевод",
-                        subtitle: error.localizedDescription,
-                        duration: 3
-                    )
-                } else {
-                    translationOverlayService.hide()
-                }
-                overlayEntryAwaitingFormattedResult = nil
-            }
+            applyFormattingFailure(entryID: entryID, error: error)
         }
     }
 
+    private func applyFormattingSuccess(entryID: CapturedTextEntry.ID, formatted: StructuredFormattedText) {
+        guard let profileID = selectedProfileID else { return }
+        guard mutateHistoryEntry(profileID: profileID, entryID: entryID, { entry in
+            entry.formattedText = formatted
+            entry.formattingStatus = .succeeded
+        }) else {
+            return
+        }
+
+        if selectedEntryID == entryID {
+            formattedRecognizedText = formatted
+        }
+        persistHistory()
+        statusMessage = "Форматирование завершено."
+        if overlayEntryAwaitingFormattedResult == entryID {
+            if shouldUseCompactOverlay {
+                translationOverlayService.showTranslation(
+                    formatted,
+                    duration: settings.calculatedTranslationOverlayDuration(for: formatted)
+                )
+            } else {
+                translationOverlayService.hide()
+            }
+            overlayEntryAwaitingFormattedResult = nil
+        }
+    }
+
+    private func applyFormattingFailure(entryID: CapturedTextEntry.ID, error: Error) {
+        guard let profileID = selectedProfileID else { return }
+        guard mutateHistoryEntry(profileID: profileID, entryID: entryID, { entry in
+            entry.formattedText = nil
+            entry.formattingStatus = .failed
+        }) else {
+            return
+        }
+
+        if selectedEntryID == entryID {
+            formattedRecognizedText = nil
+        }
+        persistHistory()
+        statusMessage = "Не удалось отформатировать текст: \(error.localizedDescription)"
+        if overlayEntryAwaitingFormattedResult == entryID {
+            if shouldUseCompactOverlay {
+                translationOverlayService.showMessage(
+                    title: "Не удалось получить перевод",
+                    subtitle: error.localizedDescription,
+                    duration: 3
+                )
+            } else {
+                translationOverlayService.hide()
+            }
+            overlayEntryAwaitingFormattedResult = nil
+        }
+    }
+
+    private func clearOverlayAwaitingFormat(entryID: CapturedTextEntry.ID, title: String) {
+        guard overlayEntryAwaitingFormattedResult == entryID else { return }
+        translationOverlayService.showMessage(title: title, duration: 3)
+        overlayEntryAwaitingFormattedResult = nil
+    }
+
+    private func beginFormattingEntry(entryID: CapturedTextEntry.ID) -> Bool {
+        guard let profileID = selectedProfileID else { return false }
+        isFormattingRecognizedText = true
+        guard mutateHistoryEntry(profileID: profileID, entryID: entryID, { entry in
+            entry.formattingStatus = .processing
+        }) else {
+            isFormattingRecognizedText = false
+            return false
+        }
+        persistHistory()
+        return true
+    }
+
+    private func endFormattingEntry() {
+        isFormattingRecognizedText = false
+    }
+
     private func loadStudyMaterial(for entryID: CapturedTextEntry.ID, forceReload: Bool) async {
-        guard currentProfileSupportsWordStudy else { return }
-        guard let token = apiKeyRepository.loadAPIKey() else {
-            statusMessage = "Сначала сохраните OpenAI token."
-            return
-        }
-        guard let modelID = selectedOpenAIModelID else {
-            statusMessage = "Выберите модель OpenAI."
-            return
-        }
         guard let profileIndex = selectedProfileIndex,
               let entryIndex = profiles[profileIndex].history.firstIndex(where: { $0.id == entryID }) else {
             return
         }
 
-        var entry = profiles[profileIndex].history[entryIndex]
-        guard let formattedText = entry.formattedText, formattedText.hasContent else { return }
-        if !forceReload, entry.studyMaterials.wordsStatus == .succeeded, entry.studyMaterials.words?.hasContent == true { return }
-        if !forceReload, entry.studyMaterials.wordsStatus == .processing { return }
-        profiles[profileIndex].history[entryIndex].studyMaterials.wordsStatus = .processing
+        let entry = profiles[profileIndex].history[entryIndex]
+        let request = LoadWordStudyRequest(
+            targetLanguage: profiles[profileIndex].learningLanguage,
+            profileSupportsWordStudy: currentProfileSupportsWordStudy,
+            forceReload: forceReload,
+            formattedText: entry.formattedText,
+            wordsStatus: entry.studyMaterials.wordsStatus,
+            words: entry.studyMaterials.words
+        )
+        let configuration = LoadWordStudyConfiguration(
+            apiKey: settings.currentAPIKey(),
+            modelID: settings.selectedOpenAIModelID
+        )
+
+        switch loadWordStudyUseCase.preflight(request: request, configuration: configuration) {
+        case .missingAPIKey:
+            statusMessage = "Сначала сохраните OpenAI token."
+            return
+        case .missingModel:
+            statusMessage = "Выберите модель OpenAI."
+            return
+        case .skipped:
+            return
+        case .ready:
+            break
+        }
+
+        let activeProfileID = profiles[profileIndex].id
+        guard mutateHistoryEntry(profileID: activeProfileID, entryID: entryID, { entry in
+            entry.studyMaterials.wordsStatus = .processing
+        }) else {
+            return
+        }
         persistHistory()
-        entry = profiles[profileIndex].history[entryIndex]
 
         do {
-            let result = try await openAIService.buildWordsStudyData(
-                apiKey: token,
-                modelID: modelID,
-                targetLanguage: profiles[profileIndex].learningLanguage,
-                formattedText: formattedText
+            let result = try await loadWordStudyUseCase.perform(
+                request: request,
+                configuration: configuration
             )
-            guard let latestProfileIndex = selectedProfileIndex,
-                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else { return }
-            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = result
-            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .succeeded
-
-            if selectedEntryID == entryID {
-                studyMaterials = profiles[selectedProfileIndex!].history[profiles[selectedProfileIndex!].history.firstIndex(where: { $0.id == entryID })!].studyMaterials
-            }
-            persistHistory()
-            statusMessage = "Перевод слов готов."
+            applyWordStudySuccess(entryID: entryID, profileID: activeProfileID, payload: result)
         } catch {
-            guard let latestProfileIndex = selectedProfileIndex,
-                  let latestEntryIndex = profiles[latestProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
-                return
-            }
-            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.words = nil
-            profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials.wordsStatus = .failed
-            if selectedEntryID == entryID {
-                studyMaterials = profiles[latestProfileIndex].history[latestEntryIndex].studyMaterials
-            }
-            persistHistory()
-            statusMessage = "Не удалось получить перевод слов: \(error.localizedDescription)"
+            applyWordStudyFailure(entryID: entryID, profileID: activeProfileID, error: error)
         }
+    }
+
+    private func applyWordStudySuccess(
+        entryID: CapturedTextEntry.ID,
+        profileID: LearningProfile.ID,
+        payload: WordStudyPayload
+    ) {
+        guard mutateHistoryEntry(profileID: profileID, entryID: entryID, { entry in
+            entry.studyMaterials.words = payload
+            entry.studyMaterials.wordsStatus = .succeeded
+        }) else {
+            return
+        }
+        syncStudyMaterialsToEditorIfSelected(entryID: entryID)
+        persistHistory()
+        statusMessage = "Перевод слов готов."
+    }
+
+    private func applyWordStudyFailure(
+        entryID: CapturedTextEntry.ID,
+        profileID: LearningProfile.ID,
+        error: Error
+    ) {
+        guard mutateHistoryEntry(profileID: profileID, entryID: entryID, { entry in
+            entry.studyMaterials.words = nil
+            entry.studyMaterials.wordsStatus = .failed
+        }) else {
+            return
+        }
+        syncStudyMaterialsToEditorIfSelected(entryID: entryID)
+        persistHistory()
+        statusMessage = "Не удалось получить перевод слов: \(error.localizedDescription)"
+    }
+
+    private func syncStudyMaterialsToEditorIfSelected(entryID: CapturedTextEntry.ID) {
+        guard selectedEntryID == entryID,
+              let currentProfileIndex = selectedProfileIndex,
+              let currentEntryIndex = profiles[currentProfileIndex].history.firstIndex(where: { $0.id == entryID }) else {
+            return
+        }
+        studyMaterials = profiles[currentProfileIndex].history[currentEntryIndex].studyMaterials
     }
 
     var canRetryFormatting: Bool {

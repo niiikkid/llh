@@ -6,7 +6,7 @@
 
 ## Overview
 
-Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2 завершена; Phase 3 добавляет use cases в контейнер — см. [Phase 2](refactoring-phase-2-domain-models.md), [Phase 3](refactoring-phase-3-use-cases.md).
+Phase 1 («Stabilize Boundaries With Protocols And DI») завершена: введены repository- и service-протоколы, адаптеры над существующими реализациями и `AppDependencyContainer` для сборки зависимостей. Поведение приложения для пользователя не менялось. `MainViewModel` больше не создаёт инфраструктуру внутри себя. Phase 2–3 завершены; Phase 4 добавляет feature ViewModels поверх того же контейнера — см. [Phase 4](refactoring-phase-4-presentation.md).
 
 ## Направление зависимостей
 
@@ -27,7 +27,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 | `SettingsRepository` | `UserDefaultsSettingsRepository` | `OpenAISettingsStore` |
 | `APIKeyRepository` | `KeychainAPIKeyRepository` | `OpenAITokenStoring` / `KeychainOpenAITokenStore` |
 
-`MainViewModel` вызывает `historyRepository.loadStore()` / `saveStore(_:)` вместо прямого `HistoryPersistenceService`. Настройки и токен — через `settingsRepository` и `apiKeyRepository` (`loadAPIKey` вместо `loadToken` на границе Domain).
+`MainViewModel` после Phase 1 напрямую использовал repositories; после Phase 3 — через use cases (`ManageHistoryUseCase`, `ManageOpenAISettingsUseCase` и др.). Настройки и токен на границе Domain: `SettingsRepository`, `APIKeyRepository` (`loadAPIKey` вместо `loadToken`).
 
 ## Протоколы capture/OCR
 
@@ -43,14 +43,15 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 - `@MainActor struct` с явным `init(...)` без default-аргументов (из-за MainActor-isolated сервисов).
 - `static func live()` — production-граф зависимостей.
 - `makeMainViewModel()` — фабрика `MainViewModel`.
+- Use cases (Phase 3): `recognizeTextUseCase`, `captureRegionUseCase` (`makeCaptureUseCases`), `formatCapturedTextUseCase`, `manageHistoryUseCase`, `manageProfilesUseCase`, `loadWordStudyUseCase`, `manageOpenAISettingsUseCase`.
 
 Точки входа: `llhApp` и SwiftUI preview в `ContentView` используют `AppDependencyContainer.live().makeMainViewModel()`.
 
-## MainViewModel
+## MainViewModel (состояние после Phase 3)
 
 - Единственный designated init: `init(dependencies: AppDependencyContainer)`.
-- `settingsRepository` объявлен как `var` — мутация свойств через protocol existential (`{ get set }`).
-- `TranslationOverlayService` пока остаётся конкретным типом в контейнере (протокол overlay — позже).
+- Repositories и `OpenAIServing` не инжектируются напрямую — только use cases и overlay service.
+- `TranslationOverlayService` пока остаётся конкретным типом в контейнере (протокол overlay — Phase 4+).
 
 ## Покрытие тестами (Phase 1)
 
@@ -73,7 +74,8 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 ## See Also
 
-- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases поверх протоколов Phase 1
+- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — presentation split
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — Domain/Models и Data/OpenAI границы
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь и safety net до DI
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

@@ -34,6 +34,12 @@ enum RefactorBaselineInventory {
     "profiles",
     "selectedProfileID",
     "selectedEntryID",
+    "isFormattingRecognizedText",
+    "showsSessionReadingOverview",
+  ]
+
+  /// `@Published` properties on `SettingsViewModel` (Phase 4 settings extraction).
+  static let settingsViewModelPublishedPropertyNames: [String] = [
     "availableOpenAIModels",
     "selectedOpenAIModelID",
     "selectedOCREngine",
@@ -41,8 +47,6 @@ enum RefactorBaselineInventory {
     "translationOverlayMinimumDuration",
     "translationOverlaySecondsPerWord",
     "isLoadingOpenAIModels",
-    "isFormattingRecognizedText",
-    "showsSessionReadingOverview",
   ]
 
   /// Public actions on `MainViewModel` grouped by feature bucket.
@@ -52,10 +56,7 @@ enum RefactorBaselineInventory {
       "refreshPermissionState",
       "openSystemSettings",
     ],
-    .ocr: [
-      "selectOCREngine",
-      "switchToNextOCREngine",
-    ],
+    .ocr: [],
     .translationAndFormatting: [
       "retryFormattingForSelectedEntry",
       "calculatedTranslationOverlayDuration",
@@ -69,16 +70,8 @@ enum RefactorBaselineInventory {
       "createProfile",
       "selectProfile",
       "deleteSelectedProfile",
-      "setDefaultNewProfileLearningLanguage",
     ],
-    .settings: [
-      "validateAndSaveOpenAIToken",
-      "refreshOpenAIModels",
-      "deleteOpenAIToken",
-      "selectOpenAIModel",
-      "setTranslationOverlayMinimumDuration",
-      "setTranslationOverlaySecondsPerWord",
-    ],
+    .settings: [],
     .overlay: [
       "closeTranslationOverlay",
       "toggleLastTranslationOverlay",
@@ -135,13 +128,24 @@ enum RefactorBaselineInventory {
     "buildGrammarStudyData",
   ]
 
+  /// Public actions on `SettingsViewModel` (Phase 4).
+  static let settingsViewModelPublicActions: [String] = [
+    "validateAndSaveOpenAIToken",
+    "refreshOpenAIModels",
+    "deleteOpenAIToken",
+    "selectOpenAIModel",
+    "selectOCREngine",
+    "switchToNextOCREngine",
+    "setDefaultNewProfileLearningLanguage",
+    "setTranslationOverlayMinimumDuration",
+    "setTranslationOverlaySecondsPerWord",
+  ]
+
   /// SwiftUI / App entry points that hold or observe `MainViewModel`.
   static let mainViewModelUIConsumers: [String] = [
     "llhApp (StateObject owner)",
     "ContentView",
     "MenuBarPanelView",
-    "SettingsTabContainer",
-    "OpenAISettingsTab",
-    "OverlayTimingSettingsTab",
+    "SettingsView (via MainViewModel.settings)",
   ]
 }

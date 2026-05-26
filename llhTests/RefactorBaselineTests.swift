@@ -14,7 +14,12 @@ struct RefactorBaselineTests {
 
   @Test
   func inventory_mainViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.mainViewModelPublishedPropertyNames.count == 19)
+    #expect(RefactorBaselineInventory.mainViewModelPublishedPropertyNames.count == 12)
+  }
+
+  @Test
+  func inventory_settingsViewModelPublishedPropertyCount_isStable() {
+    #expect(RefactorBaselineInventory.settingsViewModelPublishedPropertyNames.count == 7)
   }
 
   @Test

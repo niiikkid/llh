@@ -11,7 +11,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 1. **Инкремент 1** — product-модели из `MainViewModel.swift` → `llh/Domain/Models/` (`MainViewModel` ~1316 → ~744 строк).
 2. **Инкремент 2** — JSON snapshot и OpenAI-границы в Data: `HistoryStoreSnapshot`, `OpenAIModel`, `OpenAIServiceError`, `OpenAIPromptBuilder`; протокол `OpenAIServing` → `Domain/Services/`. Промпты убраны из `LearningLanguage`.
 
-Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 3** начата — см. [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md).
+Опционально остаётся расширить `Domain/Errors` для **workflow**-ошибок (отдельно от `OpenAIServiceError` в Data). **Phase 3 завершена** — см. [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md).
 
 ## Инкремент 1 — Domain/Models
 
@@ -55,9 +55,10 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## MainViewModel
 
-- После Phase 3 (инкремент 1): ~721 строк; capture делегирован use cases
+- После Phase 3: ~783 строк; все workflows делегированы use cases; `HistorySessionState` в `Domain/Models`
+- После Phase 4 inc. 1: ~685 строк Main + `SettingsViewModel`; settings UI state в `Presentation/Settings/`
 - DI из Phase 1: `AppDependencyContainer` → `init(dependencies:)`
-- Остальные workflows пока в ViewModel — [Phase 3](refactoring-phase-3-use-cases.md)
+- Остальное во Main: overlay, shortcuts, history/capture orchestration — Phase 4 продолжается ([Phase 4](refactoring-phase-4-presentation.md))
 
 ## Покрытие тестами
 
@@ -86,7 +87,8 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## See Also
 
-- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — capture/recognize use cases (в процессе)
+- [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — Phase 4 в процессе
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI и repositories
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь и safety net
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)
