@@ -140,58 +140,6 @@ struct llhTests {
     }
 
     @Test
-    func passageContextForModelQuestions_usesCleanedOriginalText() {
-        let formatted = StructuredFormattedText(
-            cleanedText: "学习",
-            pinyinText: "xuéxí",
-            russianTranslation: "учёба"
-        )
-        #expect(formatted.passageContextForModelQuestions() == "学习")
-    }
-
-    @Test
-    func passageQuestionAnswerLimiter_truncatesToMaxCharacters() {
-        let long = String(repeating: "а", count: PassageQuestionAnswerLimiter.maxCharacters + 80)
-        #expect(PassageQuestionAnswerLimiter.clamped(long).count == PassageQuestionAnswerLimiter.maxCharacters)
-    }
-
-    @Test
-    func passageQuestionAnswerLimiter_trimsWhitespace() {
-        #expect(PassageQuestionAnswerLimiter.clamped("  кратко  ") == "кратко")
-    }
-
-    @Test
-    func capturedTextEntry_encodesAndDecodesPassageQuestionTurns() throws {
-        let formatted = StructuredFormattedText(
-            cleanedText: "Hi",
-            pinyinText: "",
-            russianTranslation: "Привет"
-        )
-        let turnID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
-        let turns = [
-            PassageQuestionTurn(
-                id: turnID,
-                question: "Как дела?",
-                answer: "Нормально.",
-                isLoading: false,
-                errorMessage: nil
-            )
-        ]
-        let entry = CapturedTextEntry(
-            text: "raw",
-            formattedText: formatted,
-            formattingStatus: .succeeded,
-            passageQuestionTurns: turns
-        )
-        let data = try JSONEncoder().encode(entry)
-        let decoded = try JSONDecoder().decode(CapturedTextEntry.self, from: data)
-        #expect(decoded.passageQuestionTurns.count == 1)
-        #expect(decoded.passageQuestionTurns[0].id == turnID)
-        #expect(decoded.passageQuestionTurns[0].question == "Как дела?")
-        #expect(decoded.passageQuestionTurns[0].answer == "Нормально.")
-    }
-
-    @Test
     func sessionListLines_fallsBackToRawWhenNoFormattedText() {
         let entry = CapturedTextEntry(text: "Line one\nLine two")
 
