@@ -1,0 +1,33 @@
+---
+description: Правила тестирования Swift, persistence, OpenAI и UI flows
+globs: **/*Tests/**/*.swift,**/*UITests/**/*.swift,**/*.swift
+alwaysApply: false
+---
+
+# Testing
+
+Проект использует Swift Testing и XCTest/XCUITest там, где это уместно.
+
+Приоритеты тестирования:
+- domain use cases;
+- persistence repositories;
+- migrations;
+- OpenAI request/response mapping;
+- prompt construction;
+- OCR behavior через mocks;
+- settings и Keychain wrappers;
+- критичные UI flows через XCUITest.
+
+Правила:
+- Добавляй или обновляй tests для новой business logic.
+- Добавляй regression tests при исправлении bugs, если это практично.
+- Предпочитай тестировать use cases и services, а не SwiftUI views напрямую.
+- Mock external services.
+- Unit tests не вызывают real OpenAI API.
+- Unit tests не требуют реального Screen Recording permission.
+- Unit tests не зависят от пользовательского Keychain.
+- Persistence tests используют temporary directories/stores.
+- Миграции истории и database schema должны иметь focused tests.
+- Не добавляй flaky tests, зависящие от текущего экрана пользователя, live network или локальной среды.
+
+Важно: агент не запускает `xcodebuild test`, схемы тестов или полную сборку самостоятельно. Запускать tests/build можно только по явной просьбе пользователя.

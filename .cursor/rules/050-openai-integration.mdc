@@ -1,0 +1,35 @@
+---
+description: Интеграция OpenAI, модели, prompts, privacy и API boundaries
+globs: **/*.swift
+alwaysApply: false
+---
+
+# OpenAI Integration
+
+OpenAI используется для AI OCR, перевода, форматирования, объяснений, учебных материалов и ответов по выбранным фрагментам.
+
+Целевое направление:
+- изолировать OpenAI logic в Data/OpenAI и domain services;
+- не вызывать OpenAI из UI;
+- централизовать prompts;
+- использовать typed request/response DTOs;
+- двигаться к актуальному рекомендуемому OpenAI API, когда это требуется задачей.
+
+Правила:
+- Используй `OpenAIClient` или аналогичную инфраструктурную границу для HTTP.
+- ViewModels и Views зависят от use cases/services, а не от HTTP details.
+- DTO не должны протекать в UI.
+- Не hardcode API keys и не логируй их.
+- Не логируй full OpenAI payloads и чувствительный пользовательский текст по умолчанию.
+- Обрабатывай invalid API key, rate limits, offline, timeout, cancellation и malformed responses.
+- Model selection должен жить в settings, если фича поддерживает выбор модели.
+- Prompt templates держи в одном месте и тестируй construction там, где это важно.
+- Не собирай JSON вручную строками, если есть Codable/structured API.
+
+Privacy:
+- Screen captures, OCR text, translations и history считаются sensitive data.
+- Отправляй данные в OpenAI только для явно выбранных AI-powered операций.
+- Сохраняй и уважай local OCR mode.
+- Чётко разделяй local OCR и AI OCR flows.
+
+При изменении OpenAI API, моделей или SDK обязательно проверь актуальную документацию через MCP: сначала доступные Apple/Xcode источники, если вопрос связан с Apple platform behavior, затем Context7 MCP для OpenAI или другой сторонней библиотеки/API.

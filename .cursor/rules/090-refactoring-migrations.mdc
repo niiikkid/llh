@@ -1,0 +1,40 @@
+---
+description: Инкрементальный refactoring, migrations и roadmap развития
+globs: **/*.swift
+alwaysApply: false
+---
+
+# Refactoring и Migrations
+
+Refactoring должен быть инкрементальным и безопасным. Не переписывай всё приложение одним большим изменением без явной просьбы.
+
+Когда refactoring нужен:
+- сохраняй существующее поведение;
+- двигай код маленькими шагами;
+- вводи protocols/abstractions до замены implementation;
+- держи старую implementation, пока новая не проверена;
+- добавляй tests вокруг перенесённого поведения;
+- избегай unrelated formatting-only changes и массовых file moves;
+- кратко объясняй важные архитектурные изменения.
+
+Главные направления:
+- перестать расширять giant `MainViewModel`;
+- выделить feature-specific ViewModels;
+- ввести UseCases;
+- ввести Repository/Service protocols;
+- заменить JSON history на local database;
+- модернизировать OpenAI integration;
+- держать UI тонким.
+
+Suggested order:
+1. Stabilize boundaries: `OCRService`, `ScreenCaptureService`, `HistoryRepository`, `SettingsRepository`, `APIKeyRepository`, `OpenAIRepository`.
+2. Break ViewModel: capture, OCR, translation, history, settings.
+3. Persistence migration: database layer, JSON migration, backup.
+4. OpenAI modernization: typed client, modern endpoint/service, centralized prompts.
+5. Polish: tests, permission UX, loading/error states, dead code cleanup.
+
+Data migrations:
+- Никогда не удаляй пользовательские данные без verified migration.
+- Делай migrations idempotent, где возможно.
+- Сохраняй rollback/backup path для истории.
+- Отмечай completed migration в settings/database metadata, а не косвенными догадками.

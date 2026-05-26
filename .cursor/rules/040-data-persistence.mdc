@@ -1,0 +1,41 @@
+---
+description: Локальное хранение, репозитории, миграции и секреты
+globs: **/*.swift
+alwaysApply: false
+---
+
+# Data и Persistence
+
+Текущие направления хранения:
+- Keychain для OpenAI API token;
+- UserDefaults для небольших настроек;
+- история сейчас может быть JSON, но целевое направление — надёжная локальная база.
+
+Предпочтительное направление для истории:
+- SQLite-based local persistence;
+- explicit migrations;
+- repository abstraction;
+- простые domain models;
+- сохранение local-first поведения.
+
+Правила:
+- Не храни API tokens в UserDefaults, JSON, plain files или коде.
+- Не храни большую растущую историю в UserDefaults.
+- UI не должен знать, хранится история в JSON, SQLite, SwiftData или Core Data.
+- Используй `HistoryRepository`, `SettingsRepository`, `APIKeyRepository` для границ.
+- Централизуй UserDefaults keys.
+- Добавляй migrations при изменении database schema.
+- Database access должен быть async там, где это важно для отзывчивости.
+- Миграции должны быть идемпотентными, где возможно.
+- Никогда не удаляй старый `history.json` до успешной миграции и проверки данных.
+
+Если нужна миграция истории:
+1. Ввести repository protocol.
+2. Адаптировать текущий JSON storage.
+3. Добавить database client и schema.
+4. Реализовать concrete repository.
+5. Добавить migration service.
+6. Выполнить миграцию один раз на startup.
+7. Оставить JSON как backup до явной cleanup-задачи.
+
+SwiftData/Core Data допустимы только после осознанного выбора. По умолчанию для истории предпочитай SQLite, если пользователь не просит иначе.

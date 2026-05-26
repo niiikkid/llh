@@ -1,0 +1,36 @@
+---
+description: Безопасность, приватность, sandbox и permissions
+globs: **/*.swift
+alwaysApply: false
+---
+
+# Security, Privacy, Permissions
+
+Security:
+- OpenAI API token хранится только в Keychain.
+- Не храни secrets в UserDefaults, JSON, plain files, source code или git.
+- Не печатай secrets в logs, alerts, crash messages или debug output.
+- Не добавляй analytics/tracking SDK без явной просьбы пользователя.
+
+Privacy:
+- Screen captures, OCR text, translations, explanations и history являются sensitive user data.
+- Не отправляй данные в OpenAI, если это не требуется выбранной функцией или режимом.
+- Local OCR option должен сохраняться.
+- History остаётся local-only, пока пользователь явно не попросит sync/cloud.
+- Screenshots не сохраняются по умолчанию.
+- Full captured text и full OpenAI payloads не логируются по умолчанию.
+
+Sandbox:
+- App Sandbox включён; проект должен оставаться совместимым с sandbox constraints.
+- Не добавляй функциональность, которая борется с sandbox-моделью.
+- Browser automation через Apple Events/NSAppleScript удалён и не должен возвращаться без явной просьбы.
+
+Permissions:
+- Screen Recording permission ожидаем для capture/OCR.
+- Network access нужен для OpenAI API.
+- User-selected file access допустим там, где это нужно продукту.
+
+Errors:
+- Permission errors должны быть понятны пользователю.
+- UI не показывает raw stack traces или низкоуровневые debug details.
+- Технические детали допустимы только в безопасных debug logs.

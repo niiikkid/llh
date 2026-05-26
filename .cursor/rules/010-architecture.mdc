@@ -1,0 +1,35 @@
+---
+description: Архитектурные границы, слои и направление развития llh
+globs: **/*.swift
+alwaysApply: false
+---
+
+# Архитектура
+
+Проект должен постепенно двигаться к чистой слоистой архитектуре.
+
+Предпочтительное направление зависимостей:
+
+```text
+UI -> ViewModels -> UseCases -> Repositories -> Services / Persistence / API
+```
+
+Целевые слои:
+- App: entry point, dependency container, environment setup.
+- Presentation: SwiftUI views, AppKit controllers, ViewModels, UI state.
+- Domain: models, use cases, repository/service protocols, domain errors.
+- Data: concrete repositories, persistence, OpenAI client, DTOs, mappers.
+- Infrastructure: adapters for Vision, ScreenCaptureKit, Keychain, file system, logging.
+
+Правила:
+- UI не вызывает OpenAI напрямую.
+- UI не пишет в базу, файлы, UserDefaults или Keychain напрямую.
+- UI не выполняет OCR, screen capture или prompt construction.
+- ViewModels координируют use cases, а не содержат низкоуровневую инфраструктурную логику.
+- Use cases выражают пользовательские workflows.
+- Repository/service protocols живут ближе к Domain.
+- Конкретные реализации живут в Data или Infrastructure.
+- DTO и database entities не протекают в UI.
+- Предпочитай dependency injection глобальному mutable state и singleton-ам.
+
+`MainViewModel` уже слишком большой: не расширяй его новыми независимыми зонами ответственности. Для новых фич предпочитай feature-specific ViewModels и use cases.

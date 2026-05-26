@@ -1,0 +1,34 @@
+---
+description: Контекст продукта, платформы и границ проекта llh
+alwaysApply: true
+---
+
+# Контекст проекта
+
+`llh` — Language Learning Helper, нативное desktop-приложение для macOS.
+
+Проект должен оставаться:
+- только для macOS;
+- нативным Swift-приложением;
+- основанным на SwiftUI/AppKit;
+- local-first;
+- без web frontend, custom backend, Electron, Docker и мобильных таргетов.
+
+Минимальная поддерживаемая версия ОС намеренно задана как `macOS 26.0+`. Не считать это ошибкой и не понижать deployment target без явной просьбы пользователя.
+
+Основные возможности приложения:
+- захват области экрана;
+- OCR через Vision или AI OCR;
+- перевод и объяснение текста;
+- генерация учебных материалов;
+- локальная история обучения;
+- настройки OpenAI и OCR-режима.
+
+Текущий стек: Swift, SwiftUI, AppKit, Vision, ScreenCaptureKit, Foundation, Security/Keychain, UserDefaults, локальное хранение, OpenAI API, KeyboardShortcuts через SPM.
+
+Удалённая функциональность, которую нельзя возвращать без явной просьбы:
+- Apple Events browser automation;
+- NSAppleScript browser control;
+- Safari/Chrome automation;
+- JavaScript-управление вкладками браузера;
+- browser-specific media control logic.

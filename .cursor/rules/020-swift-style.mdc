@@ -1,0 +1,42 @@
+---
+description: Стиль Swift-кода, ошибки, concurrency и читаемость
+globs: **/*.swift
+alwaysApply: false
+---
+
+# Swift Style
+
+Используй современный Swift и нативные macOS-паттерны.
+
+Предпочитай:
+- `async/await` и structured concurrency;
+- value types там, где это естественно;
+- протоколы для границ и тестируемости;
+- понятные typed errors;
+- небольшие сфокусированные типы;
+- явный access control там, где он помогает.
+
+Избегай:
+- force unwraps;
+- скрытых side effects;
+- глобального mutable state;
+- дублирования сетевого, persistence и prompt-кода;
+- бизнес-логики внутри SwiftUI views;
+- дальнейшего раздувания крупных файлов и ViewModels.
+
+Именование:
+- Используй понятные предметные имена без сокращений ради краткости.
+- Протоколы описывают capability: `OCRService`, `ScreenCaptureService`, `HistoryRepository`.
+- Реализации описывают технологию: `VisionOCRService`, `ScreenCaptureKitService`, `KeychainAPIKeyRepository`.
+
+Ошибки:
+- Не игнорируй ошибки молча.
+- Низкоуровневые ошибки преобразуй в понятные пользовательские состояния на границах Presentation.
+- Технические детали логируй безопасно, без секретов и чувствительного пользовательского текста.
+
+Concurrency:
+- UI state обновляй на `MainActor`.
+- OCR, API-запросы, image processing и database writes не должны блокировать main thread.
+- Не используй detached tasks без сильной причины.
+
+Комментарии должны объяснять неочевидные macOS API, permissions, migrations или concurrency decisions, а не пересказывать очевидный код.

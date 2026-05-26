@@ -1,0 +1,36 @@
+---
+description: OCR, Vision, ScreenCaptureKit, screenshots и permissions
+globs: **/*.swift
+alwaysApply: false
+---
+
+# OCR и Screen Capture
+
+Приложение поддерживает два OCR-направления:
+- Local OCR через Apple Vision (`VNRecognizeTextRequest`), privacy-friendly.
+- AI OCR через OpenAI vision, только при выбранном AI mode и наличии API key/network.
+
+OCR rules:
+- Держи OCR за `OCRService`.
+- Конкретные реализации: `VisionOCRService`, `OpenAIOCRService` или аналогичные.
+- Не смешивай Vision OCR и OpenAI OCR в UI.
+- Не выполняй OCR внутри SwiftUI views.
+- Не блокируй main thread во время OCR/image processing.
+- Поддерживай cancellation.
+- Возвращай structured OCR result models.
+- Изолируй image preprocessing.
+
+Screen capture rules:
+- Используй ScreenCaptureKit для capture flow, если нет явной причины иначе.
+- Держи capture logic за `ScreenCaptureService`.
+- AppKit overlay selection UI отделяй от capture service.
+- Missing Screen Recording permission должен превращаться в понятную UI error.
+- Не запрашивай permissions в цикле.
+- Не сохраняй screenshots по умолчанию; держи их in-memory, если persistence явно не требуется.
+
+Permissions:
+- Screen Recording permission ожидаем для capture/OCR.
+- Permission handling должен быть централизованным.
+- UI должен показывать actionable message, когда permission отсутствует.
+
+Для неочевидного поведения Vision, ScreenCaptureKit, permissions или новых macOS API проверяй актуальную Apple documentation через MCP-инструменты, а не только по памяти.
