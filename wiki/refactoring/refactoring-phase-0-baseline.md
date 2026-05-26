@@ -101,6 +101,8 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 Ранее существующие тесты в `llhTests.swift` (overlay timing, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
 
+**Phase 9** расширила safety net: `Phase9IntegrationTests`, migration/bootstrap и UI smoke; `RefactorBaselineTests` / `RefactorBaselineInventory` по-прежнему фиксируют `@Published` на feature VMs — см. [Phase 9](refactoring-phase-9-testing-strategy.md).
+
 ## Критерии выхода Phase 0
 
 | Критерий | Статус |
@@ -111,6 +113,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ## See Also
 
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — integration/migration/UI tests поверх baseline
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — Phase 8 завершена: split ContentView, per-VM statusMessage
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Phase 7 завершена: `OCRResult`, Infrastructure OCR/capture, cancellation
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain, timeout

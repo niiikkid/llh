@@ -38,10 +38,10 @@ struct Phase1RepositoryTests {
         )
         var repository = UserDefaultsSettingsRepository(store: store)
 
-        repository.selectedOCREngineRawValue = "openai"
+        repository.selectedOCREngineRawValue = OCREngine.ai.rawValue
         let reloaded = UserDefaultsSettingsRepository(store: store)
 
-        #expect(reloaded.selectedOCREngineRawValue == "openai")
+        #expect(reloaded.selectedOCREngineRawValue == OCREngine.ai.rawValue)
     }
 
     @Test

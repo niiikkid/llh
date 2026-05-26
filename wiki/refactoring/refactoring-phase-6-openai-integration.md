@@ -121,10 +121,11 @@ Base URL: `https://api.openai.com/v1`. Default timeout: 120s.
 
 ## Следующий шаг
 
-**Phase 7–8 завершены** — см. [Phase 8](refactoring-phase-8-ui-decomposition.md). **Phase 9** — testing strategy. Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
+**Phases 7–9 завершены** — prompt contracts и HTTP mapping tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup. Опционально позже: Responses API migration после отдельного плана для vision/multimodal.
 
 ## See Also
 
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — `Phase9OpenAIPromptTests`, Phase 6 HTTP/OCR tests
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Vision vs OpenAI OCR polish, `OCRResult` (завершена)
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — DI, repositories, `AppDependencyContainer`

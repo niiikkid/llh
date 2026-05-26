@@ -61,7 +61,7 @@ private final class SettingsFakeOpenAIServing: OpenAIServing {
         targetLanguage: LearningLanguage,
         rawText: String
     ) async throws -> StructuredFormattedText {
-        StructuredFormattedText(cleanedText: "", pinyinText: nil, russianTranslation: "")
+        StructuredFormattedText(cleanedText: "", pinyinText: "", russianTranslation: "")
     }
 
     func buildWordsStudyData(
@@ -151,25 +151,33 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
     func preflightValidateAndSaveAPIKey_emptyToken() {
         let (useCase, _, _, _) = makeUseCase()
 
-        #expect(useCase.preflightValidateAndSaveAPIKey("   ") == .emptyToken)
+        if case .emptyToken = useCase.preflightValidateAndSaveAPIKey("   ") {
+            #expect(Bool(true))
+        } else {
+            Issue.record("Expected emptyToken preflight")
+        }
     }
 
     @Test
     func preflightValidateAndSaveAPIKey_ready() {
         let (useCase, _, _, _) = makeUseCase()
 
-        #expect(useCase.preflightValidateAndSaveAPIKey("  sk-test  ") == .ready(trimmedToken: "sk-test"))
+        if case .ready(let trimmed) = useCase.preflightValidateAndSaveAPIKey("  sk-test  ") {
+            #expect(trimmed == "sk-test")
+        } else {
+            Issue.record("Expected ready preflight")
+        }
     }
 
     @Test
     func performValidateAndSaveAPIKey_persistsModelsAndKeepsValidSelection() async throws {
-        let settings = InMemorySettingsRepository()
-        let apiKeys = InMemoryAPIKeyRepository()
-        let fake = SettingsFakeOpenAIServing()
-        let (useCase, settings, apiKeys, fake) = makeUseCase(
-            settings: settings,
-            apiKeys: apiKeys,
-            openAI: fake
+        let settingsRepo = InMemorySettingsRepository()
+        let apiKeysRepo = InMemoryAPIKeyRepository()
+        let openAIService = SettingsFakeOpenAIServing()
+        let (useCase, _, _, _) = makeUseCase(
+            settings: settingsRepo,
+            apiKeys: apiKeysRepo,
+            openAI: openAIService
         )
 
         let result = try await useCase.performValidateAndSaveAPIKey(
@@ -177,18 +185,18 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
             currentSelectedModelID: "gpt-4o-mini"
         )
 
-        #expect(fake.fetchModelsCallCount == 1)
-        #expect(fake.lastFetchedAPIKey == "sk-test")
-        #expect(apiKeys.loadAPIKey() == "sk-test")
-        #expect(settings.cachedModels.map(\.id) == ["gpt-4o", "gpt-4o-mini"])
+        #expect(openAIService.fetchModelsCallCount == 1)
+        #expect(openAIService.lastFetchedAPIKey == "sk-test")
+        #expect(apiKeysRepo.loadAPIKey() == "sk-test")
+        #expect(settingsRepo.cachedModels.map(\.id) == ["gpt-4o", "gpt-4o-mini"])
         #expect(result.selectedModelID == "gpt-4o-mini")
-        #expect(settings.selectedModelID == "gpt-4o-mini")
+        #expect(settingsRepo.selectedModelID == "gpt-4o-mini")
     }
 
     @Test
     func performValidateAndSaveAPIKey_fallsBackToFirstModelWhenSelectionMissing() async throws {
-        let settings = InMemorySettingsRepository()
-        let (useCase, settings, _, _) = makeUseCase(settings: settings)
+        let settingsRepo = InMemorySettingsRepository()
+        let (useCase, _, _, _) = makeUseCase(settings: settingsRepo)
 
         let result = try await useCase.performValidateAndSaveAPIKey(
             trimmedToken: "sk-test",
@@ -196,7 +204,7 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
         )
 
         #expect(result.selectedModelID == "gpt-4o")
-        #expect(settings.selectedModelID == "gpt-4o")
+        #expect(settingsRepo.selectedModelID == "gpt-4o")
     }
 
     @Test
@@ -218,7 +226,11 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
     func preflightRefreshModels_missingAPIKey() {
         let (useCase, _, _, _) = makeUseCase()
 
-        #expect(useCase.preflightRefreshModels() == .missingAPIKey)
+        if case .missingAPIKey = useCase.preflightRefreshModels() {
+            #expect(Bool(true))
+        } else {
+            Issue.record("Expected missingAPIKey preflight")
+        }
     }
 
     @Test
@@ -227,21 +239,25 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
         try apiKeys.saveAPIKey("sk-stored")
         let (useCase, _, _, _) = makeUseCase(apiKeys: apiKeys)
 
-        #expect(useCase.preflightRefreshModels() == .ready(trimmedToken: "sk-stored"))
+        if case .ready(let trimmed) = useCase.preflightRefreshModels() {
+            #expect(trimmed == "sk-stored")
+        } else {
+            Issue.record("Expected ready preflight")
+        }
     }
 
     @Test
     func performRefreshModels_usesStoredKey() async throws {
         let apiKeys = InMemoryAPIKeyRepository()
         try apiKeys.saveAPIKey("sk-stored")
-        let fake = SettingsFakeOpenAIServing()
-        let (useCase, settings, _, fake) = makeUseCase(apiKeys: apiKeys, openAI: fake)
+        let openAIService = SettingsFakeOpenAIServing()
+        let (useCase, settingsRepo, _, _) = makeUseCase(apiKeys: apiKeys, openAI: openAIService)
 
         let result = try await useCase.performRefreshModels(currentSelectedModelID: nil)
 
-        #expect(fake.lastFetchedAPIKey == "sk-stored")
+        #expect(openAIService.lastFetchedAPIKey == "sk-stored")
         #expect(result.models.count == 2)
-        #expect(settings.selectedModelID == "gpt-4o")
+        #expect(settingsRepo.selectedModelID == "gpt-4o")
     }
 
     @Test
@@ -257,23 +273,23 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
 
     @Test
     func persistSettings_writeThroughRepository() {
-        let settings = InMemorySettingsRepository()
-        let (useCase, settings, _, _) = makeUseCase(settings: settings)
+        let settingsRepo = InMemorySettingsRepository()
+        let (useCase, _, _, _) = makeUseCase(settings: settingsRepo)
 
         #expect(useCase.persistSelectedModelID("gpt-4o") == "gpt-4o")
-        #expect(settings.selectedModelID == "gpt-4o")
+        #expect(settingsRepo.selectedModelID == "gpt-4o")
 
-        #expect(useCase.persistOCREngine(.openai) == .openai)
-        #expect(settings.selectedOCREngineRawValue == OCREngine.openai.rawValue)
+        #expect(useCase.persistOCREngine(.ai) == .ai)
+        #expect(settingsRepo.selectedOCREngineRawValue == OCREngine.ai.rawValue)
 
         #expect(useCase.persistDefaultNewProfileLearningLanguage(.chinese) == .chinese)
-        #expect(settings.selectedLearningLanguageRawValue == LearningLanguage.chinese.rawValue)
+        #expect(settingsRepo.selectedLearningLanguageRawValue == LearningLanguage.chinese.rawValue)
 
         #expect(useCase.persistTranslationOverlayMinimumDuration(0.5) == 1)
-        #expect(settings.translationOverlayMinimumDuration == 1)
+        #expect(settingsRepo.translationOverlayMinimumDuration == 1)
 
         #expect(useCase.persistTranslationOverlaySecondsPerWord(5) == 2)
-        #expect(settings.translationOverlaySecondsPerWord == 2)
+        #expect(settingsRepo.translationOverlaySecondsPerWord == 2)
     }
 
     @Test

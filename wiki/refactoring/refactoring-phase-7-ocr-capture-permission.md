@@ -77,10 +77,11 @@ Infrastructure/Capture/
 
 ## Следующий шаг
 
-**Phase 8 завершена** — см. [Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md). **Phase 9** — testing strategy ([roadmap](project-refactoring-roadmap.md)).
+**Phases 8–9 завершены** — capture integration и permission UX tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup ([roadmap](project-refactoring-roadmap.md)).
 
 ## See Also
 
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — capture workflow + `CaptureViewModel` permission UX
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md)
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md)

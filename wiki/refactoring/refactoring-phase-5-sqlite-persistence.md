@@ -96,12 +96,13 @@ let historyRepository = HistoryRepositoryBootstrap.makeRepository()
 
 ## Следующий шаг
 
-**Phase 6–8 завершены** — см. [Phase 8](refactoring-phase-8-ui-decomposition.md). **Следующий этап — Phase 9** (testing strategy).
+**Phases 6–9 завершены** — migration failure/bootstrap tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup ([roadmap](project-refactoring-roadmap.md)).
 
 Опционально в рамках Phase 5: async save/load, UX при битом JSON.
 
 ## See Also
 
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — migration verification failure, bootstrap fallback
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — OCR/capture после persistence (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — OpenAI modernization (завершена)

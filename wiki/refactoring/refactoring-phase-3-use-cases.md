@@ -289,10 +289,11 @@ Phase 3 завершена: `MainViewModel` делегирует все пере
 
 ## Следующий шаг
 
-Phase 3 завершена; **Phase 6–8 завершены** — см. [Phase 8](refactoring-phase-8-ui-decomposition.md). Следующий этап — **Phase 9** (testing strategy) в [roadmap](project-refactoring-roadmap.md).
+Phase 3 завершена; **Phases 6–9 завершены** — use case integration tests в [Phase 9](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup и product decisions ([roadmap](project-refactoring-roadmap.md)).
 
 ## See Also
 
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — capture/format/settings integration tests
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — split ContentView, per-VM status (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, cancellation, Infrastructure adapters (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — Phase 6 завершена: HTTP, models, OCR, translation/study, settings/keychain

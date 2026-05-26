@@ -110,6 +110,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 
 ## See Also
 
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — display/prompt helpers в `Phase2DomainModelsTests` + `Phase9OpenAIPromptTests`
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — UI использует display helpers `StructuredFormattedText`
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, Infrastructure OCR/capture (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, models/OCR/translation/study services

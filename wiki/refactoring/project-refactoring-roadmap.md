@@ -5,6 +5,8 @@
 
 ## Overview
 
+> **Статус (2026-05-27):** Phases 0–9 реализованы в коде и задокументированы в `refactoring-phase-*.md`. Эта страница — архивный snapshot плана на 2026-05-26; для текущего статуса см. [wiki/index.md](../index.md) и [Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md). Следующий этап — **Phase 10** (cleanup).
+
 This page is a point-in-time refactoring roadmap for bringing `llh` into alignment with the new Cursor rules. The target is a native macOS SwiftUI/AppKit, local-first application with a clean layered direction: UI -> ViewModels -> UseCases -> Repositories -> Services / Persistence / API. The current project is functional but still organized mostly as a flat `MainViewModel + Services` app. The safest path is an incremental refactor: first stabilize boundaries and tests, then extract domain models and workflows, then split presentation state, then migrate persistence and modernize OpenAI/OCR infrastructure.
 
 ## Target Architecture

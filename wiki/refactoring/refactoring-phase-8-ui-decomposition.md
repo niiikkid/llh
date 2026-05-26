@@ -81,10 +81,11 @@ Presentation/
 
 ## Следующий шаг
 
-**Phase 9** — testing strategy (use case/repository/migration coverage alignment). См. [roadmap](project-refactoring-roadmap.md).
+**Phase 9 завершена** — см. [Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md). **Phase 10** — cleanup и product decisions ([roadmap](project-refactoring-roadmap.md)).
 
 ## See Also
 
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — `CaptureViewModel` / UI tests после decomposition
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь `@Published` после Phase 8
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — `StructuredFormattedText` display helpers
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — feature ViewModels (Phase 4) + views (Phase 8)

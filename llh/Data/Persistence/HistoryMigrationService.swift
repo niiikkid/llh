@@ -9,14 +9,14 @@ import Foundation
 struct HistoryMigrationService {
     private let database: HistoryDatabase
     private let jsonRepository: JSONHistoryRepository
-    private let sqliteRepository: SQLiteHistoryRepository
+    private let sqliteRepository: any HistoryRepository
     private let jsonFileURL: URL
     private let fileManager: FileManager
 
     init(
         database: HistoryDatabase,
         jsonRepository: JSONHistoryRepository,
-        sqliteRepository: SQLiteHistoryRepository,
+        sqliteRepository: any HistoryRepository,
         jsonFileURL: URL,
         fileManager: FileManager = .default
     ) {
