@@ -74,4 +74,18 @@ struct OpenAIService: OpenAIServing {
             formattedText: formattedText
         )
     }
+
+    func buildGrammarStudyData(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) async throws -> GrammarExplanationPayload {
+        try await studyService.buildGrammarStudyData(
+            apiKey: apiKey,
+            modelID: modelID,
+            targetLanguage: targetLanguage,
+            formattedText: formattedText
+        )
+    }
 }

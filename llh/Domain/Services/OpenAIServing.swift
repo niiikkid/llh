@@ -25,4 +25,10 @@ protocol OpenAIServing {
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
     ) async throws -> WordStudyPayload
+    func buildGrammarStudyData(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) async throws -> GrammarExplanationPayload
 }

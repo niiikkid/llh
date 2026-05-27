@@ -153,16 +153,19 @@ Format/study/overlay и editor state остаются на Main (до inc. 5); �
 
 | Файл | Строк (≈) | Назначение |
 |------|-----------|------------|
-| `Presentation/Study/StudyViewModel.swift` | 151 | Word study materials, `LoadWordStudyUseCase`, retry |
+| `Presentation/Study/StudyViewModel.swift` | 280+ | Word + grammar study, `LoadWordStudyUseCase` / `LoadGrammarStudyUseCase`, tab state (v0.2 inc. 5) |
+| `Presentation/Study/StudyLearningTab.swift` | — | `words` / `grammar` tabs (v0.2 inc. 5) |
+| `Presentation/Study/GrammarExplanationView.swift` | — | Renders `GrammarExplanationPayload` (v0.2 inc. 5) |
 | `Presentation/Overlay/TranslationOverlayCoordinator.swift` | 92 | Overlay после format, toggle last translation, awaiting entry ID |
 | `MainViewModel.swift` | 307 | Фасад: `let study`; format/editor на Main |
 | `ContentView.swift` | 513 | Study block читает `viewModel.study.studyMaterials` |
 
-### Состояние в StudyViewModel (1 `@Published`)
+### Состояние в StudyViewModel
 
 | Свойство | Назначение |
 |----------|------------|
-| `studyMaterials` | Word study payload и status для выбранной записи |
+| `studyMaterials` | Words + grammar payloads/status для выбранной записи |
+| `selectedLearningTab` | Активная вкладка «Перевод слов» / «Грамматика» (v0.2 inc. 5) |
 
 ### TranslationOverlayCoordinator
 
@@ -275,5 +278,5 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — session navigation (Inc. 2); settings page (Inc. 3); translation result state (Inc. 4)
+- [v0.2 Product Plan](v0-2-product-plan.md) — Inc. 2–5: sessions, settings, translation state, study tabs
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план

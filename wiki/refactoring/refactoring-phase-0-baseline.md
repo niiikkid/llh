@@ -57,7 +57,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ### OpenAI
 
-Четыре метода `OpenAIServing` в `OpenAIService` (`Data/OpenAI/`): models, recognize, format, words study (Phase 10 убрал phrase/grammar).
+Пять методов `OpenAIServing` в `OpenAIService` (`Data/OpenAI/`): models, recognize, format, words study, grammar study (Phase 10 убрал phrase; grammar восстановлена в v0.2 inc. 5).
 
 **Исходный инвентарь Phase 0:** из `MainViewModel` напрямую вызывались models, AI OCR, format, words study.
 
@@ -75,7 +75,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 **После Phase 8:** `MainViewModel` (~129 строк) — композиция feature VMs + overlay shortcuts; без `@Published`. UI decomposition — см. [Phase 8](refactoring-phase-8-ui-decomposition.md).
 
-**Phase 10:** неподключённые `buildPhrasesStudyData` / `buildGrammarStudyData` удалены из `OpenAIServing`; legacy `StudyMaterials.phrases`/`grammar` в истории сохранены — см. [Phase 10](refactoring-phase-10-cleanup.md).
+**Phase 10:** `buildPhrasesStudyData` удалён; `buildGrammarStudyData` удалялся и **восстановлен** в v0.2 inc. 5. Legacy `StudyMaterials.phrases`/`grammar` в истории сохранены — см. [Phase 10](refactoring-phase-10-cleanup.md).
 
 Промпты: `OpenAIPromptBuilder` (Phase 2). HTTP: `OpenAIHTTPClient` (PR 2 + PR 6 timeout/cancellation). Models: `OpenAIModelsService` (PR 3). AI OCR: `OpenAIOCRService` (PR 4). Format/study: `OpenAITranslationService`, `OpenAIStudyService` (PR 5). Settings/keychain: `OpenAISettingsStore`, `KeychainOpenAITokenStore` в `Data/OpenAI/` (PR 6). `OpenAIService` — чистый фасад `OpenAIServing`.
 
@@ -98,7 +98,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 Ранее существующие тесты в `llhTests.swift` (overlay timing, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
 
-**Phase 9** расширила safety net: `Phase9IntegrationTests`, migration/bootstrap и UI smoke. **Phase 10** — `OpenAICallSite` = 4, `Phase10CaptureViewModelTests` — см. [Phase 9](refactoring-phase-9-testing-strategy.md), [Phase 10](refactoring-phase-10-cleanup.md).
+**Phase 9** расширила safety net: `Phase9IntegrationTests`, migration/bootstrap и UI smoke. **Phase 10** — `OpenAICallSite` = 5 (grammar, v0.2 inc. 5), `Phase10CaptureViewModelTests` — см. [Phase 9](refactoring-phase-9-testing-strategy.md), [Phase 10](refactoring-phase-10-cleanup.md).
 
 ## Критерии выхода Phase 0
 
@@ -110,7 +110,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ## See Also
 
-- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — удаление unwired study API, inventory locks
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — phrase API removed; grammar restored (v0.2 inc. 5); inventory locks
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — integration/migration/UI tests поверх baseline
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — Phase 8 завершена: split ContentView, per-VM statusMessage
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Phase 7 завершена: `OCRResult`, Infrastructure OCR/capture, cancellation
@@ -120,5 +120,5 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — завершённый Phase 1
-- [v0.2 Product Plan](v0-2-product-plan.md) — product shell after refactor (inc. 1–4, 10)
+- [v0.2 Product Plan](v0-2-product-plan.md) — product shell after refactor (inc. 1–5, 10)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный пофазный план (архивный snapshot на 2026-05-26)

@@ -6,13 +6,14 @@
 
 ## Overview
 
-Phase 10 («Cleanup And Product Decisions») **завершена**. Удалены неподключённые OpenAI study API (phrases/grammar), зафиксированы продуктовые решения по отложенным фичам из `TODO.txt`, устранён дубликат overlay display logic, перенесены остатки `llh/Services/` в целевые слои, JSON backup сохранён.
+Phase 10 («Cleanup And Product Decisions») **завершена**. Удалён неподключённый phrase study API; grammar вернулась в продукт в **v0.2 inc. 5**. Зафиксированы продуктовые решения по отложенным фичам из `TODO.txt`, устранён дубликат overlay display logic, перенесены остатки `llh/Services/` в целевые слои, JSON backup сохранён.
 
 ## Продуктовые решения
 
 | Тема | Решение |
 |------|---------|
-| Phrase / grammar study API | **Удалены** из кода; вернуть через use case + UI, когда появятся в roadmap |
+| Phrase study API | **Удалён** из кода (не был в UI) |
+| Grammar study API | **Удалён в Phase 10**, **восстановлен** в v0.2 inc. 5 (`LoadGrammarStudyUseCase` + вкладка «Грамматика») |
 | Word-click translation, session vocabulary, cost stats, speech | **Отложены** — см. `TODO.txt` |
 | Повторный hotkey захвата | **Реализовано**: отмена активного захвата при `isProcessing`; форматирование после capture hotkey не отменяется |
 | JSON `history.json` | **Сохранён** как backup / fallback (`HistoryRepositoryBootstrap`) |
@@ -21,12 +22,12 @@ Phase 10 («Cleanup And Product Decisions») **завершена**. Удале�
 
 ## Удалённый мёртвый код
 
-- `OpenAIServing.buildPhrasesStudyData` / `buildGrammarStudyData`
-- `OpenAIStudyService` phrase/grammar HTTP + DTOs
-- `OpenAIPromptBuilder.phrasesStudy*` / `grammarStudy*` / `pinyinTonePromptParagraph`
-- `RefactorBaselineInventory.unwiredOpenAIStudyAPIs`
+- `OpenAIServing.buildPhrasesStudyData` (grammar удалялся здесь же, затем восстановлен в v0.2 inc. 5)
+- `OpenAIStudyService` phrase HTTP + DTOs (grammar restored in v0.2 inc. 5)
+- `OpenAIPromptBuilder.phrasesStudy*`
+- `RefactorBaselineInventory.unwiredOpenAIStudyAPIs` (phrase only)
 
-Живой study path: **`buildWordsStudyData`** → `LoadWordStudyUseCase` → `StudyViewModel`.
+Живые study paths: **`buildWordsStudyData`** → `LoadWordStudyUseCase`; **`buildGrammarStudyData`** → `LoadGrammarStudyUseCase` → `StudyViewModel`.
 
 ## Display helpers
 
@@ -49,7 +50,7 @@ Phase 10 («Cleanup And Product Decisions») **завершена**. Удале�
 |------|------------|
 | `Phase10CaptureViewModelTests.swift` | Hotkey при `isProcessing` → cancel + status «отменён» |
 | `Phase9OpenAIPromptTests.swift` | `overlayPrimaryText` precedence (вместо phrase/grammar prompts) |
-| `RefactorBaselineTests.swift` | `OpenAICallSite` count **4** |
+| `RefactorBaselineTests.swift` | `OpenAICallSite` count **5** (grammar, v0.2 inc. 5) |
 
 ```bash
 xcodebuild -scheme llh -destination 'platform=macOS' test \
@@ -61,7 +62,7 @@ xcodebuild -scheme llh -destination 'platform=macOS' test \
 
 | Критерий | Статус |
 |----------|--------|
-| Нет unused OpenAI study paths без intent | ✅ только words |
+| Нет unused OpenAI study paths без intent | ✅ words + grammar (phrase out) |
 | Obsolete persistence не удалён без approval | ✅ JSON backup |
 | Крупные legacy файлы уменьшены | ✅ `Services/` убран, overlay dedup |
 

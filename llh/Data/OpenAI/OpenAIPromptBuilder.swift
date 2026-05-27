@@ -172,11 +172,64 @@ enum OpenAIPromptBuilder {
         )
     }
 
+    static func grammarStudySystemPrompt(for targetLanguage: LearningLanguage) -> String {
+        """
+        You produce JSON only for grammar explanation aimed at a Russian-speaking learner.
+        Never use hieroglyphs or source script in the response.
+        Use only transliteration and Russian.
+        \(pinyinTonePromptParagraph(for: targetLanguage))
+        Return JSON object with key `structures`.
+        Each structure has:
+        title
+        explanation
+        usage_notes
+        examples
+        `examples` is an array of objects with:
+        pinyin_text
+        russian_translation
+        Keep explanations short, compact, and clear.
+        """
+    }
+
+    static func grammarStudyUserPrompt(
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) -> String {
+        """
+        Target language: \(openAIInstructionName(for: targetLanguage))
+        Cleaned text:
+        \(formattedText.cleanedText)
+
+        Pronunciation:
+        \(formattedText.pinyinText)
+
+        Translation:
+        \(formattedText.russianTranslation)
+
+        Explain in simple Russian how the parts of this sentence connect and why the sentence means what it means.
+        Focus on structures that may confuse a learner; skip obvious trivia.
+        For each structure:
+        - title: short label in Russian
+        - explanation: how the parts work together and why the meaning arises
+        - usage_notes: where else the pattern is useful (one short paragraph max)
+        - examples: 1–2 short examples with transliteration only (no source script)
+        If several structures matter, return several; otherwise one is enough.
+        """
+    }
+
     static func pinyinTonePromptLine(for targetLanguage: LearningLanguage) -> String {
         guard targetLanguage == .chinese || targetLanguage == .auto else {
             return "2a) If pinyin_text is empty, return empty string."
         }
 
         return "2a) If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
+    }
+
+    static func pinyinTonePromptParagraph(for targetLanguage: LearningLanguage) -> String {
+        guard targetLanguage == .chinese || targetLanguage == .auto else {
+            return "If transliteration is used, keep it readable and consistent."
+        }
+
+        return "If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
     }
 }

@@ -1,14 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); single main window (Inc. 10). Remaining: study tabs, automation, overlay close, reading overview details, Dock badge.
+**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); single main window (Inc. 10). Remaining: session automation, overlay close, reading overview details, Dock badge.
 
 ## Release progress
 
@@ -18,7 +18,7 @@
 | 2 | Session list page | **Done** (2026-05-27) |
 | 3 | Settings page | **Done** (2026-05-27) |
 | 4 | Translation result state | **Done** (2026-05-27) |
-| 5 | Words and grammar tabs | Planned |
+| 5 | Words and grammar tabs | **Done** (2026-05-27) |
 | 6 | Session-level automation | Planned |
 | 7 | Overlay closing | Planned |
 | 8 | Session reading overview details | Planned |
@@ -165,9 +165,11 @@ Risk:
 
 ## Increment 5: Words And Grammar Tabs
 
+**Status: done** (2026-05-27).
+
 Goal: make learning materials first-class in the main window.
 
-Scope:
+Scope (all delivered):
 
 - Replace the current word-study presentation with two tabs: `Перевод слов` and `Грамматика`.
 - Keep `Перевод слов` based on `WordStudyPayload`.
@@ -175,11 +177,27 @@ Scope:
 - Grammar should be short, compact, and useful for a Russian-speaking learner: explain how sentence parts connect and why they create this meaning.
 - Loading and retry behavior should apply to the active learning tab.
 
-Implementation notes:
+### Implemented
 
-- `StudyMaterials` already has `grammar` and `grammarStatus`; reuse or adapt it instead of adding parallel storage.
-- Add a dedicated grammar request/use case/service path, not a bundled words+grammar request.
-- Keep prompts centralized in `OpenAIPromptBuilder` and covered by focused tests.
+| Area | What shipped |
+|------|----------------|
+| UI | `StudyAssistantView` segmented tabs; `GrammarExplanationView`; per-tab loading/retry |
+| State | `StudyLearningTab`; `StudyViewModel.selectedLearningTab`, separate word/grammar loaders |
+| Domain | `LoadGrammarStudyUseCase`; `grammar` / `grammarStatus` on `StudyMaterials` |
+| OpenAI | `buildGrammarStudyData` on `OpenAIServing`; `OpenAIStudyService` + `grammarStudy*` prompts |
+| DI | `AppDependencyContainer.loadGrammarStudyUseCase` |
+
+New files: `LoadGrammarStudyUseCase.swift`, `StudyLearningTab.swift`, `GrammarExplanationView.swift`, `Phase3LoadGrammarStudyUseCaseTests.swift`.
+
+Implementation notes (as built):
+
+- Words and grammar are independent requests; manual load per active tab only (automation — Inc. 6).
+- Prompts in `OpenAIPromptBuilder`; tests in `Phase3LoadGrammarStudyUseCaseTests` and `openAIService_grammarStudyPrompt_targetsRussianLearner`.
+- `RefactorBaselineInventory.OpenAICallSite` count **5**.
+
+Risk:
+
+- Low. Reuses existing `StudyMaterials` fields; no persistence schema change.
 
 ## Increment 6: Session-Level Automation
 
@@ -280,8 +298,8 @@ New file: `App/MainWindowActivator.swift`.
 3. ~~Session list page and rename.~~ **Done.**
 4. ~~Settings page layout and routing polish.~~ **Done.**
 5. ~~Translation result state cleanup.~~ **Done.**
-6. Words/grammar tabs and grammar OpenAI path. **Next recommended.**
-7. Session-level automation flags.
+6. ~~Words/grammar tabs and grammar OpenAI path.~~ **Done.**
+7. Session-level automation flags. **Next recommended.**
 8. Overlay close/Escape behavior.
 9. Session reading overview details.
 10. Dock language badge.
@@ -290,6 +308,7 @@ New file: `App/MainWindowActivator.swift`.
 
 - Settings route: `testSettingsRouteOpensAndReturns` (toolbar «Настройки» → «Общие» → «Назад»); launch chrome uses Russian product name.
 - **Inc. 4 (done):** `TranslationResultPresentationResolverTests` — loading / formatted / failed / rawOnly from `FormattingStatus`.
+- **Inc. 5 (done):** `Phase3LoadGrammarStudyUseCaseTests`; grammar prompt test in `llhTests`.
 - Session rename persists and does not change language.
 - Existing sessions decode with default automation flags.
 - Formatting failure shows raw text and icon-only retry (manual UI verification).
@@ -305,5 +324,5 @@ New file: `App/MainWindowActivator.swift`.
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
-- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke (inc. 1–3); resolver tests (inc. 4)
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar tests (inc. 5)
 - [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md)

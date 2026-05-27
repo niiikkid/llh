@@ -7,31 +7,34 @@ import SwiftUI
 
 struct StudyAssistantView: View {
     @ObservedObject var study: StudyViewModel
-    @ObservedObject var history: HistoryViewModel
-
-    private var hasSelectedStudyMaterialContent: Bool {
-        study.studyMaterials.words?.hasContent == true
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Picker("Учебные материалы", selection: $study.selectedLearningTab) {
+                ForEach(StudyLearningTab.allCases) { tab in
+                    Text(tab.title).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
             HStack {
-                Text("Перевод слов")
+                Text(study.selectedLearningTab.title)
                     .font(.headline)
                 Spacer()
-                Button(hasSelectedStudyMaterialContent ? "Обновить перевод" : "Перевести слова") {
+                Button(study.activeTabRetryButtonTitle) {
                     study.retryStudyAssistantDataForSelectedEntry()
                 }
-                .disabled(study.selectedEntryStudyAssistantStatus == .processing)
+                .disabled(study.activeLearningTabStatus == .processing)
             }
 
             Group {
-                if hasSelectedStudyMaterialContent {
+                if study.hasActiveTabContent {
                     ScrollView {
-                        studyAssistantBody
+                        activeTabBody
                     }
                 } else {
-                    studyAssistantBody
+                    activeTabBody
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -46,8 +49,18 @@ struct StudyAssistantView: View {
     }
 
     @ViewBuilder
-    private var studyAssistantBody: some View {
-        if study.selectedEntryStudyAssistantStatus == .processing {
+    private var activeTabBody: some View {
+        switch study.selectedLearningTab {
+        case .words:
+            wordsTabBody
+        case .grammar:
+            grammarTabBody
+        }
+    }
+
+    @ViewBuilder
+    private var wordsTabBody: some View {
+        if study.selectedEntryWordsStatus == .processing {
             CenteredContentContainer {
                 ContentUnavailableView(
                     "Готовлю перевод слов",
@@ -55,9 +68,9 @@ struct StudyAssistantView: View {
                     description: Text("Запрашиваю слова для текущего текста.")
                 )
             }
-        } else if hasSelectedStudyMaterialContent {
+        } else if study.hasWordsContent {
             WordStudyEntriesView(payload: study.studyMaterials.words)
-        } else if study.canRetryStudyAssistantData {
+        } else if study.canRetryWordsStudy {
             CenteredContentContainer {
                 ContentUnavailableView(
                     "Слова не загрузились",
@@ -71,6 +84,37 @@ struct StudyAssistantView: View {
                     "Загрузить перевод слов",
                     systemImage: "hand.tap",
                     description: Text("Материал загружается только по запросу.")
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var grammarTabBody: some View {
+        if study.selectedEntryGrammarStatus == .processing {
+            CenteredContentContainer {
+                ContentUnavailableView(
+                    "Готовлю грамматику",
+                    systemImage: "text.book.closed",
+                    description: Text("Разбираю, как связаны части предложения.")
+                )
+            }
+        } else if study.hasGrammarContent {
+            GrammarExplanationView(payload: study.studyMaterials.grammar)
+        } else if study.canRetryGrammarStudy {
+            CenteredContentContainer {
+                ContentUnavailableView(
+                    "Грамматика не загрузилась",
+                    systemImage: "arrow.clockwise.circle",
+                    description: Text("Можно запросить объяснение еще раз.")
+                )
+            }
+        } else {
+            CenteredContentContainer {
+                ContentUnavailableView(
+                    "Загрузить грамматику",
+                    systemImage: "hand.tap",
+                    description: Text("Объяснение загружается только по запросу.")
                 )
             }
         }

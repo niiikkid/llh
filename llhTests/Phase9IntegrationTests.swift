@@ -188,6 +188,7 @@ struct Phase9IntegrationTests {
             manageHistoryUseCase: manageHistoryUseCase,
             manageProfilesUseCase: ManageProfilesUseCase(manageHistoryUseCase: manageHistoryUseCase),
             loadWordStudyUseCase: LoadWordStudyUseCase(openAIService: openAI),
+            loadGrammarStudyUseCase: LoadGrammarStudyUseCase(openAIService: openAI),
             manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase(
                 settingsRepository: settingsRepository,
                 apiKeyRepository: apiKeyRepository,

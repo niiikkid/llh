@@ -34,6 +34,7 @@ final class MainViewModel: ObservableObject {
         )
         study = StudyViewModel(
             loadWordStudyUseCase: dependencies.loadWordStudyUseCase,
+            loadGrammarStudyUseCase: dependencies.loadGrammarStudyUseCase,
             settings: settingsViewModel,
             history: history
         )

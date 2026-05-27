@@ -44,8 +44,9 @@ struct RefactorBaselineTests {
 
   @Test
   func inventory_openAICallSites_coverAllOpenAIServingMethods() {
-    #expect(RefactorBaselineInventory.OpenAICallSite.allCases.count == 4)
+    #expect(RefactorBaselineInventory.OpenAICallSite.allCases.count == 5)
     #expect(RefactorBaselineInventory.openAIPromptBuilders[.buildWordsStudyData] == "OpenAIPromptBuilder.wordsAnalysisPrompt(for:)")
+    #expect(RefactorBaselineInventory.openAIPromptBuilders[.buildGrammarStudyData] == "OpenAIPromptBuilder.grammarStudySystemPrompt/UserPrompt")
   }
 
   // MARK: - History persistence

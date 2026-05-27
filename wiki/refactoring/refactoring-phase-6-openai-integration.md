@@ -31,7 +31,7 @@ Domain/Services/OpenAIOCRServing — AI OCR boundary (RecognizeTextUseCase)
 | `OpenAIModelsService.swift` | Model listing + empty-list guard (PR 3) |
 | `OpenAIOCRService.swift` | AI OCR vision request (PR 4) |
 | `OpenAITranslationService.swift` | Format recognized text (PR 5) |
-| `OpenAIStudyService.swift` | Word/phrase/grammar study (PR 5) |
+| `OpenAIStudyService.swift` | Word + grammar study (phrase removed Phase 10; grammar v0.2 inc. 5) |
 | `OpenAIChatCompletionClient.swift` | Text Chat Completions + JSON from content (PR 5) |
 | `OpenAITokenStore.swift` | `OpenAITokenStoring`, `KeychainOpenAITokenStore` (PR 6) |
 | `OpenAISettingsStore.swift` | UserDefaults settings store (PR 6) |
@@ -121,11 +121,11 @@ Base URL: `https://api.openai.com/v1`. Default timeout: 120s.
 
 ## Следующий шаг
 
-**Phases 7–10 завершены** — prompt tests в [Phase 9](refactoring-phase-9-testing-strategy.md); unwired phrase/grammar API удалены в [Phase 10](refactoring-phase-10-cleanup.md). Опционально позже: Responses API migration.
+**Phases 7–10 завершены** — prompt tests в [Phase 9](refactoring-phase-9-testing-strategy.md); phrase API удалён в [Phase 10](refactoring-phase-10-cleanup.md); **grammar** восстановлен в v0.2 inc. 5 (`buildGrammarStudyData`). Опционально позже: Responses API migration.
 
 ## See Also
 
-- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `OpenAIService` в `Data/OpenAI/`, только `buildWordsStudyData`
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `OpenAIService` в `Data/OpenAI/`; study: `buildWordsStudyData` + `buildGrammarStudyData` (v0.2 inc. 5)
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — `Phase9OpenAIPromptTests`, Phase 6 HTTP/OCR tests
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — Vision vs OpenAI OCR polish, `OCRResult` (завершена)

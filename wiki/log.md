@@ -1,5 +1,24 @@
 # Wiki Log
 
+## [2026-05-27] lint | 12 issues found, 15 auto-fixed
+- Updated: wiki/index.md (Phase 0/3/4/6/8/9/10 summaries after Inc. 5)
+- Updated: Refactoring Phase 0 Baseline (`OpenAICallSite` = 5)
+- Updated: Refactoring Phase 3 Use Cases (grammar section, boundaries, exit criteria)
+- Updated: Refactoring Phase 4 Presentation (StudyViewModel state)
+- Updated: Refactoring Phase 6 OpenAI Integration (study service table)
+- Updated: Refactoring Phase 8 UI Decomposition (See Also)
+- Updated: Refactoring Phase 9 Testing Strategy (Inc. 5 tests)
+- Updated: Refactoring Phase 10 Cleanup (overview, product decisions, exit criteria)
+- Updated: Refactoring Phase 1 Boundaries (`loadGrammarStudyUseCase`)
+- Updated: v0.2 Product Plan (See Also Phase 9)
+
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 5 completion)
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 6 OpenAI Integration
+- Updated: Refactoring Phase 8 UI Decomposition
+- Updated: Refactoring Phase 10 Cleanup
+- Updated: wiki/index.md
+
 ## [2026-05-27] lint | 3 issues found, 8 auto-fixed
 - Updated: Refactoring Phase 4 Presentation (Inc. 4 files in Editor section, not Settings)
 - Updated: Refactoring Phase 8 UI Decomposition (See Also inc. 1–4)

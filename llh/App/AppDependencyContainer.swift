@@ -22,6 +22,7 @@ struct AppDependencyContainer {
     let manageHistoryUseCase: ManageHistoryUseCase
     let manageProfilesUseCase: ManageProfilesUseCase
     let loadWordStudyUseCase: LoadWordStudyUseCase
+    let loadGrammarStudyUseCase: LoadGrammarStudyUseCase
     let manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
 
     init(
@@ -40,6 +41,7 @@ struct AppDependencyContainer {
         manageHistoryUseCase: ManageHistoryUseCase,
         manageProfilesUseCase: ManageProfilesUseCase,
         loadWordStudyUseCase: LoadWordStudyUseCase,
+        loadGrammarStudyUseCase: LoadGrammarStudyUseCase,
         manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
     ) {
         self.historyRepository = historyRepository
@@ -57,6 +59,7 @@ struct AppDependencyContainer {
         self.manageHistoryUseCase = manageHistoryUseCase
         self.manageProfilesUseCase = manageProfilesUseCase
         self.loadWordStudyUseCase = loadWordStudyUseCase
+        self.loadGrammarStudyUseCase = loadGrammarStudyUseCase
         self.manageOpenAISettingsUseCase = manageOpenAISettingsUseCase
     }
 
@@ -80,6 +83,7 @@ struct AppDependencyContainer {
         let manageHistoryUseCase = ManageHistoryUseCase(historyRepository: historyRepository)
         let manageProfilesUseCase = ManageProfilesUseCase(manageHistoryUseCase: manageHistoryUseCase)
         let loadWordStudyUseCase = LoadWordStudyUseCase(openAIService: openAIService)
+        let loadGrammarStudyUseCase = LoadGrammarStudyUseCase(openAIService: openAIService)
         let settingsRepository = UserDefaultsSettingsRepository()
         let apiKeyRepository = KeychainAPIKeyRepository()
         let manageOpenAISettingsUseCase = ManageOpenAISettingsUseCase(
@@ -104,6 +108,7 @@ struct AppDependencyContainer {
             manageHistoryUseCase: manageHistoryUseCase,
             manageProfilesUseCase: manageProfilesUseCase,
             loadWordStudyUseCase: loadWordStudyUseCase,
+            loadGrammarStudyUseCase: loadGrammarStudyUseCase,
             manageOpenAISettingsUseCase: manageOpenAISettingsUseCase
         )
     }

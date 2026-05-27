@@ -484,6 +484,24 @@ struct llhTests {
     }
 
     @Test
+    func openAIService_grammarStudyPrompt_targetsRussianLearner() {
+        let system = OpenAIPromptBuilder.grammarStudySystemPrompt(for: .chinese)
+        let user = OpenAIPromptBuilder.grammarStudyUserPrompt(
+            targetLanguage: .chinese,
+            formattedText: StructuredFormattedText(
+                cleanedText: "你好",
+                pinyinText: "nǐ hǎo",
+                russianTranslation: "привет"
+            )
+        )
+
+        #expect(system.contains("Russian-speaking learner"))
+        #expect(system.contains("Never use hieroglyphs or source script"))
+        #expect(user.contains("how the parts of this sentence connect"))
+        #expect(user.contains("why the sentence means what it means"))
+    }
+
+    @Test
     func learningLanguage_autoDisablesWordStudy() {
         #expect(LearningLanguage.auto.supportsWordStudy == false)
         #expect(LearningLanguage.english.supportsWordStudy == true)

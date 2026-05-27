@@ -19,7 +19,7 @@ struct FormattedTranslationContentView: View {
                         learningLanguage: history.currentProfileLearningLanguage
                     )
                     if history.currentProfileSupportsWordStudy {
-                        StudyAssistantView(study: study, history: history)
+                        StudyAssistantView(study: study)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .top)

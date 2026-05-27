@@ -40,6 +40,8 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 
 **v0.2 Inc. 4:** unit-тесты `TranslationResultPresentationResolverTests` — матрица loading / formatted / failed / rawOnly от `FormattingStatus` (без UI-теста вкладок; вкладки удалены).
 
+**v0.2 Inc. 5:** `Phase3LoadGrammarStudyUseCaseTests`; grammar prompt test в `llhTests` (`openAIService_grammarStudyPrompt_targetsRussianLearner`).
+
 ## Исправления существующих тестов
 
 - `OCREngine.openai` → `.ai` в Phase 1/3 tests.
@@ -51,10 +53,10 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 | Слой / фаза | Файлы |
 |-------------|--------|
 | Baseline (0) | `RefactorBaselineTests`, `llhTests` |
-| Presentation (v0.2 inc. 4) | `TranslationResultPresentationResolverTests` |
+| Presentation (v0.2 inc. 4–5) | `TranslationResultPresentationResolverTests`; study tabs — manual / use-case tests |
 | Repositories (1) | `Phase1RepositoryTests` |
 | Domain (2) | `Phase2DomainModelsTests` |
-| Use cases (3) | `Phase3*UseCaseTests`, `Phase3CaptureRegionUseCaseTests` |
+| Use cases (3) | `Phase3*UseCaseTests`, `Phase3CaptureRegionUseCaseTests`, `Phase3LoadGrammarStudyUseCaseTests` (v0.2 inc. 5) |
 | Persistence (5) | `Phase5HistoryPersistenceTests` |
 | OpenAI (6) | `Phase6OpenAI*Tests`, `OpenAIHTTPClientTestSupport` |
 | OCR/Capture (7) | `Phase7CaptureOCRTests` |
@@ -98,5 +100,5 @@ xcodebuild -scheme llh -destination 'platform=macOS' test -only-testing:llhTests
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
-- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke (inc. 1–3); `TranslationResultPresentationResolverTests` (inc. 4)
+- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar use case (inc. 5)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot §Phase 9–10

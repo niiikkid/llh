@@ -72,6 +72,15 @@ private final class SettingsFakeOpenAIServing: OpenAIServing {
     ) async throws -> WordStudyPayload {
         WordStudyPayload(entries: [])
     }
+
+    func buildGrammarStudyData(
+        apiKey: String,
+        modelID: String,
+        targetLanguage: LearningLanguage,
+        formattedText: StructuredFormattedText
+    ) async throws -> GrammarExplanationPayload {
+        GrammarExplanationPayload(structures: [])
+    }
 }
 
 @MainActor

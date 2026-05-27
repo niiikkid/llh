@@ -1,12 +1,12 @@
 # Refactoring Phase 3 Use Cases
 
 > Sources: llh project, 2026-05-26
-> Raw: [Phase 3 capture use cases completion](../../raw/refactoring/2026-05-26-phase-3-capture-use-cases-completion.md); [Phase 3 format captured text completion](../../raw/refactoring/2026-05-26-phase-3-format-captured-text-completion.md); [Phase 3 manage history use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-history-use-case-completion.md); [Phase 3 manage profiles use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-profiles-use-case-completion.md); [Phase 3 load word study use case completion](../../raw/refactoring/2026-05-26-phase-3-load-word-study-use-case-completion.md); [Phase 3 manage OpenAI settings use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-openai-settings-use-case-completion.md)
+> Raw: [Phase 3 capture use cases completion](../../raw/refactoring/2026-05-26-phase-3-capture-use-cases-completion.md); [Phase 3 format captured text completion](../../raw/refactoring/2026-05-26-phase-3-format-captured-text-completion.md); [Phase 3 manage history use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-history-use-case-completion.md); [Phase 3 manage profiles use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-profiles-use-case-completion.md); [Phase 3 load word study use case completion](../../raw/refactoring/2026-05-26-phase-3-load-word-study-use-case-completion.md); [Phase 3 manage OpenAI settings use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-openai-settings-use-case-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
-Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. Все 7 use cases зарегистрированы в контейнере. `MainViewModel` (~783 строк) координирует UI, overlay и shortcuts; не вызывает `OpenAIServing`, `SettingsRepository` или `APIKeyRepository` напрямую.
+Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. Семь use cases Phase 3 + **`LoadGrammarStudyUseCase`** (v0.2 inc. 5) зарегистрированы в контейнере. `MainViewModel` (~783 строк) координирует UI, overlay и shortcuts; не вызывает `OpenAIServing`, `SettingsRepository` или `APIKeyRepository` напрямую.
 
 ### Use cases в `AppDependencyContainer`
 
@@ -18,6 +18,7 @@ Phase 3 («Extract Use Cases Workflow By Workflow») **завершена**. В�
 | `ManageHistoryUseCase` | `HistoryRepository` |
 | `ManageProfilesUseCase` | Профили + `ManageHistoryUseCase` |
 | `LoadWordStudyUseCase` | `OpenAIServing.buildWordsStudyData` → `OpenAIStudyService` (Phase 6 PR 5) |
+| `LoadGrammarStudyUseCase` | `OpenAIServing.buildGrammarStudyData` → `OpenAIStudyService` (v0.2 inc. 5) |
 | `ManageOpenAISettingsUseCase` | `SettingsRepository`, `APIKeyRepository`, `fetchModels` |
 
 ## Инкремент 1 — capture и recognize
@@ -174,8 +175,8 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 
 ### Границы (word study)
 
-- Phrase/grammar study API удалены в Phase 10 (не были подключены к UI)
-- Загрузка только по запросу пользователя (`retryStudyAssistantDataForSelectedEntry` с `forceReload: true`)
+- Phrase study API удалён в Phase 10 (не был подключён к UI); grammar — отдельный path с v0.2 inc. 5 (см. ниже)
+- Загрузка только по запросу пользователя (`retryStudyAssistantDataForSelectedEntry` для активной вкладки)
 
 ### DI (word study)
 
@@ -188,7 +189,19 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 - `.processing` и persist — в ViewModel после preflight `.ready`
 - Settings flow ещё во ViewModel — вынесен в инкременте 6
 
-> **После Phase 4 inc. 4:** `loadStudyMaterial` и `@Published studyMaterials` — в `StudyViewModel`; `LoadWordStudyUseCase` без изменений.
+> **После Phase 4 inc. 4:** загрузка study — в `StudyViewModel`; `LoadWordStudyUseCase` без изменений.
+
+## v0.2 — load grammar study (после Phase 3)
+
+| Файл | Назначение |
+|------|------------|
+| `Domain/UseCases/LoadGrammarStudyUseCase.swift` | Preflight + `buildGrammarStudyData` (зеркало word study) |
+
+- `LoadGrammarStudyRequest` — `grammarStatus`, `grammar`, остальное как у word study
+- `StudyViewModel` — отдельный `loadGrammarStudy`; UI: вкладка «Грамматика» в `StudyAssistantView`
+- DI: `AppDependencyContainer.loadGrammarStudyUseCase`
+
+Тесты: `llhTests/Phase3LoadGrammarStudyUseCaseTests.swift`.
 
 ## Инкремент 6 — manage OpenAI settings
 
@@ -265,7 +278,7 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 - canDelete false for Default; delete custom/default/no selection
 - renameProfile; deleteProfile non-selected / profileNotFound (v0.2 inc. 2)
 
-`llhTests/Phase3LoadWordStudyUseCaseTests.swift` (9 тестов):
+`llhTests/Phase3LoadWordStudyUseCaseTests.swift` (9 тестов); `Phase3LoadGrammarStudyUseCaseTests.swift` (v0.2 inc. 5):
 
 - preflight: unsupported profile, missing key/model, skip без formatted text, skip succeeded/processing, ready при forceReload
 - perform: success, propagation `OpenAIServiceError`
@@ -293,9 +306,10 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 | `ManageHistoryUseCase` | выполнено |
 | `ManageProfilesUseCase` | выполнено |
 | `LoadWordStudyUseCase` | выполнено |
+| `LoadGrammarStudyUseCase` | выполнено (v0.2 inc. 5) |
 | `ManageOpenAISettingsUseCase` | выполнено |
 
-Phase 3 завершена: `MainViewModel` делегирует все перечисленные workflows; use cases покрыты fake-driven тестами.
+Phase 3 завершена: `MainViewModel` / feature VMs делегируют workflows; use cases покрыты fake-driven тестами.
 
 ## Следующий шаг
 
@@ -303,7 +317,7 @@ Phase 3 завершена; **Phases 6–10 завершены** — integration
 
 ## See Also
 
-- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — phrase/grammar study API removed
+- [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — phrase API removed; grammar restored (v0.2 inc. 5)
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — capture/format/settings integration tests
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — split ContentView, per-VM status (завершена)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, cancellation, Infrastructure adapters (завершена)
@@ -313,5 +327,5 @@ Phase 3 завершена; **Phases 6–10 завершены** — integration
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — протоколы и контейнер
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь MainViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — `renameProfile` / `deleteProfile(profileID:)` (Inc. 2); settings UX (Inc. 3); `FormattingStatus` drives translation UI (Inc. 4)
+- [v0.2 Product Plan](v0-2-product-plan.md) — Inc. 2–5: sessions, settings, translation state, words/grammar tabs
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

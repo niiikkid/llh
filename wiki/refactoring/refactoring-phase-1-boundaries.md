@@ -44,7 +44,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 - `@MainActor struct` с явным `init(...)` без default-аргументов (из-за MainActor-isolated сервисов).
 - `static func live()` — production-граф зависимостей.
 - `makeMainViewModel()` — фабрика `MainViewModel`.
-- Use cases (Phase 3): `recognizeTextUseCase`, `captureRegionUseCase` (`makeCaptureUseCases`), `formatCapturedTextUseCase`, `manageHistoryUseCase`, `manageProfilesUseCase`, `loadWordStudyUseCase`, `manageOpenAISettingsUseCase`.
+- Use cases (Phase 3 + v0.2 inc. 5): `recognizeTextUseCase`, `captureRegionUseCase` (`makeCaptureUseCases`), `formatCapturedTextUseCase`, `manageHistoryUseCase`, `manageProfilesUseCase`, `loadWordStudyUseCase`, `loadGrammarStudyUseCase`, `manageOpenAISettingsUseCase`.
 - **Phase 6 (завершена):** `live()` — один `OpenAIHTTPClient` (timeout 120s), `OpenAIOCRService` + `OpenAIService(httpClient:ocrService:)` (чистый фасад); `makeCaptureUseCases(..., openAIOCRService:)` для `RecognizeTextUseCase`. Settings/keychain types — `Data/OpenAI/`, не в `OpenAIService.swift` (см. [Phase 6](refactoring-phase-6-openai-integration.md)).
 - **Phase 7 (завершена):** `VisionOCRService` + `ScreenCaptureKitCaptureService` в `live()`; `RecognizeTextUseCase` — `Sendable`, возвращает `OCRResult` (см. [Phase 7](refactoring-phase-7-ocr-capture-permission.md)).
 
