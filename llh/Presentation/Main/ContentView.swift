@@ -69,6 +69,7 @@ struct ContentView: View {
                     editor: viewModel.editor,
                     study: viewModel.study,
                     capture: viewModel.capture,
+                    defaultNewProfileLearningLanguage: viewModel.settings.defaultNewProfileLearningLanguage,
                     isTranslationsSidebarCollapsed: isTranslationsSidebarCollapsed
                 )
             }

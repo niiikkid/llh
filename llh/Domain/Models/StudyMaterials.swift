@@ -84,13 +84,20 @@ struct GrammarStructure: Equatable, Codable {
     let explanation: String
     let usageNotes: String
     let examples: [GrammarExample]
+
+    var hasVisibleContent: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !explanation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !usageNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !examples.isEmpty
+    }
 }
 
 struct GrammarExplanationPayload: Equatable, Codable {
     let structures: [GrammarStructure]
 
     var hasContent: Bool {
-        !structures.isEmpty
+        structures.contains(where: \.hasVisibleContent)
     }
 }
 

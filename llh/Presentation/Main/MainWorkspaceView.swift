@@ -11,6 +11,7 @@ struct MainWorkspaceView: View {
     @ObservedObject var study: StudyViewModel
     @ObservedObject var capture: CaptureViewModel
 
+    var defaultNewProfileLearningLanguage: LearningLanguage
     var isTranslationsSidebarCollapsed: Bool
 
     private let columnSpacing: CGFloat = 12
@@ -29,7 +30,10 @@ struct MainWorkspaceView: View {
             HStack(alignment: .top, spacing: spacing) {
                 if !isTranslationsSidebarCollapsed {
                     GroupBox("Переводы") {
-                        HistoryView(viewModel: history)
+                        HistoryView(
+                            viewModel: history,
+                            defaultNewProfileLearningLanguage: defaultNewProfileLearningLanguage
+                        )
                     }
                     .groupBoxStyle(PanelGroupBoxStyle())
                     .frame(

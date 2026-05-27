@@ -201,6 +201,30 @@ struct llhTests {
     }
 
     @Test
+    func sessionReadingSequenceItem_exposesGrammarStudyWithExamplesOnly() {
+        let grammar = GrammarExplanationPayload(structures: [
+            GrammarStructure(
+                title: "",
+                explanation: "",
+                usageNotes: "",
+                examples: [
+                    GrammarExample(pinyinText: "Hola", russianTranslation: "Привет"),
+                ]
+            ),
+        ])
+        let entry = CapturedTextEntry(
+            text: "Hola",
+            studyMaterials: StudyMaterials(grammar: grammar, grammarStatus: .succeeded)
+        )
+
+        let item = SessionReadingSequenceItem(entry: entry, learningLanguage: .spanish)
+
+        #expect(item.hasExpandableDetails)
+        #expect(item.grammarStudy == grammar)
+        #expect(item.wordStudy == nil)
+    }
+
+    @Test
     func sessionListLines_fallsBackToRawWhenNoFormattedText() {
         let entry = CapturedTextEntry(text: "Line one\nLine two")
 
@@ -596,8 +620,11 @@ struct llhTests {
 
         #expect(system.contains("Russian-speaking learner"))
         #expect(system.contains("Never use hieroglyphs or source script"))
-        #expect(user.contains("how the parts of this sentence connect"))
-        #expect(user.contains("why the sentence means what it means"))
+        #expect(system.contains("Never use linguistic jargon"))
+        #expect(system.contains("существительное"))
+        #expect(system.contains("at most 2 structures"))
+        #expect(user.contains("No grammar terminology"))
+        #expect(user.contains("One structure is usually enough"))
     }
 
     @Test

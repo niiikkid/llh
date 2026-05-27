@@ -94,8 +94,10 @@ final class StudyViewModel: ObservableObject {
 
     var hasActiveTabContent: Bool {
         switch selectedLearningTab {
-        case .words: hasWordsContent
-        case .grammar: hasGrammarContent
+        case .words:
+            hasWordsContent && selectedEntryWordsStatus != .processing
+        case .grammar:
+            hasGrammarContent && selectedEntryGrammarStatus != .processing
         }
     }
 
@@ -183,6 +185,7 @@ final class StudyViewModel: ObservableObject {
         }) else {
             return
         }
+        syncStudyMaterialsToEditorIfSelected(entryID: entryID)
         history.persist()
 
         do {
@@ -235,6 +238,7 @@ final class StudyViewModel: ObservableObject {
         }) else {
             return
         }
+        syncStudyMaterialsToEditorIfSelected(entryID: entryID)
         history.persist()
 
         do {

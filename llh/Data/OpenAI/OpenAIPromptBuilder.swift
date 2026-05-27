@@ -178,7 +178,14 @@ enum OpenAIPromptBuilder {
         Never use hieroglyphs or source script in the response.
         Use only transliteration and Russian.
         \(pinyinTonePromptParagraph(for: targetLanguage))
+        Tone: explain like to a curious 14-year-old who does not know school grammar terms.
+        Never use linguistic jargon or “smart words” (for example: существительное, глагол, прилагательное,
+        наречие, часть речи, падеж, время, согласование, субъект, предикат, конструкция, конъюнкция).
+        Describe what happens in the sentence in plain, physical, lived language — who does what, what comes
+        first, what the phrase feels like, why it reads with this meaning.
+        Brevity is required: minimum words, maximum clarity.
         Return JSON object with key `structures`.
+        Return at most 2 structures; prefer 1 unless two clearly different patterns matter.
         Each structure has:
         title
         explanation
@@ -187,7 +194,12 @@ enum OpenAIPromptBuilder {
         `examples` is an array of objects with:
         pinyin_text
         russian_translation
-        Keep explanations short, compact, and clear.
+        Limits per structure:
+        - title: a few words in Russian
+        - explanation: at most 2 short sentences (about 35 words total)
+        - usage_notes: at most 1 short sentence, or empty string
+        - examples: at most 1 brief example, or an empty array
+        Do not restate the full translation or pad with generic grammar lectures.
         """
     }
 
@@ -206,14 +218,16 @@ enum OpenAIPromptBuilder {
         Translation:
         \(formattedText.russianTranslation)
 
-        Explain in simple Russian how the parts of this sentence connect and why the sentence means what it means.
-        Focus on structures that may confuse a learner; skip obvious trivia.
+        In very simple Russian, briefly explain only what helps feel the sentence from the inside.
+        No grammar terminology — only everyday words, as if talking to a smart teenager who never studied linguistics.
+        Pick the single most useful point; add a second structure only if truly necessary.
+        Skip obvious trivia, repetition, and long background.
         For each structure:
-        - title: short label in Russian
-        - explanation: how the parts work together and why the meaning arises
-        - usage_notes: where else the pattern is useful (one short paragraph max)
-        - examples: 1–2 short examples with transliteration only (no source script)
-        If several structures matter, return several; otherwise one is enough.
+        - title: 2–5 words in Russian
+        - explanation: max 2 short sentences — how the parts link and why the meaning arises
+        - usage_notes: one short sentence or empty
+        - examples: 0–1 mini example with transliteration only (no source script), only if it clarifies
+        One structure is usually enough.
         """
     }
 

@@ -221,29 +221,21 @@ private struct SessionReadingGrammarStudyDetailsView: View {
     let payload: GrammarExplanationPayload
     let fontSizePoints: CGFloat
 
+    private var visibleStructures: [GrammarStructure] {
+        payload.structures.filter(\.hasVisibleContent)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Грамматика")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            ForEach(Array(payload.structures.enumerated()), id: \.offset) { _, structure in
-                VStack(alignment: .leading, spacing: 4) {
-                    if !structure.title.isEmpty {
-                        Text(structure.title)
-                            .font(.system(size: fontSizePoints + 1, weight: .semibold))
-                    }
-                    if !structure.explanation.isEmpty {
-                        Text(structure.explanation)
-                            .font(.system(size: fontSizePoints))
-                            .textSelection(.enabled)
-                    }
-                    if !structure.usageNotes.isEmpty {
-                        Text(structure.usageNotes)
-                            .font(.system(size: fontSizePoints))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
+            ForEach(Array(visibleStructures.enumerated()), id: \.offset) { index, structure in
+                GrammarStructureLinesView(structure: structure, fontSizePoints: fontSizePoints)
+                if index < visibleStructures.count - 1 {
+                    Divider()
+                        .padding(.vertical, 2)
                 }
             }
         }

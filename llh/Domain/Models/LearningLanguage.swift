@@ -36,7 +36,7 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// Dock tile badge text; `auto` clears the badge (`nil`).
+    /// Dock tile overlay text; `auto` clears the overlay (`nil`).
     var dockBadgeLabel: String? {
         flagEmoji
     }

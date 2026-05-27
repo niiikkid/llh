@@ -46,38 +46,40 @@ struct MainChromeView: View {
             Spacer()
 
             if route == .workspace {
-                Picker(
-                    "",
-                    selection: Binding(
-                        get: { settings.selectedOCREngine },
-                        set: { settings.selectOCREngine($0) }
-                    )
-                ) {
-                    ForEach(OCREngine.allCases) { engine in
-                        Text(engine.title).tag(engine)
+                HStack(spacing: 8) {
+                    Picker(
+                        "",
+                        selection: Binding(
+                            get: { settings.selectedOCREngine },
+                            set: { settings.selectOCREngine($0) }
+                        )
+                    ) {
+                        ForEach(OCREngine.allCases) { engine in
+                            Text(engine.title).tag(engine)
+                        }
                     }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(width: 200)
-                .help("Движок OCR: \(settings.selectedOCREngine.title)")
-                .accessibilityLabel("Движок OCR")
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .help("Движок OCR: \(settings.selectedOCREngine.title)")
+                    .accessibilityLabel("Движок OCR")
 
-                Button {
-                    isTranslationsSidebarCollapsed.toggle()
-                } label: {
-                    Image(
-                        systemName: isTranslationsSidebarCollapsed
-                            ? "sidebar.left"
-                            : "sidebar.leading"
+                    Button {
+                        isTranslationsSidebarCollapsed.toggle()
+                    } label: {
+                        Image(
+                            systemName: isTranslationsSidebarCollapsed
+                                ? "sidebar.left"
+                                : "sidebar.leading"
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .help(
+                        isTranslationsSidebarCollapsed
+                            ? "Показать список переводов"
+                            : "Скрыть список переводов"
                     )
                 }
-                .buttonStyle(.bordered)
-                .help(
-                    isTranslationsSidebarCollapsed
-                        ? "Показать список переводов"
-                        : "Скрыть список переводов"
-                )
             }
 
             if route != .settings {

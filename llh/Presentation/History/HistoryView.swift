@@ -8,28 +8,35 @@ import SwiftUI
 /// Translation list for the active session (sidebar in workspace).
 struct HistoryView: View {
     @ObservedObject var viewModel: HistoryViewModel
+    var defaultNewProfileLearningLanguage: LearningLanguage
+
+    @State private var newProfileName = ""
+    @State private var newProfileLearningLanguage: LearningLanguage = .english
+    @State private var newProfileAutomaticallyLoadWords = false
+    @State private var newProfileAutomaticallyLoadGrammar = false
+    @State private var isCreateProfilePresented = false
+    @State private var isDeleteProfileConfirmationPresented = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Text(viewModel.selectedProfileDisplayName)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
+            sessionPickerRow
 
             HStack(spacing: 8) {
                 Text("Язык сессии:")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 SessionLanguageBadge(language: viewModel.currentProfileLearningLanguage)
-                Spacer()
+                Spacer(minLength: 0)
             }
 
             if viewModel.currentProfileLearningLanguage == .auto {
                 Text("Для этой сессии язык определяется автоматически, отображается только перевод.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            if viewModel.selectedProfileID != nil {
+                sessionAutomationSection
             }
 
             if viewModel.history.isEmpty {
@@ -59,7 +66,7 @@ struct HistoryView: View {
                                 ? "Вернуться к выбранному переводу в списке."
                                 : "Показать все фрагменты сессии подряд: строка оригинала и строка перевода."
                         )
-                        Spacer()
+                        Spacer(minLength: 0)
                     }
 
                     List(
@@ -90,5 +97,149 @@ struct HistoryView: View {
                 }
             }
         }
+        .sheet(isPresented: $isCreateProfilePresented) {
+            createProfileSheet
+        }
+        .alert("Удалить сессию?", isPresented: $isDeleteProfileConfirmationPresented) {
+            Button("Удалить", role: .destructive) {
+                viewModel.deleteSelectedProfile()
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text(
+                "Сессия «\(viewModel.selectedProfileDisplayName)» будет удалена вместе со всеми переводами внутри неё."
+            )
+        }
+    }
+
+    private var sessionPickerRow: some View {
+        HStack(spacing: 8) {
+            Picker(
+                "Сессия",
+                selection: Binding(
+                    get: { viewModel.selectedProfileID },
+                    set: { viewModel.selectProfile($0) }
+                )
+            ) {
+                ForEach(viewModel.profiles) { profile in
+                    Text(profile.displayName).tag(Optional(profile.id))
+                }
+            }
+            .labelsHidden()
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            sidebarActionButton(systemName: "plus", helpText: "Создать сессию") {
+                newProfileName = ""
+                newProfileLearningLanguage = defaultNewProfileLearningLanguage
+                newProfileAutomaticallyLoadWords = false
+                newProfileAutomaticallyLoadGrammar = false
+                isCreateProfilePresented = true
+            }
+
+            sidebarActionButton(
+                systemName: "trash",
+                helpText: "Удалить текущую сессию",
+                role: .destructive
+            ) {
+                isDeleteProfileConfirmationPresented = true
+            }
+            .disabled(!viewModel.canDeleteSelectedProfile)
+        }
+    }
+
+    private var sessionAutomationSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("После форматирования")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            SessionAutomationTogglesView(
+                loadWords: automationLoadWordsBinding,
+                loadGrammar: automationLoadGrammarBinding
+            )
+            .font(.caption)
+        }
+    }
+
+    private var automationLoadWordsBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.activeProfile?.automaticallyLoadWords ?? false },
+            set: { newValue in
+                guard let profileID = viewModel.selectedProfileID else { return }
+                viewModel.updateSessionAutomation(
+                    profileID: profileID,
+                    automaticallyLoadWords: newValue,
+                    automaticallyLoadGrammar: viewModel.activeProfile?.automaticallyLoadGrammar ?? false
+                )
+            }
+        )
+    }
+
+    private var automationLoadGrammarBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.activeProfile?.automaticallyLoadGrammar ?? false },
+            set: { newValue in
+                guard let profileID = viewModel.selectedProfileID else { return }
+                viewModel.updateSessionAutomation(
+                    profileID: profileID,
+                    automaticallyLoadWords: viewModel.activeProfile?.automaticallyLoadWords ?? false,
+                    automaticallyLoadGrammar: newValue
+                )
+            }
+        )
+    }
+
+    private var createProfileSheet: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Новая сессия")
+                .font(.headline)
+            TextField("Название сессии", text: $newProfileName)
+            Picker("Язык изучения", selection: $newProfileLearningLanguage) {
+                ForEach(LearningLanguage.allCases.filter(\.supportsWordStudy)) { language in
+                    Text(language.title).tag(language)
+                }
+            }
+            .pickerStyle(.segmented)
+            Text("Язык сессии нельзя изменить после создания.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            SessionAutomationTogglesView(
+                loadWords: $newProfileAutomaticallyLoadWords,
+                loadGrammar: $newProfileAutomaticallyLoadGrammar
+            )
+            HStack {
+                Spacer()
+                Button("Отмена") {
+                    isCreateProfilePresented = false
+                }
+                Button("Создать") {
+                    viewModel.createProfile(
+                        named: newProfileName,
+                        learningLanguage: newProfileLearningLanguage,
+                        automaticallyLoadWords: newProfileAutomaticallyLoadWords,
+                        automaticallyLoadGrammar: newProfileAutomaticallyLoadGrammar
+                    )
+                    isCreateProfilePresented = false
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 400)
+    }
+
+    private func sidebarActionButton(
+        systemName: String,
+        helpText: String,
+        role: ButtonRole? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(role: role, action: action) {
+            Image(systemName: systemName)
+                .frame(width: 14, height: 14)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.regular)
+        .frame(width: 32, height: 30)
+        .help(helpText)
     }
 }

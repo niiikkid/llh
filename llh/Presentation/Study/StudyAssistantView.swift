@@ -61,13 +61,10 @@ struct StudyAssistantView: View {
     @ViewBuilder
     private var wordsTabBody: some View {
         if study.selectedEntryWordsStatus == .processing {
-            CenteredContentContainer {
-                ContentUnavailableView(
-                    "Готовлю перевод слов",
-                    systemImage: "books.vertical",
-                    description: Text("Запрашиваю слова для текущего текста.")
-                )
-            }
+            StudyTabLoadingView(
+                title: "Готовлю перевод слов",
+                subtitle: "Запрашиваю слова для текущего текста."
+            )
         } else if study.hasWordsContent {
             WordStudyEntriesView(payload: study.studyMaterials.words)
         } else if study.canRetryWordsStudy {
@@ -92,13 +89,10 @@ struct StudyAssistantView: View {
     @ViewBuilder
     private var grammarTabBody: some View {
         if study.selectedEntryGrammarStatus == .processing {
-            CenteredContentContainer {
-                ContentUnavailableView(
-                    "Готовлю грамматику",
-                    systemImage: "text.book.closed",
-                    description: Text("Разбираю, как связаны части предложения.")
-                )
-            }
+            StudyTabLoadingView(
+                title: "Готовлю грамматику",
+                subtitle: "Разбираю, как связаны части предложения."
+            )
         } else if study.hasGrammarContent {
             GrammarExplanationView(payload: study.studyMaterials.grammar)
         } else if study.canRetryGrammarStudy {
@@ -132,5 +126,27 @@ struct StudyAssistantView: View {
             return "Грамматика запустится автоматически после форматирования, если включено в настройках сессии."
         }
         return "Объяснение загружается по кнопке выше."
+    }
+}
+
+private struct StudyTabLoadingView: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        CenteredContentContainer {
+            VStack(spacing: 12) {
+                ProgressView()
+                VStack(spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.medium))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
     }
 }

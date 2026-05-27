@@ -168,7 +168,7 @@ struct SessionsListView: View {
             Text("Язык сессии нельзя изменить после создания.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            sessionAutomationToggles(
+            SessionAutomationTogglesView(
                 loadWords: $newProfileAutomaticallyLoadWords,
                 loadGrammar: $newProfileAutomaticallyLoadGrammar
             )
@@ -224,7 +224,7 @@ struct SessionsListView: View {
             Text("После успешного форматирования перевода сессия может автоматически запросить учебные материалы.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            sessionAutomationToggles(
+            SessionAutomationTogglesView(
                 loadWords: $automationLoadWords,
                 loadGrammar: $automationLoadGrammar
             )
@@ -246,15 +246,6 @@ struct SessionsListView: View {
         }
         .padding(16)
         .frame(width: 420)
-    }
-
-    @ViewBuilder
-    private func sessionAutomationToggles(
-        loadWords: Binding<Bool>,
-        loadGrammar: Binding<Bool>
-    ) -> some View {
-        Toggle("Автоматически переводить слова", isOn: loadWords)
-        Toggle("Автоматически объяснять грамматику", isOn: loadGrammar)
     }
 
     private func sessionAutomationSummary(for profile: LearningProfile) -> String {
