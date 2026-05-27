@@ -47,7 +47,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - **Profiles / session list:** на `HistoryViewModel` (`createProfile`, `selectProfile`, `deleteSelectedProfile`, `deleteSelectedEntry`, `selectEntry`, session reading)
 - **Overlay:** `TranslationOverlayCoordinator` (`close`, `toggleLastTranslation`, format-result handlers); `TranslationOverlayService` — compact panel (v0.2 inc. 7: ✕, Escape, `onRequestClose` → coordinator); Main — прокси `closeTranslationOverlay`, `toggleLastTranslationOverlay` для shortcuts
 - **Study (words):** `StudyViewModel.retryStudyAssistantDataForSelectedEntry` (Phase 8: UI вызывает Study VM напрямую, без прокси Main)
-- **Session reading:** на `HistoryViewModel` (`toggleSessionReadingOverview`, `copySessionReadingOverviewToPasteboard`, `plainTextForSessionReadingCopy`)
+- **Session reading:** на `HistoryViewModel` (`toggleSessionReadingOverview`, `copySessionReadingOverviewToPasteboard`, `plainTextForSessionReadingCopy`); v0.2 inc. 8 — `SessionReadingSequenceItem` с word/grammar из persisted `StudyMaterials`, UI в `SessionReadingOverviewView`
 
 **Shortcuts:** `AppShortcutsCoordinator` в `App/`; handlers вызывают capture/settings/overlay на Main (не public API на feature ViewModels).
 

@@ -8,6 +8,7 @@ import SwiftUI
 struct SessionReadingOverviewView: View {
     @ObservedObject var history: HistoryViewModel
     @State private var fontSizePoints: CGFloat = 16
+    @State private var expandedEntryIDs: Set<CapturedTextEntry.ID> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -46,7 +47,12 @@ struct SessionReadingOverviewView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 16) {
                     ForEach(Array(history.sessionReadingSequence.enumerated()), id: \.element.id) { index, item in
-                        SessionReadingItemView(item: item, fontSizePoints: fontSizePoints)
+                        SessionReadingItemView(
+                            item: item,
+                            fontSizePoints: fontSizePoints,
+                            isExpanded: expandedEntryIDs.contains(item.id),
+                            onToggleDetails: { toggleDetails(for: item.id) }
+                        )
 
                         if index < history.sessionReadingSequence.count - 1 {
                             Divider()
@@ -60,38 +66,186 @@ struct SessionReadingOverviewView: View {
         }
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onChange(of: history.showsSessionReadingOverview) { _, isShowing in
+            if !isShowing {
+                expandedEntryIDs = []
+            }
+        }
+    }
+
+    private func toggleDetails(for entryID: CapturedTextEntry.ID) {
+        if expandedEntryIDs.contains(entryID) {
+            expandedEntryIDs.remove(entryID)
+        } else {
+            expandedEntryIDs.insert(entryID)
+        }
     }
 }
 
 private struct SessionReadingItemView: View {
     let item: SessionReadingSequenceItem
     let fontSizePoints: CGFloat
+    let isExpanded: Bool
+    let onToggleDetails: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if item.sourceLine.isEmpty {
-                Text(item.displaySourceLine)
-                    .font(.system(size: fontSizePoints))
-                    .foregroundStyle(.tertiary)
-            } else {
-                Text(item.sourceLine)
-                    .font(.system(size: fontSizePoints, weight: .medium))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if item.sourceLine.isEmpty {
+                        Text(item.displaySourceLine)
+                            .font(.system(size: fontSizePoints))
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        Text(item.sourceLine)
+                            .font(.system(size: fontSizePoints, weight: .medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+
+                    if item.translationLine.isEmpty {
+                        Text(item.displayTranslationLine)
+                            .font(.system(size: max(11, fontSizePoints - 2)))
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        Text(item.translationLine)
+                            .font(.system(size: max(11, fontSizePoints - 2)))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if item.hasExpandableDetails {
+                    Button(action: onToggleDetails) {
+                        Image(systemName: isExpanded ? "eye.fill" : "eye")
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                    .help(isExpanded ? "Скрыть детали" : "Показать детали")
+                }
             }
 
-            if item.translationLine.isEmpty {
-                Text(item.displayTranslationLine)
-                    .font(.system(size: max(11, fontSizePoints - 2)))
-                    .foregroundStyle(.tertiary)
-            } else {
-                Text(item.translationLine)
-                    .font(.system(size: max(11, fontSizePoints - 2)))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+            if isExpanded, item.hasExpandableDetails {
+                SessionReadingEntryDetailsView(item: item, fontSizePoints: fontSizePoints)
+                    .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct SessionReadingEntryDetailsView: View {
+    let item: SessionReadingSequenceItem
+    let fontSizePoints: CGFloat
+
+    private var detailFontSize: CGFloat {
+        max(11, fontSizePoints - 2)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let wordStudy = item.wordStudy {
+                SessionReadingWordStudyDetailsView(
+                    payload: wordStudy,
+                    fontSizePoints: detailFontSize
+                )
+            }
+
+            if let grammarStudy = item.grammarStudy {
+                SessionReadingGrammarStudyDetailsView(
+                    payload: grammarStudy,
+                    fontSizePoints: detailFontSize
+                )
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.65))
+        )
+    }
+}
+
+private struct SessionReadingWordStudyDetailsView: View {
+    let payload: WordStudyPayload
+    let fontSizePoints: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Перевод слов")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            ForEach(Array(payload.entries.enumerated()), id: \.offset) { _, entry in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(entry.termPinyin)
+                            .font(.system(size: fontSizePoints + 1, weight: .semibold, design: .rounded))
+                        if !entry.russianPronunciationGuide.isEmpty {
+                            Text("(\(entry.russianPronunciationGuide))")
+                                .font(.system(size: fontSizePoints))
+                                .foregroundStyle(.secondary)
+                        }
+                        Text("—")
+                            .foregroundStyle(.secondary)
+                        Text(entry.termTranslation)
+                            .font(.system(size: fontSizePoints))
+                            .foregroundStyle(.secondary)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+
+                    if !entry.characterBreakdown.isEmpty {
+                        ForEach(Array(entry.characterBreakdown.enumerated()), id: \.offset) { _, part in
+                            HStack(alignment: .top, spacing: 8) {
+                                Text(part.pinyinText)
+                                    .font(.system(size: fontSizePoints, weight: .medium, design: .rounded))
+                                    .frame(minWidth: 72, alignment: .leading)
+                                Text(part.russianTranslation)
+                                    .font(.system(size: fontSizePoints))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .textSelection(.enabled)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct SessionReadingGrammarStudyDetailsView: View {
+    let payload: GrammarExplanationPayload
+    let fontSizePoints: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Грамматика")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            ForEach(Array(payload.structures.enumerated()), id: \.offset) { _, structure in
+                VStack(alignment: .leading, spacing: 4) {
+                    if !structure.title.isEmpty {
+                        Text(structure.title)
+                            .font(.system(size: fontSizePoints + 1, weight: .semibold))
+                    }
+                    if !structure.explanation.isEmpty {
+                        Text(structure.explanation)
+                            .font(.system(size: fontSizePoints))
+                            .textSelection(.enabled)
+                    }
+                    if !structure.usageNotes.isEmpty {
+                        Text(structure.usageNotes)
+                            .font(.system(size: fontSizePoints))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+        }
     }
 }

@@ -1,5 +1,21 @@
 # Wiki Log
 
+## [2026-05-27] lint | 0 issues found, 7 auto-fixed
+- Updated: wiki/index.md (Phase 2/4/8/9 summaries aligned with Inc. 8)
+- Updated: Refactoring Phase 0 Baseline (session reading inc. 8)
+- Updated: Refactoring Phase 2 Domain Models (See Also inc. 8)
+- Updated: Refactoring Phase 4 Presentation (Updated metadata)
+- Updated: Refactoring Phase 8 UI Decomposition (tree + See Also inc. 8)
+- Updated: Refactoring Phase 9 Testing Strategy (See Also inc. 8)
+- Verified: v0.2 Product Plan and raw Inc. 8 completion already current
+
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 8 session reading details completion)
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 8 UI Decomposition
+- Updated: Refactoring Phase 9 Testing Strategy
+- Updated: wiki/index.md
+
 ## [2026-05-27] ingest | v0.2 Product Plan (Increment 7 overlay close completion)
 - Updated: Refactoring Phase 4 Presentation
 - Updated: Refactoring Phase 8 UI Decomposition

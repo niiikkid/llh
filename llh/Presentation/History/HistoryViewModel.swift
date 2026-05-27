@@ -79,11 +79,7 @@ final class HistoryViewModel: ObservableObject {
         return profiles[selectedProfileIndex].history
             .sorted(by: { $0.createdAt < $1.createdAt })
             .map { entry in
-                SessionReadingSequenceItem(
-                    id: entry.id,
-                    sourceLine: entry.sessionReadingSourceLine(learningLanguage: language),
-                    translationLine: entry.sessionReadingTranslationLine()
-                )
+                SessionReadingSequenceItem(entry: entry, learningLanguage: language)
             }
     }
 

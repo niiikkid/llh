@@ -141,6 +141,66 @@ struct llhTests {
     }
 
     @Test
+    func sessionReadingSequenceItem_exposesStoredWordStudyWhenSucceeded() {
+        let words = WordStudyPayload(entries: [
+            WordStudyEntry(
+                termPinyin: "你好",
+                termTranslation: "привет",
+                characterBreakdown: []
+            ),
+        ])
+        let entry = CapturedTextEntry(
+            text: "你好",
+            studyMaterials: StudyMaterials(words: words, wordsStatus: .succeeded)
+        )
+
+        let item = SessionReadingSequenceItem(entry: entry, learningLanguage: .chinese)
+
+        #expect(item.hasExpandableDetails)
+        #expect(item.wordStudy == words)
+        #expect(item.grammarStudy == nil)
+    }
+
+    @Test
+    func sessionReadingSequenceItem_omitsWordStudyWhileProcessingOrFailed() {
+        let words = WordStudyPayload(entries: [
+            WordStudyEntry(termPinyin: "a", termTranslation: "b", characterBreakdown: []),
+        ])
+        let processingEntry = CapturedTextEntry(
+            text: "a",
+            studyMaterials: StudyMaterials(words: words, wordsStatus: .processing)
+        )
+        let failedEntry = CapturedTextEntry(
+            text: "a",
+            studyMaterials: StudyMaterials(words: words, wordsStatus: .failed)
+        )
+
+        #expect(SessionReadingSequenceItem(entry: processingEntry, learningLanguage: .chinese).hasExpandableDetails == false)
+        #expect(SessionReadingSequenceItem(entry: failedEntry, learningLanguage: .chinese).wordStudy == nil)
+    }
+
+    @Test
+    func sessionReadingSequenceItem_exposesGrammarStudyWhenSucceeded() {
+        let grammar = GrammarExplanationPayload(structures: [
+            GrammarStructure(
+                title: "Порядок слов",
+                explanation: "Субъект перед сказуемым.",
+                usageNotes: "",
+                examples: []
+            ),
+        ])
+        let entry = CapturedTextEntry(
+            text: "Hello",
+            studyMaterials: StudyMaterials(grammar: grammar, grammarStatus: .succeeded)
+        )
+
+        let item = SessionReadingSequenceItem(entry: entry, learningLanguage: .english)
+
+        #expect(item.hasExpandableDetails)
+        #expect(item.grammarStudy == grammar)
+    }
+
+    @Test
     func sessionListLines_fallsBackToRawWhenNoFormattedText() {
         let entry = CapturedTextEntry(text: "Line one\nLine two")
 

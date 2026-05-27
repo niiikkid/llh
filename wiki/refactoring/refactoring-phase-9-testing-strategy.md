@@ -46,6 +46,8 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 
 **v0.2 Inc. 7:** `translationOverlayDismissSchedule_onlyTimesTemporaryContent` в `llhTests` — `TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss` (timer только при `dismissAfter != nil`). Overlay ✕ / Escape — manual UI verification.
 
+**v0.2 Inc. 8:** `sessionReadingSequenceItem_*` в `llhTests` — succeeded word/grammar payloads vs processing/failed; eye/details UI — manual verification.
+
 ## Исправления существующих тестов
 
 - `OCREngine.openai` → `.ai` в Phase 1/3 tests.
@@ -104,5 +106,5 @@ xcodebuild -scheme llh -destination 'platform=macOS' test -only-testing:llhTests
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
-- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar (inc. 5); automation (inc. 6); overlay dismiss (inc. 7)
+- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar (inc. 5); automation (inc. 6); overlay dismiss (inc. 7); reading details (inc. 8)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot §Phase 9–10

@@ -1,14 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md); [v0.2 increment 7 overlay close completion](../../raw/refactoring/2026-05-27-v0-2-increment-7-overlay-close-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md); [v0.2 increment 7 overlay close completion](../../raw/refactoring/2026-05-27-v0-2-increment-7-overlay-close-completion.md); [v0.2 increment 8 session reading details completion](../../raw/refactoring/2026-05-27-v0-2-increment-8-session-reading-details-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); per-session auto words/grammar after formatting (Inc. 6); dismissible compact overlay with close button and Escape (Inc. 7); single main window (Inc. 10). Remaining: reading overview details, Dock badge.
+**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); per-session auto words/grammar after formatting (Inc. 6); dismissible compact overlay with close button and Escape (Inc. 7); session reading overview expandable word/grammar details (Inc. 8); single main window (Inc. 10). Remaining: Dock badge (Inc. 9).
 
 ## Release progress
 
@@ -21,7 +21,7 @@
 | 5 | Words and grammar tabs | **Done** (2026-05-27) |
 | 6 | Session-level automation | **Done** (2026-05-27) |
 | 7 | Overlay closing | **Done** (2026-05-27) |
-| 8 | Session reading overview details | Planned |
+| 8 | Session reading overview details | **Done** (2026-05-27) |
 | 9 | Dock language badge | Planned |
 | 10 | Single main window | **Done** (2026-05-27) |
 
@@ -266,19 +266,35 @@ Risk:
 
 ## Increment 8: Session Reading Overview Details
 
+**Status: done** (2026-05-27).
+
 Goal: make `Весь текст сессии` useful for review, not only plain reading.
 
-Scope:
+Scope (all delivered):
 
 - Add a small details/eye button per entry in the session reading overview.
 - Expanding an entry shows available details below it.
 - Include word translations when available.
 - Keep the overview readable; collapsed state should remain compact.
 
-Implementation notes:
+### Implemented
 
-- Extend `SessionReadingSequenceItem` or provide a richer view model item with entry ID and available study materials.
-- Avoid loading missing words implicitly from the overview unless the session automation setting says so.
+| Area | What shipped |
+|------|----------------|
+| Domain | `SessionReadingSequenceItem` — `wordStudy`, `grammarStudy`, `hasExpandableDetails`; `init(entry:learningLanguage:)`; only `.succeeded` payloads with content |
+| History VM | `sessionReadingSequence` maps via entry initializer (no OpenAI from overview) |
+| UI | `SessionReadingOverviewView` — eye toggle per row; compact word/grammar blocks; collapse reset on leaving overview |
+| Copy | `plainTextForSessionReadingCopy` unchanged (source + translation only) |
+| Tests | `sessionReadingSequenceItem_*` in `llhTests` |
+
+Implementation notes (as built):
+
+- Grammar details shown when persisted and succeeded, same rules as words.
+- No implicit study loading from overview.
+
+Risk:
+
+- Low. Read-only display of persisted `StudyMaterials`.
 
 ## Increment 9: Dock Language Badge
 
@@ -329,8 +345,8 @@ New file: `App/MainWindowActivator.swift`.
 6. ~~Words/grammar tabs and grammar OpenAI path.~~ **Done.**
 7. ~~Session-level automation flags.~~ **Done.**
 8. ~~Overlay close/Escape behavior.~~ **Done.**
-9. Session reading overview details. **Next recommended.**
-10. Dock language badge.
+9. ~~Session reading overview details.~~ **Done.**
+10. Dock language badge. **Next recommended.**
 
 ## Testing Focus
 
@@ -340,6 +356,7 @@ New file: `App/MainWindowActivator.swift`.
 - Session rename persists and does not change language.
 - **Inc. 6 (done):** existing sessions decode with default automation flags; SQLite migration; `Phase3ManageProfilesUseCaseTests` / `Phase5HistoryPersistenceTests` / `learningProfile_decodesLegacyPayloadWithoutAutomationFlags`.
 - **Inc. 7 (done):** `translationOverlayDismissSchedule_onlyTimesTemporaryContent` in `llhTests`; manual — ✕ / Escape / configured shortcut close overlay; loading stays until dismiss; timed translation still auto-hides.
+- **Inc. 8 (done):** `sessionReadingSequenceItem_*` in `llhTests`; manual — eye appears only when words/grammar succeeded in history; expand shows compact details; copy unchanged.
 - Formatting failure shows raw text and icon-only retry (manual UI verification).
 - Successful formatting triggers enabled words/grammar requests exactly once (manual UI verification).
 - Words and grammar failures are independently retryable.
