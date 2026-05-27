@@ -120,5 +120,5 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — завершённый Phase 1
-- [v0.2 Product Plan](v0-2-product-plan.md) — product shell after refactor (inc. 1–5, 10)
+- [v0.2 Product Plan](v0-2-product-plan.md) — product shell after refactor (inc. 1–6, 10)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный пофазный план (архивный snapshot на 2026-05-26)

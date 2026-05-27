@@ -17,6 +17,11 @@ enum ManageProfilesRenameOutcome: Equatable {
     case profileNotFound
 }
 
+enum ManageProfilesAutomationOutcome: Equatable {
+    case updated
+    case profileNotFound
+}
+
 @MainActor
 struct ManageProfilesUseCase {
     private let manageHistoryUseCase: ManageHistoryUseCase
@@ -46,11 +51,15 @@ struct ManageProfilesUseCase {
     func createProfile(
         state: inout HistorySessionState,
         named rawName: String,
-        learningLanguage: LearningLanguage
+        learningLanguage: LearningLanguage,
+        automaticallyLoadWords: Bool = false,
+        automaticallyLoadGrammar: Bool = false
     ) -> LearningProfile {
         let profile = LearningProfile(
             name: Self.normalizedProfileName(from: rawName),
-            learningLanguage: learningLanguage
+            learningLanguage: learningLanguage,
+            automaticallyLoadWords: automaticallyLoadWords,
+            automaticallyLoadGrammar: automaticallyLoadGrammar
         )
         state.profiles.insert(profile, at: 0)
         state.selectedProfileID = profile.id
@@ -65,6 +74,20 @@ struct ManageProfilesUseCase {
         } else {
             state.selectedEntryID = nil
         }
+    }
+
+    func updateSessionAutomation(
+        state: inout HistorySessionState,
+        profileID: LearningProfile.ID,
+        automaticallyLoadWords: Bool,
+        automaticallyLoadGrammar: Bool
+    ) -> ManageProfilesAutomationOutcome {
+        guard let profileIndex = state.profiles.firstIndex(where: { $0.id == profileID }) else {
+            return .profileNotFound
+        }
+        state.profiles[profileIndex].automaticallyLoadWords = automaticallyLoadWords
+        state.profiles[profileIndex].automaticallyLoadGrammar = automaticallyLoadGrammar
+        return .updated
     }
 
     func renameProfile(

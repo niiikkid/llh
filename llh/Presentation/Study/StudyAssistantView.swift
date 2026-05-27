@@ -83,7 +83,7 @@ struct StudyAssistantView: View {
                 ContentUnavailableView(
                     "Загрузить перевод слов",
                     systemImage: "hand.tap",
-                    description: Text("Материал загружается только по запросу.")
+                    description: Text(wordsEmptyStateDescription)
                 )
             }
         }
@@ -114,9 +114,23 @@ struct StudyAssistantView: View {
                 ContentUnavailableView(
                     "Загрузить грамматику",
                     systemImage: "hand.tap",
-                    description: Text("Объяснение загружается только по запросу.")
+                    description: Text(grammarEmptyStateDescription)
                 )
             }
         }
+    }
+
+    private var wordsEmptyStateDescription: String {
+        if study.sessionAutomaticallyLoadsWords {
+            return "Перевод слов запустится автоматически после форматирования, если включено в настройках сессии."
+        }
+        return "Материал загружается по кнопке выше."
+    }
+
+    private var grammarEmptyStateDescription: String {
+        if study.sessionAutomaticallyLoadsGrammar {
+            return "Грамматика запустится автоматически после форматирования, если включено в настройках сессии."
+        }
+        return "Объяснение загружается по кнопке выше."
     }
 }

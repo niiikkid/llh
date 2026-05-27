@@ -147,6 +147,49 @@ struct Phase3ManageProfilesUseCaseTests {
 
     @Test
     @MainActor
+    func createProfile_persistsSessionAutomationFlags() {
+        var state = HistorySessionState(profiles: [], selectedProfileID: nil, selectedEntryID: nil)
+        let useCase = makeProfilesUseCase()
+
+        let profile = useCase.createProfile(
+            state: &state,
+            named: "Chinese",
+            learningLanguage: .chinese,
+            automaticallyLoadWords: true,
+            automaticallyLoadGrammar: true
+        )
+
+        #expect(profile.automaticallyLoadWords)
+        #expect(profile.automaticallyLoadGrammar)
+        #expect(state.profiles[0].automaticallyLoadWords)
+        #expect(state.profiles[0].automaticallyLoadGrammar)
+    }
+
+    @Test
+    @MainActor
+    func updateSessionAutomation_updatesProfileFlags() {
+        let custom = LearningProfile(name: "Study", learningLanguage: .english)
+        var state = HistorySessionState(
+            profiles: [custom],
+            selectedProfileID: custom.id,
+            selectedEntryID: nil
+        )
+        let useCase = makeProfilesUseCase()
+
+        let outcome = useCase.updateSessionAutomation(
+            state: &state,
+            profileID: custom.id,
+            automaticallyLoadWords: true,
+            automaticallyLoadGrammar: false
+        )
+
+        #expect(outcome == .updated)
+        #expect(state.profiles[0].automaticallyLoadWords)
+        #expect(!state.profiles[0].automaticallyLoadGrammar)
+    }
+
+    @Test
+    @MainActor
     func renameProfile_updatesStoredName() {
         let custom = LearningProfile(name: "Old", learningLanguage: .spanish)
         var state = HistorySessionState(

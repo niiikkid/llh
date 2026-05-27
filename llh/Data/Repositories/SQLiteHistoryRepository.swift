@@ -71,6 +71,9 @@ struct SQLiteHistoryRepository: HistoryRepository {
                     throw HistoryPersistenceError.invalidRow
                 }
 
+                let autoLoadWords: Int = profileRow["auto_load_words"] ?? 0
+                let autoLoadGrammar: Int = profileRow["auto_load_grammar"] ?? 0
+
                 profiles.append(
                     LearningProfile(
                         id: profileID,
@@ -79,7 +82,9 @@ struct SQLiteHistoryRepository: HistoryRepository {
                         kind: kind,
                         createdAt: Date(timeIntervalSince1970: createdAt),
                         history: history,
-                        selectedEntryID: selectedEntryID
+                        selectedEntryID: selectedEntryID,
+                        automaticallyLoadWords: autoLoadWords != 0,
+                        automaticallyLoadGrammar: autoLoadGrammar != 0
                     )
                 )
             }
@@ -98,8 +103,9 @@ struct SQLiteHistoryRepository: HistoryRepository {
                     sql: """
                     INSERT INTO \(HistoryDatabaseSchema.profilesTable) (
                         id, name, learning_language, kind, created_at,
-                        selected_entry_id, profile_sort_index
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        selected_entry_id, profile_sort_index,
+                        auto_load_words, auto_load_grammar
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     arguments: [
                         profile.id.uuidString,
@@ -109,6 +115,8 @@ struct SQLiteHistoryRepository: HistoryRepository {
                         profile.createdAt.timeIntervalSince1970,
                         profile.selectedEntryID?.uuidString,
                         profileIndex,
+                        profile.automaticallyLoadWords ? 1 : 0,
+                        profile.automaticallyLoadGrammar ? 1 : 0,
                     ]
                 )
 

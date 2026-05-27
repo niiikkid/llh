@@ -47,6 +47,26 @@ struct Phase5HistoryPersistenceTests {
   }
 
   @Test
+  func sqliteHistoryRepository_roundtripsSessionAutomationFlags() throws {
+    let locations = makeTemporaryLocations()
+    let database = try HistoryDatabase(locations: locations)
+    let repository = SQLiteHistoryRepository(database: database)
+    let profile = LearningProfile(
+      name: "Auto",
+      learningLanguage: .chinese,
+      automaticallyLoadWords: true,
+      automaticallyLoadGrammar: true
+    )
+    let snapshot = HistoryStoreSnapshot(profiles: [profile], selectedProfileID: profile.id)
+
+    try repository.saveStore(snapshot)
+    let loaded = try repository.loadStore()
+
+    #expect(loaded.profiles[0].automaticallyLoadWords)
+    #expect(loaded.profiles[0].automaticallyLoadGrammar)
+  }
+
+  @Test
   func sqliteHistoryRepository_emptyDatabaseReturnsDefaultProfile() throws {
     let locations = makeTemporaryLocations()
     let database = try HistoryDatabase(locations: locations)

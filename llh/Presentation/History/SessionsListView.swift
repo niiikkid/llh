@@ -12,10 +12,15 @@ struct SessionsListView: View {
 
     @State private var newProfileName = ""
     @State private var newProfileLearningLanguage: LearningLanguage = .english
+    @State private var newProfileAutomaticallyLoadWords = false
+    @State private var newProfileAutomaticallyLoadGrammar = false
     @State private var isCreateProfilePresented = false
     @State private var profilePendingDelete: LearningProfile?
     @State private var profilePendingRename: LearningProfile?
+    @State private var profilePendingAutomation: LearningProfile?
     @State private var renameProfileName = ""
+    @State private var automationLoadWords = false
+    @State private var automationLoadGrammar = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -24,6 +29,8 @@ struct SessionsListView: View {
                 Button {
                     newProfileName = ""
                     newProfileLearningLanguage = defaultNewProfileLearningLanguage
+                    newProfileAutomaticallyLoadWords = false
+                    newProfileAutomaticallyLoadGrammar = false
                     isCreateProfilePresented = true
                 } label: {
                     Label("Создать сессию", systemImage: "plus")
@@ -51,6 +58,9 @@ struct SessionsListView: View {
         }
         .sheet(item: $profilePendingRename) { profile in
             renameProfileSheet(profile)
+        }
+        .sheet(item: $profilePendingAutomation) { profile in
+            sessionAutomationSheet(profile)
         }
         .alert(
             "Удалить сессию?",
@@ -94,6 +104,11 @@ struct SessionsListView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                if profile.automaticallyLoadWords || profile.automaticallyLoadGrammar {
+                    Text(sessionAutomationSummary(for: profile))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 8)
             HStack(spacing: 8) {
@@ -113,6 +128,17 @@ struct SessionsListView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .help("Переименовать сессию")
+
+                Button {
+                    automationLoadWords = profile.automaticallyLoadWords
+                    automationLoadGrammar = profile.automaticallyLoadGrammar
+                    profilePendingAutomation = profile
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Автозагрузка учебных материалов")
 
                 Button(role: .destructive) {
                     profilePendingDelete = profile
@@ -142,6 +168,10 @@ struct SessionsListView: View {
             Text("Язык сессии нельзя изменить после создания.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            sessionAutomationToggles(
+                loadWords: $newProfileAutomaticallyLoadWords,
+                loadGrammar: $newProfileAutomaticallyLoadGrammar
+            )
             HStack {
                 Spacer()
                 Button("Отмена") {
@@ -150,7 +180,9 @@ struct SessionsListView: View {
                 Button("Создать") {
                     viewModel.createProfile(
                         named: newProfileName,
-                        learningLanguage: newProfileLearningLanguage
+                        learningLanguage: newProfileLearningLanguage,
+                        automaticallyLoadWords: newProfileAutomaticallyLoadWords,
+                        automaticallyLoadGrammar: newProfileAutomaticallyLoadGrammar
                     )
                     isCreateProfilePresented = false
                     if let createdID = viewModel.selectedProfileID {
@@ -183,6 +215,59 @@ struct SessionsListView: View {
         }
         .padding(16)
         .frame(width: 360)
+    }
+
+    private func sessionAutomationSheet(_ profile: LearningProfile) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Автозагрузка для «\(profile.displayName)»")
+                .font(.headline)
+            Text("После успешного форматирования перевода сессия может автоматически запросить учебные материалы.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            sessionAutomationToggles(
+                loadWords: $automationLoadWords,
+                loadGrammar: $automationLoadGrammar
+            )
+            HStack {
+                Spacer()
+                Button("Отмена") {
+                    profilePendingAutomation = nil
+                }
+                Button("Сохранить") {
+                    viewModel.updateSessionAutomation(
+                        profileID: profile.id,
+                        automaticallyLoadWords: automationLoadWords,
+                        automaticallyLoadGrammar: automationLoadGrammar
+                    )
+                    profilePendingAutomation = nil
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 420)
+    }
+
+    @ViewBuilder
+    private func sessionAutomationToggles(
+        loadWords: Binding<Bool>,
+        loadGrammar: Binding<Bool>
+    ) -> some View {
+        Toggle("Автоматически переводить слова", isOn: loadWords)
+        Toggle("Автоматически объяснять грамматику", isOn: loadGrammar)
+    }
+
+    private func sessionAutomationSummary(for profile: LearningProfile) -> String {
+        switch (profile.automaticallyLoadWords, profile.automaticallyLoadGrammar) {
+        case (true, true):
+            return "Авто: слова и грамматика после перевода"
+        case (true, false):
+            return "Авто: перевод слов после перевода"
+        case (false, true):
+            return "Авто: грамматика после перевода"
+        case (false, false):
+            return ""
+        }
     }
 
     private func translationCountLabel(for profile: LearningProfile) -> String {

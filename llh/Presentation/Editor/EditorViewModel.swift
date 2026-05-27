@@ -177,6 +177,7 @@ final class EditorViewModel: ObservableObject {
         history.persist()
         publishStatus("Форматирование завершено.")
         overlay.handleFormattingSuccess(entryID: entryID, formatted: formatted)
+        study.startSessionAutomationAfterFormattingSuccess(profileID: profileID, entryID: entryID)
     }
 
     private func applyFormattingFailure(entryID: CapturedTextEntry.ID, error: Error) {

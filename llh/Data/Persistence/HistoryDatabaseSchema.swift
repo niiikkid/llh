@@ -49,6 +49,12 @@ enum HistoryDatabaseSchema {
                 table.column("entry_sort_index", .integer).notNull()
             }
         }
+        migrator.registerMigration("v2_profile_session_automation") { db in
+            try db.alter(table: profilesTable) { table in
+                table.add(column: "auto_load_words", .integer).notNull().defaults(to: 0)
+                table.add(column: "auto_load_grammar", .integer).notNull().defaults(to: 0)
+            }
+        }
         return migrator
     }
 }

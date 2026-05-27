@@ -1,5 +1,16 @@
 # Wiki Log
 
+## [2026-05-27] lint | 2 issues found, 11 auto-fixed
+- Updated: wiki/index.md (Inc. 6 summaries for Phases 2–5, 8–9)
+- Updated: v0.2 Product Plan (Inc. 5 note vs Inc. 6)
+- Updated: Refactoring Phase 0/2/3/4/8/9 (Inc. 6 cascade)
+- Updated: Refactoring Phase 3 Use Cases (Raw link, test counts)
+
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 6 completion)
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: Refactoring Phase 5 SQLite Persistence
+- Updated: wiki/index.md
+
 ## [2026-05-27] lint | 12 issues found, 15 auto-fixed
 - Updated: wiki/index.md (Phase 0/3/4/6/8/9/10 summaries after Inc. 5)
 - Updated: Refactoring Phase 0 Baseline (`OpenAICallSite` = 5)

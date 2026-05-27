@@ -54,7 +54,7 @@ MainViewModel
 |------|-----------|------------|
 | `Presentation/History/HistoryViewModel.swift` | 253 | Профили, выбор записи, load/persist/mutate session |
 | `Presentation/History/HistoryView.swift` | ~120 | Sidebar: список переводов активной сессии (v0.2 inc. 2) |
-| `Presentation/History/SessionsListView.swift` | — | Страница сессий: create/open/rename/delete (v0.2 inc. 2) |
+| `Presentation/History/SessionsListView.swift` | — | Страница сессий: CRUD (inc. 2); automation toggles + gear sheet (inc. 6) |
 | `MainViewModel.swift` | 509 | Фасад: `let history`; capture/format/study/editor |
 | `ContentView.swift` | — | `AppMainRoute`: sessions / workspace / settings (v0.2 inc. 2) |
 
@@ -153,7 +153,7 @@ Format/study/overlay и editor state остаются на Main (до inc. 5); �
 
 | Файл | Строк (≈) | Назначение |
 |------|-----------|------------|
-| `Presentation/Study/StudyViewModel.swift` | 280+ | Word + grammar study, `LoadWordStudyUseCase` / `LoadGrammarStudyUseCase`, tab state (v0.2 inc. 5) |
+| `Presentation/Study/StudyViewModel.swift` | 280+ | Word + grammar study, tab state (inc. 5); `startSessionAutomationAfterFormattingSuccess` (inc. 6) |
 | `Presentation/Study/StudyLearningTab.swift` | — | `words` / `grammar` tabs (v0.2 inc. 5) |
 | `Presentation/Study/GrammarExplanationView.swift` | — | Renders `GrammarExplanationPayload` (v0.2 inc. 5) |
 | `Presentation/Overlay/TranslationOverlayCoordinator.swift` | 92 | Overlay после format, toggle last translation, awaiting entry ID |
@@ -166,6 +166,7 @@ Format/study/overlay и editor state остаются на Main (до inc. 5); �
 |----------|------------|
 | `studyMaterials` | Words + grammar payloads/status для выбранной записи |
 | `selectedLearningTab` | Активная вкладка «Перевод слов» / «Грамматика» (v0.2 inc. 5) |
+| Session automation | После format success — отдельные Task для слов/грамматики по флагам `LearningProfile` (v0.2 inc. 6); триггер из `EditorViewModel` |
 
 ### TranslationOverlayCoordinator
 
@@ -278,5 +279,5 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — Inc. 2–5: sessions, settings, translation state, study tabs
+- [v0.2 Product Plan](v0-2-product-plan.md) — Inc. 2–6: sessions, settings, translation state, study tabs, session automation
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план

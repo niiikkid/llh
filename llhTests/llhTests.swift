@@ -198,6 +198,31 @@ struct llhTests {
 
         #expect(profile.name == "Legacy")
         #expect(profile.learningLanguage == .english)
+        #expect(!profile.automaticallyLoadWords)
+        #expect(!profile.automaticallyLoadGrammar)
+    }
+
+    @Test
+    func learningProfile_decodesLegacyPayloadWithoutAutomationFlags() throws {
+        let json = """
+        {
+          "id": "11111111-1111-1111-1111-111111111111",
+          "name": "Legacy",
+          "learningLanguage": "english",
+          "kind": "custom",
+          "createdAt": "2026-04-06T12:00:00Z",
+          "history": [],
+          "selectedEntryID": null
+        }
+        """
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let profile = try decoder.decode(LearningProfile.self, from: Data(json.utf8))
+
+        #expect(!profile.automaticallyLoadWords)
+        #expect(!profile.automaticallyLoadGrammar)
     }
 
     @Test

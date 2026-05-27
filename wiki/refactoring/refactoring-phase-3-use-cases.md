@@ -1,7 +1,7 @@
 # Refactoring Phase 3 Use Cases
 
 > Sources: llh project, 2026-05-26
-> Raw: [Phase 3 capture use cases completion](../../raw/refactoring/2026-05-26-phase-3-capture-use-cases-completion.md); [Phase 3 format captured text completion](../../raw/refactoring/2026-05-26-phase-3-format-captured-text-completion.md); [Phase 3 manage history use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-history-use-case-completion.md); [Phase 3 manage profiles use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-profiles-use-case-completion.md); [Phase 3 load word study use case completion](../../raw/refactoring/2026-05-26-phase-3-load-word-study-use-case-completion.md); [Phase 3 manage OpenAI settings use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-openai-settings-use-case-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md)
+> Raw: [Phase 3 capture use cases completion](../../raw/refactoring/2026-05-26-phase-3-capture-use-cases-completion.md); [Phase 3 format captured text completion](../../raw/refactoring/2026-05-26-phase-3-format-captured-text-completion.md); [Phase 3 manage history use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-history-use-case-completion.md); [Phase 3 manage profiles use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-profiles-use-case-completion.md); [Phase 3 load word study use case completion](../../raw/refactoring/2026-05-26-phase-3-load-word-study-use-case-completion.md); [Phase 3 manage OpenAI settings use case completion](../../raw/refactoring/2026-05-26-phase-3-manage-openai-settings-use-case-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
@@ -128,6 +128,7 @@ Use case не меняет `formattingStatus`, не пишет историю и
 | `createProfile` | Insert at 0, select profile, resolve entry |
 | `selectProfile` | Смена профиля + resolve/clear entry |
 | `renameProfile` | Переименование по ID (v0.2 inc. 2) |
+| `updateSessionAutomation` | Флаги `automaticallyLoadWords` / `automaticallyLoadGrammar` на профиле (v0.2 inc. 6) |
 | `deleteProfile` / `deleteSelectedProfile` | Удаление по ID или выбранного; Default защищён |
 | `canDeleteProfile` / `canDeleteSelectedProfile` | `false` для Default |
 
@@ -271,19 +272,20 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 - load fallback `selectedProfileID`, delete/insert/resolve selection, update text reset
 - save roundtrip, `mutateEntry`
 
-`llhTests/Phase3ManageProfilesUseCaseTests.swift` (12 тестов):
+`llhTests/Phase3ManageProfilesUseCaseTests.swift` (14 тестов):
 
 - normalized name; createProfile insert/select
 - selectProfile resolve/clear entry
 - canDelete false for Default; delete custom/default/no selection
 - renameProfile; deleteProfile non-selected / profileNotFound (v0.2 inc. 2)
+- createProfile / updateSessionAutomation persistence flags (v0.2 inc. 6)
 
 `llhTests/Phase3LoadWordStudyUseCaseTests.swift` (9 тестов); `Phase3LoadGrammarStudyUseCaseTests.swift` (v0.2 inc. 5):
 
 - preflight: unsupported profile, missing key/model, skip без formatted text, skip succeeded/processing, ready при forceReload
 - perform: success, propagation `OpenAIServiceError`
 
-**Итого Phase 3 unit-тестов:** 60 (7 + 8 + 10 + 12 + 9 + 14).
+**Итого Phase 3 unit-тестов:** 62 (7 + 8 + 10 + 14 + 9 + 14).
 
 `llhTests/Phase3ManageOpenAISettingsUseCaseTests.swift` (14 тестов):
 
@@ -327,5 +329,5 @@ Phase 3 завершена; **Phases 6–10 завершены** — integration
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — протоколы и контейнер
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь MainViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — Inc. 2–5: sessions, settings, translation state, words/grammar tabs
+- [v0.2 Product Plan](v0-2-product-plan.md) — Inc. 2–6: sessions, settings, translation state, study tabs, session automation
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

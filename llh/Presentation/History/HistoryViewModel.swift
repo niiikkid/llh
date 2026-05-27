@@ -175,12 +175,19 @@ final class HistoryViewModel: ObservableObject {
         publishStatus("Перевод удален.")
     }
 
-    func createProfile(named rawName: String, learningLanguage: LearningLanguage) {
+    func createProfile(
+        named rawName: String,
+        learningLanguage: LearningLanguage,
+        automaticallyLoadWords: Bool = false,
+        automaticallyLoadGrammar: Bool = false
+    ) {
         var updated = session
         let profile = manageProfilesUseCase.createProfile(
             state: &updated,
             named: rawName,
-            learningLanguage: learningLanguage
+            learningLanguage: learningLanguage,
+            automaticallyLoadWords: automaticallyLoadWords,
+            automaticallyLoadGrammar: automaticallyLoadGrammar
         )
         onPersistDefaultLanguageForNewProfile(learningLanguage)
         applySession(updated)
@@ -209,6 +216,27 @@ final class HistoryViewModel: ObservableObject {
             applySession(updated)
             persist()
             publishStatus("Сессия переименована в «\(displayName)».")
+        case .profileNotFound:
+            break
+        }
+    }
+
+    func updateSessionAutomation(
+        profileID: LearningProfile.ID,
+        automaticallyLoadWords: Bool,
+        automaticallyLoadGrammar: Bool
+    ) {
+        var updated = session
+        switch manageProfilesUseCase.updateSessionAutomation(
+            state: &updated,
+            profileID: profileID,
+            automaticallyLoadWords: automaticallyLoadWords,
+            automaticallyLoadGrammar: automaticallyLoadGrammar
+        ) {
+        case .updated:
+            applySession(updated)
+            persist()
+            publishStatus("Настройки автозагрузки для сессии сохранены.")
         case .profileNotFound:
             break
         }

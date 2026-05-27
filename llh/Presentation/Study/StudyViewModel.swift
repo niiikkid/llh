@@ -49,6 +49,26 @@ final class StudyViewModel: ObservableObject {
         }
     }
 
+    func startSessionAutomationAfterFormattingSuccess(
+        profileID: LearningProfile.ID,
+        entryID: CapturedTextEntry.ID
+    ) {
+        guard let profileIndex = history.profiles.firstIndex(where: { $0.id == profileID }) else {
+            return
+        }
+        let profile = history.profiles[profileIndex]
+        if profile.automaticallyLoadWords {
+            Task {
+                await loadWordStudy(for: entryID, forceReload: false)
+            }
+        }
+        if profile.automaticallyLoadGrammar {
+            Task {
+                await loadGrammarStudy(for: entryID, forceReload: false)
+            }
+        }
+    }
+
     var selectedEntryWordsStatus: FormattingStatus? {
         selectedEntryMaterials?.wordsStatus
     }
@@ -94,6 +114,19 @@ final class StudyViewModel: ObservableObject {
         case .words: canRetryWordsStudy
         case .grammar: canRetryGrammarStudy
         }
+    }
+
+    var sessionAutomaticallyLoadsWords: Bool {
+        activeProfile?.automaticallyLoadWords == true
+    }
+
+    var sessionAutomaticallyLoadsGrammar: Bool {
+        activeProfile?.automaticallyLoadGrammar == true
+    }
+
+    private var activeProfile: LearningProfile? {
+        guard let profileIndex = history.selectedProfileIndex else { return nil }
+        return history.profiles[profileIndex]
     }
 
     var activeTabRetryButtonTitle: String {

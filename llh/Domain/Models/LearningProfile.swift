@@ -18,6 +18,10 @@ struct LearningProfile: Identifiable, Equatable, Codable {
     let createdAt: Date
     var history: [CapturedTextEntry]
     var selectedEntryID: CapturedTextEntry.ID?
+    /// After formatting succeeds, load word study automatically for new results in this session.
+    var automaticallyLoadWords: Bool
+    /// After formatting succeeds, load grammar study automatically for new results in this session.
+    var automaticallyLoadGrammar: Bool
 
     init(
         id: UUID = UUID(),
@@ -26,7 +30,9 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         kind: LearningProfileKind = .custom,
         createdAt: Date = Date(),
         history: [CapturedTextEntry] = [],
-        selectedEntryID: CapturedTextEntry.ID? = nil
+        selectedEntryID: CapturedTextEntry.ID? = nil,
+        automaticallyLoadWords: Bool = false,
+        automaticallyLoadGrammar: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -35,6 +41,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         self.createdAt = createdAt
         self.history = history
         self.selectedEntryID = selectedEntryID
+        self.automaticallyLoadWords = automaticallyLoadWords
+        self.automaticallyLoadGrammar = automaticallyLoadGrammar
     }
 
     init(
@@ -42,7 +50,9 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         name: String,
         createdAt: Date = Date(),
         history: [CapturedTextEntry] = [],
-        selectedEntryID: CapturedTextEntry.ID? = nil
+        selectedEntryID: CapturedTextEntry.ID? = nil,
+        automaticallyLoadWords: Bool = false,
+        automaticallyLoadGrammar: Bool = false
     ) {
         self.init(
             id: id,
@@ -51,7 +61,9 @@ struct LearningProfile: Identifiable, Equatable, Codable {
             kind: .custom,
             createdAt: createdAt,
             history: history,
-            selectedEntryID: selectedEntryID
+            selectedEntryID: selectedEntryID,
+            automaticallyLoadWords: automaticallyLoadWords,
+            automaticallyLoadGrammar: automaticallyLoadGrammar
         )
     }
 
@@ -59,7 +71,9 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         id: UUID = UUID(),
         createdAt: Date = Date(),
         history: [CapturedTextEntry] = [],
-        selectedEntryID: CapturedTextEntry.ID? = nil
+        selectedEntryID: CapturedTextEntry.ID? = nil,
+        automaticallyLoadWords: Bool = false,
+        automaticallyLoadGrammar: Bool = false
     ) -> LearningProfile {
         LearningProfile(
             id: id,
@@ -68,7 +82,9 @@ struct LearningProfile: Identifiable, Equatable, Codable {
             kind: .default,
             createdAt: createdAt,
             history: history,
-            selectedEntryID: selectedEntryID
+            selectedEntryID: selectedEntryID,
+            automaticallyLoadWords: automaticallyLoadWords,
+            automaticallyLoadGrammar: automaticallyLoadGrammar
         )
     }
 
@@ -83,7 +99,6 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         }
         return name
     }
-}
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -93,6 +108,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         case createdAt
         case history
         case selectedEntryID
+        case automaticallyLoadWords
+        case automaticallyLoadGrammar
     }
 
     init(from decoder: Decoder) throws {
@@ -104,6 +121,21 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         history = try container.decodeIfPresent([CapturedTextEntry].self, forKey: .history) ?? []
         selectedEntryID = try container.decodeIfPresent(CapturedTextEntry.ID.self, forKey: .selectedEntryID)
+        automaticallyLoadWords = try container.decodeIfPresent(Bool.self, forKey: .automaticallyLoadWords) ?? false
+        automaticallyLoadGrammar = try container.decodeIfPresent(Bool.self, forKey: .automaticallyLoadGrammar) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(learningLanguage, forKey: .learningLanguage)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(history, forKey: .history)
+        try container.encodeIfPresent(selectedEntryID, forKey: .selectedEntryID)
+        try container.encode(automaticallyLoadWords, forKey: .automaticallyLoadWords)
+        try container.encode(automaticallyLoadGrammar, forKey: .automaticallyLoadGrammar)
     }
 
     mutating func deleteEntry(with id: CapturedTextEntry.ID) -> Bool {

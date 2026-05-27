@@ -1,14 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); single main window (Inc. 10). Remaining: session automation, overlay close, reading overview details, Dock badge.
+**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); per-session auto words/grammar after formatting (Inc. 6); single main window (Inc. 10). Remaining: overlay close, reading overview details, Dock badge.
 
 ## Release progress
 
@@ -19,7 +19,7 @@
 | 3 | Settings page | **Done** (2026-05-27) |
 | 4 | Translation result state | **Done** (2026-05-27) |
 | 5 | Words and grammar tabs | **Done** (2026-05-27) |
-| 6 | Session-level automation | Planned |
+| 6 | Session-level automation | **Done** (2026-05-27) |
 | 7 | Overlay closing | Planned |
 | 8 | Session reading overview details | Planned |
 | 9 | Dock language badge | Planned |
@@ -191,7 +191,7 @@ New files: `LoadGrammarStudyUseCase.swift`, `StudyLearningTab.swift`, `GrammarEx
 
 Implementation notes (as built):
 
-- Words and grammar are independent requests; manual load per active tab only (automation — Inc. 6).
+- Words and grammar are independent requests; manual load per active tab (session automation added in Inc. 6).
 - Prompts in `OpenAIPromptBuilder`; tests in `Phase3LoadGrammarStudyUseCaseTests` and `openAIService_grammarStudyPrompt_targetsRussianLearner`.
 - `RefactorBaselineInventory.OpenAICallSite` count **5**.
 
@@ -201,23 +201,34 @@ Risk:
 
 ## Increment 6: Session-Level Automation
 
+**Status: done** (2026-05-27).
+
 Goal: let a session automatically continue into learning materials after the main translation.
 
-Scope:
+Scope (all delivered):
 
-- Add per-session settings for:
-  - automatically load word translations;
-  - automatically load grammar.
-- After formatting succeeds, start enabled follow-up jobs.
-- Word translation and grammar must be separate requests.
-- Do not start follow-up requests when formatting fails.
-- Preserve explicit manual retry for failed words or grammar.
+- Per-session flags on `LearningProfile`: `automaticallyLoadWords`, `automaticallyLoadGrammar` (default `false` for legacy JSON/SQLite).
+- After formatting succeeds, start enabled follow-up jobs as separate async tasks.
+- No automation when formatting fails; manual retry unchanged.
 
-Implementation notes:
+### Implemented
 
-- Store these flags on `LearningProfile` so they travel with the session.
-- Add Codable defaults for existing persisted sessions.
-- Trigger automation from the ViewModel/use-case coordination point after `applyFormattingSuccess`, but avoid expanding `MainViewModel`.
+| Area | What shipped |
+|------|----------------|
+| Domain | `LearningProfile` automation fields; `ManageProfilesUseCase.updateSessionAutomation` |
+| Persistence | SQLite migration `v2_profile_session_automation`; `SQLiteHistoryRepository` roundtrip |
+| UI | `SessionsListView` toggles on create; gear sheet for existing sessions |
+| Coordination | `EditorViewModel.applyFormattingSuccess` → `StudyViewModel.startSessionAutomationAfterFormattingSuccess` |
+| UX | `StudyAssistantView` hints when session automation is enabled |
+
+Implementation notes (as built):
+
+- Words and grammar run in parallel `Task`s when both flags are on; preflight skips succeeded/processing states.
+- `MainViewModel` unchanged; trigger stays in `EditorViewModel` + `StudyViewModel`.
+
+Risk:
+
+- Low. Reuses Inc. 5 study paths; no new OpenAI surface.
 
 ## Increment 7: Compact Overlay Closing
 
@@ -299,8 +310,8 @@ New file: `App/MainWindowActivator.swift`.
 4. ~~Settings page layout and routing polish.~~ **Done.**
 5. ~~Translation result state cleanup.~~ **Done.**
 6. ~~Words/grammar tabs and grammar OpenAI path.~~ **Done.**
-7. Session-level automation flags. **Next recommended.**
-8. Overlay close/Escape behavior.
+7. ~~Session-level automation flags.~~ **Done.**
+8. Overlay close/Escape behavior. **Next recommended.**
 9. Session reading overview details.
 10. Dock language badge.
 
@@ -310,9 +321,9 @@ New file: `App/MainWindowActivator.swift`.
 - **Inc. 4 (done):** `TranslationResultPresentationResolverTests` — loading / formatted / failed / rawOnly from `FormattingStatus`.
 - **Inc. 5 (done):** `Phase3LoadGrammarStudyUseCaseTests`; grammar prompt test in `llhTests`.
 - Session rename persists and does not change language.
-- Existing sessions decode with default automation flags.
+- **Inc. 6 (done):** existing sessions decode with default automation flags; SQLite migration; `Phase3ManageProfilesUseCaseTests` / `Phase5HistoryPersistenceTests` / `learningProfile_decodesLegacyPayloadWithoutAutomationFlags`.
 - Formatting failure shows raw text and icon-only retry (manual UI verification).
-- Successful formatting triggers enabled words/grammar requests exactly once.
+- Successful formatting triggers enabled words/grammar requests exactly once (manual UI verification).
 - Words and grammar failures are independently retryable.
 - `Open Window` does not create duplicate windows.
 - Dock badge updates when selected session changes.

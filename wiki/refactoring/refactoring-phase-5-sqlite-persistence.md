@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 5 SQLite history persistence completion](../../raw/refactoring/2026-05-26-phase-5-sqlite-history-persistence-completion.md)
-> Updated: 2026-05-27
+> Updated: 2026-05-27 (v0.2 increment 6 session automation migration)
 
 ## Overview
 
@@ -31,7 +31,7 @@ HistoryRepositoryBootstrap (App/)
 
 | Компонент | Назначение |
 |-----------|------------|
-| `HistoryDatabaseSchema` | Миграция `v1_history_schema` |
+| `HistoryDatabaseSchema` | Миграции `v1_history_schema`, `v2_profile_session_automation` (v0.2 inc. 6) |
 | `HistorySnapshotCodec` | JSON blobs для `StructuredFormattedText` и `StudyMaterials` |
 | `HistoryMigrationService` | Идемпотентный импорт + верификация counts/IDs |
 | `HistoryPersistenceError` | `migrationVerificationFailed`, encoding/decoding |
@@ -43,7 +43,7 @@ HistoryRepositoryBootstrap (App/)
 - `selected_profile_id` — глобальный выбор профиля (как в JSON snapshot)
 - `json_migration_completed` — `0` / `1`, явный флаг завершения миграции
 
-**`learning_profiles`**: `id`, `name`, `learning_language`, `kind`, `created_at`, `selected_entry_id`, `profile_sort_index`
+**`learning_profiles`**: `id`, `name`, `learning_language`, `kind`, `created_at`, `selected_entry_id`, `profile_sort_index`; **v2:** `auto_load_words`, `auto_load_grammar` (integer 0/1, default 0)
 
 **`history_entries`**: `id`, `profile_id` (FK CASCADE), `text`, `formatted_text_json`, `formatting_status`, `study_materials_json`, `created_at`, `entry_sort_index`
 
