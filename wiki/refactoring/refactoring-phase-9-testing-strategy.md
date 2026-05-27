@@ -48,6 +48,8 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 
 **v0.2 Inc. 8:** `sessionReadingSequenceItem_*` в `llhTests` — succeeded word/grammar payloads vs processing/failed; eye/details UI — manual verification.
 
+**v0.2 Inc. 9:** `learningLanguage_dockBadgeLabel_usesFlagOrClearsForAuto` в `llhTests`; session switch / restart badge — manual verification.
+
 ## Исправления существующих тестов
 
 - `OCREngine.openai` → `.ai` в Phase 1/3 tests.
@@ -58,7 +60,7 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 
 | Слой / фаза | Файлы |
 |-------------|--------|
-| Baseline (0) | `RefactorBaselineTests`, `llhTests` (overlay timing + dismiss schedule, inc. 7) |
+| Baseline (0) | `RefactorBaselineTests`, `llhTests` (overlay timing + dismiss schedule, inc. 7; dock badge label, inc. 9) |
 | Presentation (v0.2 inc. 4–5) | `TranslationResultPresentationResolverTests`; study tabs — manual / use-case tests |
 | Repositories (1) | `Phase1RepositoryTests` |
 | Domain (2) | `Phase2DomainModelsTests` |
@@ -106,5 +108,5 @@ xcodebuild -scheme llh -destination 'platform=macOS' test -only-testing:llhTests
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
-- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar (inc. 5); automation (inc. 6); overlay dismiss (inc. 7); reading details (inc. 8)
+- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar (inc. 5); automation (inc. 6); overlay dismiss (inc. 7); reading details (inc. 8); dock badge (inc. 9)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot §Phase 9–10

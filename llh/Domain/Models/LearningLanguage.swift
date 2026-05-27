@@ -35,4 +35,9 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
         case .chinese: return "🇨🇳"
         }
     }
+
+    /// Dock tile badge text; `auto` clears the badge (`nil`).
+    var dockBadgeLabel: String? {
+        flagEmoji
+    }
 }

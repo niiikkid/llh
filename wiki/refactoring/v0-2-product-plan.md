@@ -1,14 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md); [v0.2 increment 7 overlay close completion](../../raw/refactoring/2026-05-27-v0-2-increment-7-overlay-close-completion.md); [v0.2 increment 8 session reading details completion](../../raw/refactoring/2026-05-27-v0-2-increment-8-session-reading-details-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md); [v0.2 increment 7 overlay close completion](../../raw/refactoring/2026-05-27-v0-2-increment-7-overlay-close-completion.md); [v0.2 increment 8 session reading details completion](../../raw/refactoring/2026-05-27-v0-2-increment-8-session-reading-details-completion.md); [v0.2 increment 9 dock language badge completion](../../raw/refactoring/2026-05-27-v0-2-increment-9-dock-language-badge-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); per-session auto words/grammar after formatting (Inc. 6); dismissible compact overlay with close button and Escape (Inc. 7); session reading overview expandable word/grammar details (Inc. 8); single main window (Inc. 10). Remaining: Dock badge (Inc. 9).
+**Shipped (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); per-session auto words/grammar after formatting (Inc. 6); dismissible compact overlay with close button and Escape (Inc. 7); session reading overview expandable word/grammar details (Inc. 8); Dock language badge on app icon (Inc. 9); single main window (Inc. 10). **v0.2 plan complete.**
 
 ## Release progress
 
@@ -22,7 +22,7 @@
 | 6 | Session-level automation | **Done** (2026-05-27) |
 | 7 | Overlay closing | **Done** (2026-05-27) |
 | 8 | Session reading overview details | **Done** (2026-05-27) |
-| 9 | Dock language badge | Planned |
+| 9 | Dock language badge | **Done** (2026-05-27) |
 | 10 | Single main window | **Done** (2026-05-27) |
 
 ## Product Decisions
@@ -298,19 +298,36 @@ Risk:
 
 ## Increment 9: Dock Language Badge
 
+**Status: done** (2026-05-27).
+
 Goal: show the active session language on the app icon in Dock.
 
-Scope:
+Scope (all delivered):
 
 - For `Автоопределение`, show a neutral/empty badge.
 - For concrete languages, show a short badge or flag for the selected session language.
 - Update badge when selected session changes.
 - Clear/update badge on startup based on restored selected session.
 
-Implementation notes:
+### Implemented
 
-- The simplest native path is `NSApp.dockTile.badgeLabel`.
-- A full custom flag overlay on the icon is a separate AppKit task and should only be done if the badge label is not visually acceptable.
+| Area | What shipped |
+|------|----------------|
+| Domain | `LearningLanguage.dockBadgeLabel` — flag emoji; `auto` → `nil` |
+| AppKit | `DockLanguageBadgeController.update(for:)` — `NSApp.dockTile.badgeLabel` + `display()` |
+| Coordination | `MainViewModel` — Combine on `history.$selectedProfileID` + `history.$profiles` → `activeProfile?.learningLanguage` |
+| Tests | `learningLanguage_dockBadgeLabel_usesFlagOrClearsForAuto` in `llhTests` |
+
+New file: `App/DockLanguageBadgeController.swift`.
+
+Implementation notes (as built):
+
+- Used native `badgeLabel` with flag emoji (🇬🇧 / 🇪🇸 / 🇨🇳); no custom dock tile drawing.
+- No selected session clears the badge (does not fall back to default new-profile language).
+
+Risk:
+
+- Low. AppKit dock tile only; no persistence or workflow changes.
 
 ## Increment 10: Single Main Window Behavior
 
@@ -346,7 +363,7 @@ New file: `App/MainWindowActivator.swift`.
 7. ~~Session-level automation flags.~~ **Done.**
 8. ~~Overlay close/Escape behavior.~~ **Done.**
 9. ~~Session reading overview details.~~ **Done.**
-10. Dock language badge. **Next recommended.**
+10. ~~Dock language badge.~~ **Done.**
 
 ## Testing Focus
 
@@ -361,7 +378,7 @@ New file: `App/MainWindowActivator.swift`.
 - Successful formatting triggers enabled words/grammar requests exactly once (manual UI verification).
 - Words and grammar failures are independently retryable.
 - `Open Window` does not create duplicate windows.
-- Dock badge updates when selected session changes.
+- **Inc. 9 (done):** `learningLanguage_dockBadgeLabel_usesFlagOrClearsForAuto` in `llhTests`; manual — badge shows flag for concrete session language, clears for auto / no session; updates on session switch and after app restart.
 - Prompt construction for grammar stays short and Russian-learner-oriented.
 
 ## See Also
@@ -370,5 +387,5 @@ New file: `App/MainWindowActivator.swift`.
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
-- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar (inc. 5); overlay dismiss schedule (inc. 7)
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar (inc. 5); automation (inc. 6); overlay dismiss (inc. 7); reading details (inc. 8); dock badge (inc. 9)
 - [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md)

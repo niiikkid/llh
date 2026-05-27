@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 4 settings ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-settings-viewmodel-completion.md); [Phase 4 history ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-history-viewmodel-completion.md); [Phase 4 capture ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-capture-viewmodel-completion.md); [Phase 4 study and overlay completion](../../raw/refactoring/2026-05-26-phase-4-study-overlay-completion.md); [Phase 4 editor ViewModel completion](../../raw/refactoring/2026-05-26-phase-4-editor-viewmodel-completion.md)
-> Updated: 2026-05-27 (v0.2 increment 8 session reading details)
+> Updated: 2026-05-27 (v0.2 increment 9 dock language badge)
 
 ## Overview
 
@@ -176,6 +176,8 @@ Format/study/overlay и editor state остаются на Main (до inc. 5); �
 
 **v0.2 Inc. 8:** `sessionReadingSequence` строит `SessionReadingSequenceItem(entry:learningLanguage:)` с сохранёнными word/grammar payloads; `SessionReadingOverviewView` — eye toggle и компактные детали без подгрузки OpenAI.
 
+**v0.2 Inc. 9:** `MainViewModel` — Combine-подписка на `history.$selectedProfileID` + `history.$profiles` → `DockLanguageBadgeController.update(for: activeProfile?.learningLanguage)`.
+
 Main сохраняет публичные прокси `closeTranslationOverlay`, `toggleLastTranslationOverlay` для shortcuts. Capture сбрасывает awaiting через `configureOverlayAwaitingFormatReset` → `overlay.clearAwaitingFormattedEntry()`.
 
 ### MainViewModel после инкремента 4
@@ -264,7 +266,7 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 
 - `Presentation/Main/ContentView.swift` — маршруты `AppMainRoute` (v0.2 inc. 2)
 - Feature views: `MainChromeView`, `MainWorkspaceView`, `SessionsListView`, `HistoryView`, `TranslationDetailPanelView`, …
-- `statusMessage` перенесён с Main на feature ViewModels; Main без `@Published` (~129 строк)
+- `statusMessage` перенесён с Main на feature ViewModels; Main без `@Published` (~140 строк после v0.2 inc. 9)
 
 **v0.2 Increment 2:** профили управляются на `SessionsListView`; `HistoryView` — только переводы выбранной сессии в workspace.
 
@@ -283,5 +285,5 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — Inc. 2–8, 10: sessions, settings, translation state, study, automation, overlay dismiss, reading overview details
+- [v0.2 Product Plan](v0-2-product-plan.md) — **Inc. 1–10 complete**: sessions, settings, translation state, study, automation, overlay dismiss, reading overview, dock badge
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план

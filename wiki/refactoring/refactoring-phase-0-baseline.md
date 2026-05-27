@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 0 baseline completion](../../raw/refactoring/2026-05-26-phase-0-baseline-completion.md)
-> Updated: 2026-05-27
+> Updated: 2026-05-27 (v0.2 inc. 9 dock badge sync)
 
 ## Overview
 
@@ -75,6 +75,8 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 **После Phase 8:** `MainViewModel` (~129 строк) — композиция feature VMs + overlay shortcuts; без `@Published`. UI decomposition — см. [Phase 8](refactoring-phase-8-ui-decomposition.md).
 
+**v0.2 inc. 9:** `MainViewModel` (~140 строк) — Combine-sync `DockLanguageBadgeController` от активной сессии; `LearningLanguage.dockBadgeLabel`.
+
 **Phase 10:** `buildPhrasesStudyData` удалён; `buildGrammarStudyData` удалялся и **восстановлен** в v0.2 inc. 5. Legacy `StudyMaterials.phrases`/`grammar` в истории сохранены — см. [Phase 10](refactoring-phase-10-cleanup.md).
 
 Промпты: `OpenAIPromptBuilder` (Phase 2). HTTP: `OpenAIHTTPClient` (PR 2 + PR 6 timeout/cancellation). Models: `OpenAIModelsService` (PR 3). AI OCR: `OpenAIOCRService` (PR 4). Format/study: `OpenAITranslationService`, `OpenAIStudyService` (PR 5). Settings/keychain: `OpenAISettingsStore`, `KeychainOpenAITokenStore` в `Data/OpenAI/` (PR 6). `OpenAIService` — чистый фасад `OpenAIServing`.
@@ -96,7 +98,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - Persistence OCR engine (`OpenAISettingsStore.selectedOCREngineRawValue`)
 - `OpenAIPromptBuilder.formattingRules` / `wordsAnalysisPrompt` / `OpenAIServiceError` descriptions (вкл. `rateLimited`, `timeout`, `cancelled`)
 
-Ранее существующие тесты в `llhTests.swift` (overlay timing, overlay dismiss schedule — v0.2 inc. 7, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
+Ранее существующие тесты в `llhTests.swift` (overlay timing, overlay dismiss schedule — v0.2 inc. 7, dock badge label — inc. 9, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
 
 **Phase 9** расширила safety net: `Phase9IntegrationTests`, migration/bootstrap и UI smoke. **Phase 10** — `OpenAICallSite` = 5 (grammar, v0.2 inc. 5), `Phase10CaptureViewModelTests` — см. [Phase 9](refactoring-phase-9-testing-strategy.md), [Phase 10](refactoring-phase-10-cleanup.md).
 
@@ -120,5 +122,5 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — завершённый Phase 1
-- [v0.2 Product Plan](v0-2-product-plan.md) — product shell after refactor (inc. 1–6, 10)
+- [v0.2 Product Plan](v0-2-product-plan.md) — product polish after refactor (**Inc. 1–10 complete**)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный пофазный план (архивный snapshot на 2026-05-26)

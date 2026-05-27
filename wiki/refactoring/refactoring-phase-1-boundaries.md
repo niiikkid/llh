@@ -56,7 +56,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 - Repositories и `OpenAIServing` не инжектируются напрямую — только use cases и overlay service.
 - `TranslationOverlayService` остаётся конкретным типом в контейнере; lifecycle overlay после format — `TranslationOverlayCoordinator` (Phase 4 inc. 4); v0.2 inc. 7 — user dismiss через `onRequestClose` в coordinator.
 - **Phase 4 (завершена):** `let settings`, `history`, `capture`, `study`, `editor`; private `TranslationOverlayCoordinator`; `AppShortcutsCoordinator` в `init`. `FormatCapturedTextUseCase` — в `EditorViewModel`, не в Main.
-- **Phase 8 (завершена):** Main ~129 строк, **без `@Published`**; `statusMessage` на feature ViewModels; UI — `Presentation/Main/` + feature views — см. [Phase 8](refactoring-phase-8-ui-decomposition.md).
+- **Phase 8 (завершена):** Main ~140 строк (inc. 9 dock badge sync), **без `@Published`**; `statusMessage` на feature ViewModels; UI — `Presentation/Main/` + feature views — см. [Phase 8](refactoring-phase-8-ui-decomposition.md).
 
 ## Покрытие тестами (Phase 1)
 
@@ -89,4 +89,5 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — Domain/Models и Data/OpenAI границы
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь и safety net до DI
+- [v0.2 Product Plan](v0-2-product-plan.md) — **Inc. 1–10 complete**
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

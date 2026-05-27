@@ -418,6 +418,14 @@ struct llhTests {
     }
 
     @Test
+    func learningLanguage_dockBadgeLabel_usesFlagOrClearsForAuto() {
+        #expect(LearningLanguage.auto.dockBadgeLabel == nil)
+        #expect(LearningLanguage.english.dockBadgeLabel == "🇬🇧")
+        #expect(LearningLanguage.spanish.dockBadgeLabel == "🇪🇸")
+        #expect(LearningLanguage.chinese.dockBadgeLabel == "🇨🇳")
+    }
+
+    @Test
     func latestTranslationLookup_returnsNewestFormattedTranslationAcrossProfiles() {
         let older = StructuredFormattedText(
             cleanedText: "hello",

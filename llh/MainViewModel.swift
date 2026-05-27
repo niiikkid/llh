@@ -106,6 +106,7 @@ final class MainViewModel: ObservableObject {
         subscribeToChildViewModelChanges(capture)
         subscribeToChildViewModelChanges(study)
         subscribeToChildViewModelChanges(editor)
+        subscribeToDockLanguageBadge(from: history)
 
         history.loadFromDisk()
         capture.refreshPermissionState()
@@ -123,6 +124,15 @@ final class MainViewModel: ObservableObject {
         child.objectWillChange
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func subscribeToDockLanguageBadge(from history: HistoryViewModel) {
+        history.$selectedProfileID
+            .combineLatest(history.$profiles)
+            .sink { [weak history] _, _ in
+                DockLanguageBadgeController.update(for: history?.activeProfile?.learningLanguage)
             }
             .store(in: &cancellables)
     }

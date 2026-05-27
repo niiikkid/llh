@@ -1,5 +1,21 @@
 # Wiki Log
 
+## [2026-05-27] lint | 2 issues found, 9 auto-fixed
+- Updated: wiki/index.md (v0.2 plan complete in section intro)
+- Updated: Refactoring Phase 0 Baseline (inc. 9 MainViewModel + tests + See Also)
+- Updated: Refactoring Phase 1 Boundaries (MainViewModel ~140; See Also v0.2)
+- Updated: Refactoring Phase 2 Domain Models (See Also inc. 9)
+- Updated: Refactoring Phase 3 Use Cases (See Also inc. 2–10)
+- Updated: Refactoring Phase 4 Presentation (MainViewModel ~140; See Also v0.2 complete)
+- Updated: Refactoring Phase 8 UI Decomposition (See Also inc. 1–10)
+- Updated: v0.2 Product Plan (See Also Phase 9 inc. 6–9)
+
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 9 dock language badge completion)
+- Updated: Refactoring Phase 2 Domain Models
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 8 UI Decomposition
+- Updated: Refactoring Phase 9 Testing Strategy
+
 ## [2026-05-27] lint | 0 issues found, 7 auto-fixed
 - Updated: wiki/index.md (Phase 2/4/8/9 summaries aligned with Inc. 8)
 - Updated: Refactoring Phase 0 Baseline (session reading inc. 8)
