@@ -45,7 +45,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - **Formatting:** `retryFormattingForSelectedEntry` (на `EditorViewModel`); длительность overlay — `SettingsViewModel.calculatedTranslationOverlayDuration`
 - **History:** `updateSelectedText` (на `EditorViewModel`; координирует editor + `history.updateSelectedEntryText`)
 - **Profiles / session list:** на `HistoryViewModel` (`createProfile`, `selectProfile`, `deleteSelectedProfile`, `deleteSelectedEntry`, `selectEntry`, session reading)
-- **Overlay:** `TranslationOverlayCoordinator` (`close`, `toggleLastTranslation`, format-result handlers); Main — прокси `closeTranslationOverlay`, `toggleLastTranslationOverlay` для shortcuts
+- **Overlay:** `TranslationOverlayCoordinator` (`close`, `toggleLastTranslation`, format-result handlers); `TranslationOverlayService` — compact panel (v0.2 inc. 7: ✕, Escape, `onRequestClose` → coordinator); Main — прокси `closeTranslationOverlay`, `toggleLastTranslationOverlay` для shortcuts
 - **Study (words):** `StudyViewModel.retryStudyAssistantDataForSelectedEntry` (Phase 8: UI вызывает Study VM напрямую, без прокси Main)
 - **Session reading:** на `HistoryViewModel` (`toggleSessionReadingOverview`, `copySessionReadingOverviewToPasteboard`, `plainTextForSessionReadingCopy`)
 
@@ -96,7 +96,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - Persistence OCR engine (`OpenAISettingsStore.selectedOCREngineRawValue`)
 - `OpenAIPromptBuilder.formattingRules` / `wordsAnalysisPrompt` / `OpenAIServiceError` descriptions (вкл. `rateLimited`, `timeout`, `cancelled`)
 
-Ранее существующие тесты в `llhTests.swift` (overlay timing, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
+Ранее существующие тесты в `llhTests.swift` (overlay timing, overlay dismiss schedule — v0.2 inc. 7, legacy profile decode, single-profile persistence, prompt variants) остаются дополнительной сеткой.
 
 **Phase 9** расширила safety net: `Phase9IntegrationTests`, migration/bootstrap и UI smoke. **Phase 10** — `OpenAICallSite` = 5 (grammar, v0.2 inc. 5), `Phase10CaptureViewModelTests` — см. [Phase 9](refactoring-phase-9-testing-strategy.md), [Phase 10](refactoring-phase-10-cleanup.md).
 

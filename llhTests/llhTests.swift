@@ -352,6 +352,12 @@ struct llhTests {
     }
 
     @Test
+    func translationOverlayDismissSchedule_onlyTimesTemporaryContent() {
+        #expect(TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss(dismissAfter: nil) == false)
+        #expect(TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss(dismissAfter: 3) == true)
+    }
+
+    @Test
     func latestTranslationLookup_returnsNewestFormattedTranslationAcrossProfiles() {
         let older = StructuredFormattedText(
             cleanedText: "hello",

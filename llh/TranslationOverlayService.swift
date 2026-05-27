@@ -13,14 +13,20 @@ final class TranslationOverlayService {
         case persistentLastTranslation
     }
 
+    /// Invoked when the user dismisses the overlay via the close button or Escape.
+    var onRequestClose: (() -> Void)?
+
     private let panel = OverlayPanel(
         contentRect: .zero,
         styleMask: [.borderless, .nonactivatingPanel],
         backing: .buffered,
         defer: false
     )
-    private let hostingView = NSHostingView(rootView: CompactOverlayView(content: .loading("Обрабатываю перевод...")))
+    private let hostingView = NSHostingView(
+        rootView: CompactOverlayView(content: .loading("Обрабатываю перевод..."), onClose: {})
+    )
     private var dismissTask: Task<Void, Never>?
+    private var escapeKeyMonitor: Any?
     private(set) var displayMode: DisplayMode?
 
     init() {
@@ -31,7 +37,7 @@ final class TranslationOverlayService {
         panel.isOpaque = false
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
-        panel.ignoresMouseEvents = true
+        panel.ignoresMouseEvents = false
         panel.contentView = hostingView
     }
 
@@ -69,6 +75,7 @@ final class TranslationOverlayService {
         dismissTask?.cancel()
         dismissTask = nil
         displayMode = nil
+        removeEscapeKeyMonitor()
         panel.orderOut(nil)
     }
 
@@ -83,7 +90,9 @@ final class TranslationOverlayService {
     private func present(content: CompactOverlayContent, dismissAfter: TimeInterval?, displayMode: DisplayMode) {
         dismissTask?.cancel()
         self.displayMode = displayMode
-        hostingView.rootView = CompactOverlayView(content: content)
+        hostingView.rootView = CompactOverlayView(content: content) { [weak self] in
+            self?.handleUserDismissRequest()
+        }
 
         let targetSize = hostingView.fittingSize
         let width = max(300, min(targetSize.width, 460))
@@ -91,12 +100,41 @@ final class TranslationOverlayService {
         panel.setContentSize(NSSize(width: width, height: height))
         updatePanelFrame(size: NSSize(width: width, height: height))
         panel.orderFrontRegardless()
+        installEscapeKeyMonitor()
 
-        guard let dismissAfter else { return }
+        guard TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss(dismissAfter: dismissAfter) else {
+            return
+        }
         dismissTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(dismissAfter))
+            try? await Task.sleep(for: .seconds(dismissAfter ?? 0))
             guard !Task.isCancelled else { return }
             self?.hide()
+        }
+    }
+
+    private func handleUserDismissRequest() {
+        if let onRequestClose {
+            onRequestClose()
+        } else {
+            hide()
+        }
+    }
+
+    private func installEscapeKeyMonitor() {
+        removeEscapeKeyMonitor()
+        escapeKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53 else { return }
+            Task { @MainActor in
+                guard let self, self.panel.isVisible else { return }
+                self.handleUserDismissRequest()
+            }
+        }
+    }
+
+    private func removeEscapeKeyMonitor() {
+        if let escapeKeyMonitor {
+            NSEvent.removeMonitor(escapeKeyMonitor)
+            self.escapeKeyMonitor = nil
         }
     }
 
@@ -129,52 +167,74 @@ private enum CompactOverlayContent: Equatable {
     case message(title: String, subtitle: String?)
 }
 
+enum TranslationOverlayDismissSchedule {
+    /// Loading and persistent overlays stay until the user closes them; timed translations/messages auto-hide.
+    static func shouldScheduleAutomaticDismiss(dismissAfter: TimeInterval?) -> Bool {
+        dismissAfter != nil
+    }
+}
+
 private struct CompactOverlayView: View {
     let content: CompactOverlayContent
+    let onClose: () -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
-            switch content {
-            case .loading(let text):
-                HStack(spacing: 10) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text(text)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.primary)
-                }
-
-            case .translation(let primaryText, let secondaryText):
-                if !primaryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(primaryText)
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.primary)
-                }
-
-                Text(secondaryText)
-                    .font(.system(size: 13))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-
-            case .message(let title, let subtitle):
-                HStack(spacing: 8) {
-                    Text(title)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-
-                    if let subtitle, !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(subtitle)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 10) {
+                switch content {
+                case .loading(let text):
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(text)
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.primary)
                     }
+
+                case .translation(let primaryText, let secondaryText):
+                    if !primaryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(primaryText)
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.primary)
+                    }
+
+                    Text(secondaryText)
+                        .font(.system(size: 13))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+
+                case .message(let title, let subtitle):
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+
+                        if let subtitle, !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text(subtitle)
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    .multilineTextAlignment(.center)
                 }
-                .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 6)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 14)
+
+            Button(action: onClose) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .padding(10)
+            .help("Закрыть (Escape)")
         }
         .frame(width: 360)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
         .background(backgroundView)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(

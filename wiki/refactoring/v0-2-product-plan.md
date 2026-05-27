@@ -1,14 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 5 words grammar tabs completion](../../raw/refactoring/2026-05-27-v0-2-increment-5-words-grammar-tabs-completion.md); [v0.2 increment 6 session automation completion](../../raw/refactoring/2026-05-27-v0-2-increment-6-session-automation-completion.md); [v0.2 increment 7 overlay close completion](../../raw/refactoring/2026-05-27-v0-2-increment-7-overlay-close-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); per-session auto words/grammar after formatting (Inc. 6); single main window (Inc. 10). Remaining: overlay close, reading overview details, Dock badge.
+**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); words/grammar study tabs with separate grammar API (Inc. 5); per-session auto words/grammar after formatting (Inc. 6); dismissible compact overlay with close button and Escape (Inc. 7); single main window (Inc. 10). Remaining: reading overview details, Dock badge.
 
 ## Release progress
 
@@ -20,7 +20,7 @@
 | 4 | Translation result state | **Done** (2026-05-27) |
 | 5 | Words and grammar tabs | **Done** (2026-05-27) |
 | 6 | Session-level automation | **Done** (2026-05-27) |
-| 7 | Overlay closing | Planned |
+| 7 | Overlay closing | **Done** (2026-05-27) |
 | 8 | Session reading overview details | Planned |
 | 9 | Dock language badge | Planned |
 | 10 | Single main window | **Done** (2026-05-27) |
@@ -232,20 +232,37 @@ Risk:
 
 ## Increment 7: Compact Overlay Closing
 
+**Status: done** (2026-05-27).
+
 Goal: make the compact translation overlay dismissible and predictable.
 
-Scope:
+Scope (all delivered):
 
-- Add a visible close button in the top-right of the overlay.
-- Support Escape to close the visible overlay.
-- Stop ignoring mouse events when the overlay contains interactive controls.
-- Preserve manual close behavior for the persistent last-translation overlay.
-- If future overlay content waits for additional data, disable auto-hide until the user closes it.
+- Visible close button (top-right) on all overlay states.
+- Escape closes the visible overlay (global key monitor while shown).
+- `panel.ignoresMouseEvents = false` for the close control.
+- Persistent last translation stays until user closes (no timer).
+- Loading / awaiting format: no auto-hide until user closes.
 
-Implementation notes:
+### Implemented
 
-- This is AppKit-sensitive because the current overlay panel is borderless, nonactivating, and ignores mouse events.
-- Keep lifecycle in `TranslationOverlayService` / coordinator rather than SwiftUI views.
+| Area | What shipped |
+|------|----------------|
+| UI | `CompactOverlayView`: ✕ button, `ZStack` top-trailing |
+| Input | `NSEvent` global monitor keyCode 53; `onRequestClose` → `TranslationOverlayCoordinator.close()` |
+| Panel | `ignoresMouseEvents = false`; lifecycle in `TranslationOverlayService` |
+| Auto-hide | `TranslationOverlayDismissSchedule` — timer only when `dismissAfter != nil` |
+| Settings copy | Compact overlay section explains manual close while processing |
+| Tests | `translationOverlayDismissSchedule_onlyTimesTemporaryContent` in `llhTests` |
+
+Implementation notes (as built):
+
+- User dismiss routes through coordinator to cancel `entryAwaitingFormattedResult` and `hide()`.
+- Configured shortcut «Закрыть компактное окно» remains; Escape works without relying on KeyboardShortcuts binding.
+
+Risk:
+
+- Low. AppKit panel behavior; no formatting or persistence changes.
 
 ## Increment 8: Session Reading Overview Details
 
@@ -311,8 +328,8 @@ New file: `App/MainWindowActivator.swift`.
 5. ~~Translation result state cleanup.~~ **Done.**
 6. ~~Words/grammar tabs and grammar OpenAI path.~~ **Done.**
 7. ~~Session-level automation flags.~~ **Done.**
-8. Overlay close/Escape behavior. **Next recommended.**
-9. Session reading overview details.
+8. ~~Overlay close/Escape behavior.~~ **Done.**
+9. Session reading overview details. **Next recommended.**
 10. Dock language badge.
 
 ## Testing Focus
@@ -322,6 +339,7 @@ New file: `App/MainWindowActivator.swift`.
 - **Inc. 5 (done):** `Phase3LoadGrammarStudyUseCaseTests`; grammar prompt test in `llhTests`.
 - Session rename persists and does not change language.
 - **Inc. 6 (done):** existing sessions decode with default automation flags; SQLite migration; `Phase3ManageProfilesUseCaseTests` / `Phase5HistoryPersistenceTests` / `learningProfile_decodesLegacyPayloadWithoutAutomationFlags`.
+- **Inc. 7 (done):** `translationOverlayDismissSchedule_onlyTimesTemporaryContent` in `llhTests`; manual — ✕ / Escape / configured shortcut close overlay; loading stays until dismiss; timed translation still auto-hides.
 - Formatting failure shows raw text and icon-only retry (manual UI verification).
 - Successful formatting triggers enabled words/grammar requests exactly once (manual UI verification).
 - Words and grammar failures are independently retryable.
@@ -335,5 +353,5 @@ New file: `App/MainWindowActivator.swift`.
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
-- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar tests (inc. 5)
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke (inc. 1–3); resolver (inc. 4); grammar (inc. 5); overlay dismiss schedule (inc. 7)
 - [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md)

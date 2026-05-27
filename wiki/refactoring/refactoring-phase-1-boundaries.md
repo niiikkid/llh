@@ -54,7 +54,7 @@ llhApp → AppDependencyContainer.live() → MainViewModel(dependencies:)
 
 - Единственный designated init: `init(dependencies: AppDependencyContainer)`.
 - Repositories и `OpenAIServing` не инжектируются напрямую — только use cases и overlay service.
-- `TranslationOverlayService` остаётся конкретным типом в контейнере; lifecycle overlay после format — `TranslationOverlayCoordinator` (Phase 4 inc. 4).
+- `TranslationOverlayService` остаётся конкретным типом в контейнере; lifecycle overlay после format — `TranslationOverlayCoordinator` (Phase 4 inc. 4); v0.2 inc. 7 — user dismiss через `onRequestClose` в coordinator.
 - **Phase 4 (завершена):** `let settings`, `history`, `capture`, `study`, `editor`; private `TranslationOverlayCoordinator`; `AppShortcutsCoordinator` в `init`. `FormatCapturedTextUseCase` — в `EditorViewModel`, не в Main.
 - **Phase 8 (завершена):** Main ~129 строк, **без `@Published`**; `statusMessage` на feature ViewModels; UI — `Presentation/Main/` + feature views — см. [Phase 8](refactoring-phase-8-ui-decomposition.md).
 

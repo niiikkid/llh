@@ -1,5 +1,18 @@
 # Wiki Log
 
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 7 overlay close completion)
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 8 UI Decomposition
+- Updated: Refactoring Phase 9 Testing Strategy
+- Updated: Refactoring Phase 0 Baseline
+- Updated: Refactoring Phase 1 Boundaries And DI
+- Updated: wiki/index.md
+
+## [2026-05-27] lint | 0 issues found, 6 auto-fixed
+- Updated: wiki/index.md (Phase 4/8/9 summaries for Inc. 7)
+- Updated: v0.2 Product Plan (Testing Focus Inc. 7)
+- Cascade: Phase 0/1/4/8/9 aligned with Inc. 7 overlay dismiss
+
 ## [2026-05-27] lint | 2 issues found, 11 auto-fixed
 - Updated: wiki/index.md (Inc. 6 summaries for Phases 2–5, 8–9)
 - Updated: v0.2 Product Plan (Inc. 5 note vs Inc. 6)

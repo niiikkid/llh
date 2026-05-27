@@ -24,6 +24,9 @@ final class TranslationOverlayCoordinator {
         self.settings = settings
         self.history = history
         self.shouldUseCompactOverlay = shouldUseCompactOverlay
+        translationOverlayService.onRequestClose = { [weak self] in
+            self?.close()
+        }
     }
 
     func close(cancelPendingResult: Bool = true) {
