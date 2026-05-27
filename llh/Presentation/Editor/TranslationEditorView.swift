@@ -10,38 +10,25 @@ struct TranslationEditorView: View {
     @ObservedObject var history: HistoryViewModel
     @ObservedObject var study: StudyViewModel
 
-    @Binding var selectedTextTab: TranslationTextTab
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("", selection: $selectedTextTab) {
-                Text("Сырой текст").tag(TranslationTextTab.raw)
-                Text("Форматированный").tag(TranslationTextTab.formatted)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-
-            Group {
-                if selectedTextTab == .raw {
-                    TextEditor(
-                        text: Binding(
-                            get: { editor.recognizedText },
-                            set: { editor.updateSelectedText($0) }
-                        )
-                    )
-                    .font(.system(.body, design: .monospaced))
-                } else {
-                    FormattedTranslationContentView(
-                        editor: editor,
-                        history: history,
-                        study: study
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            translationContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             HStack {
+                if editor.showsFormattingRetryAction {
+                    Button {
+                        editor.retryFormattingForSelectedEntry()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Повторить форматирование")
+                    .disabled(editor.isFormattingRecognizedText)
+                }
+
                 Spacer()
+
                 Button(role: .destructive) {
                     history.deleteSelectedEntry()
                 } label: {
@@ -52,9 +39,71 @@ struct TranslationEditorView: View {
             }
         }
     }
-}
 
-enum TranslationTextTab: String, Hashable {
-    case raw
-    case formatted
+    @ViewBuilder
+    private var translationContent: some View {
+        switch editor.translationResultPresentation {
+        case .loading:
+            rawTranslationEditor(readOnly: true)
+                .overlay(alignment: .top) {
+                    formattingProgressBanner
+                        .padding(.top, 8)
+                }
+        case .failed:
+            VStack(alignment: .leading, spacing: 8) {
+                formattingFailureBanner
+                rawTranslationEditor(readOnly: false)
+            }
+        case .rawOnly:
+            rawTranslationEditor(readOnly: false)
+        case .formatted:
+            FormattedTranslationContentView(
+                editor: editor,
+                history: history,
+                study: study
+            )
+        }
+    }
+
+    private var formattingProgressBanner: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Форматирую текст…")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var formattingFailureBanner: some View {
+        Label {
+            Text(editor.formattingFailureMessage)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.orange.opacity(0.12))
+        )
+    }
+
+    private func rawTranslationEditor(readOnly: Bool) -> some View {
+        TextEditor(
+            text: Binding(
+                get: { editor.recognizedText },
+                set: { editor.updateSelectedText($0) }
+            )
+        )
+        .font(.system(.body, design: .monospaced))
+        .disabled(readOnly)
+    }
 }

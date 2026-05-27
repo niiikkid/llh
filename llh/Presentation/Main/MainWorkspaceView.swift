@@ -13,8 +13,6 @@ struct MainWorkspaceView: View {
 
     var isTranslationsSidebarCollapsed: Bool
 
-    @Binding var selectedTextTab: TranslationTextTab
-
     private let columnSpacing: CGFloat = 12
     private let detailMinimumWidth: CGFloat = 420
     private let sidebarMinimumWidth: CGFloat = 280
@@ -46,8 +44,7 @@ struct MainWorkspaceView: View {
                     TranslationDetailPanelView(
                         history: history,
                         editor: editor,
-                        study: study,
-                        selectedTextTab: $selectedTextTab
+                        study: study
                     )
                 } label: {
                     Text(history.showsSessionReadingOverview ? "Вся сессия" : "Перевод")

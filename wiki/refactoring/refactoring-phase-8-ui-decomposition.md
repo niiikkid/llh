@@ -4,7 +4,7 @@
 > Raw: [Phase 8 UI decomposition completion](../../raw/refactoring/2026-05-27-phase-8-ui-decomposition-completion.md)
 > Updated: 2026-05-27
 
-**Post–Phase 8 (v0.2):** [Increment 1 UI polish](v0-2-product-plan.md#increment-1-quick-ui-polish) updated `MainChromeView`, `HistoryView`, `MenuBarPanelView`, `CapturePermissionBannerView`; added `AppDisplayStrings` and `SessionLanguageBadge`. [Increment 2 session navigation](v0-2-product-plan.md#increment-2-main-window-and-session-navigation) added `SessionsListView`, `AppMainRoute`, route-based `ContentView`; `HistoryView` is translations-only sidebar; `SessionLanguageBadge` in `Presentation/Shared/`. [Increment 3 settings page](v0-2-product-plan.md#increment-3-settings-as-a-page) relaid out `SettingsView` with `PanelGroupBoxStyle` sections and aligned rows; removed sheet-era fixed size and «Закрыть». [Increment 10 single main window](v0-2-product-plan.md#increment-10-single-main-window-behavior) added `MainWindowActivator` / `MainWindowIdentityView`; `MenuBarPanelView` activates existing window instead of duplicating.
+**Post–Phase 8 (v0.2):** [Increment 1 UI polish](v0-2-product-plan.md#increment-1-quick-ui-polish) updated `MainChromeView`, `HistoryView`, `MenuBarPanelView`, `CapturePermissionBannerView`; added `AppDisplayStrings` and `SessionLanguageBadge`. [Increment 2 session navigation](v0-2-product-plan.md#increment-2-main-window-and-session-navigation) added `SessionsListView`, `AppMainRoute`, route-based `ContentView`; `HistoryView` is translations-only sidebar; `SessionLanguageBadge` in `Presentation/Shared/`. [Increment 3 settings page](v0-2-product-plan.md#increment-3-settings-as-a-page) relaid out `SettingsView` with `PanelGroupBoxStyle` sections and aligned rows; removed sheet-era fixed size and «Закрыть». [Increment 4 translation result state](v0-2-product-plan.md#increment-4-translation-result-state) unified `TranslationEditorView` on `FormattingStatus` (no raw/formatted tabs; loading/failed banners). [Increment 10 single main window](v0-2-product-plan.md#increment-10-single-main-window-behavior) added `MainWindowActivator` / `MainWindowIdentityView`; `MenuBarPanelView` activates existing window instead of duplicating.
 
 ## Overview
 
@@ -31,6 +31,7 @@ Presentation/
     TranslationDetailPanelView.swift
   Editor/
     TranslationEditorView.swift
+    TranslationResultPresentation.swift  — v0.2 inc. 4
     FormattedTranslationContentView.swift
     FormattedTranslationBlockView.swift
   Study/
@@ -99,5 +100,5 @@ Presentation/
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — `StructuredFormattedText` display helpers
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — feature ViewModels (Phase 4) + views (Phase 8)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
-- [v0.2 Product Plan](v0-2-product-plan.md) — v0.2 Increments 1–3 and 10 on Presentation shell
+- [v0.2 Product Plan](v0-2-product-plan.md) — v0.2 Increments 1–4 and 10 on Presentation shell
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot; Phase 8 exit criteria в roadmap §Phase 8

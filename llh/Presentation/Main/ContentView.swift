@@ -7,7 +7,6 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var viewModel: MainViewModel
-    @State private var selectedTextTab: TranslationTextTab = .formatted
     @State private var isTranslationsSidebarCollapsed = false
     @State private var route: AppMainRoute = .workspace
     @State private var routeBeforeSettings: AppMainRoute = .workspace
@@ -70,8 +69,7 @@ struct ContentView: View {
                     editor: viewModel.editor,
                     study: viewModel.study,
                     capture: viewModel.capture,
-                    isTranslationsSidebarCollapsed: isTranslationsSidebarCollapsed,
-                    selectedTextTab: $selectedTextTab
+                    isTranslationsSidebarCollapsed: isTranslationsSidebarCollapsed
                 )
             }
         case .settings:

@@ -10,8 +10,6 @@ struct TranslationDetailPanelView: View {
     @ObservedObject var editor: EditorViewModel
     @ObservedObject var study: StudyViewModel
 
-    @Binding var selectedTextTab: TranslationTextTab
-
     var body: some View {
         Group {
             if history.showsSessionReadingOverview {
@@ -38,8 +36,7 @@ struct TranslationDetailPanelView: View {
                 TranslationEditorView(
                     editor: editor,
                     history: history,
-                    study: study,
-                    selectedTextTab: $selectedTextTab
+                    study: study
                 )
             }
         }

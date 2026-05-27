@@ -83,7 +83,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ### UI зависимости
 
-`llhApp` владеет `StateObject` `MainViewModel`; `Presentation/Main/ContentView` и `MenuBarPanelView` наблюдают Main. Композиция UI: `MainChromeView`, `MainWorkspaceView`, `SessionsListView`, `HistoryView`, `TranslationDetailPanelView`, … **v0.2 inc. 2+:** `AppMainRoute` (sessions / workspace / settings); sidebar переводов — `HistoryView`; управление сессиями — `SessionsListView`; настройки — `SettingsView` по маршруту (inc. 3: full-page `GroupBox` layout, без sheet/«Закрыть»). Menu bar status — `main.capture.statusMessage`; capture — `main.capture.triggerCapture()`.
+`llhApp` владеет `StateObject` `MainViewModel`; `Presentation/Main/ContentView` и `MenuBarPanelView` наблюдают Main. Композиция UI: `MainChromeView`, `MainWorkspaceView`, `SessionsListView`, `HistoryView`, `TranslationDetailPanelView`, `TranslationEditorView`, … **v0.2 inc. 2+:** `AppMainRoute` (sessions / workspace / settings); sidebar переводов — `HistoryView`; управление сессиями — `SessionsListView`; настройки — `SettingsView` по маршруту (inc. 3: full-page `GroupBox` layout, без sheet/«Закрыть»). **Inc. 4:** `TranslationEditorView` без вкладок raw/formatted; состояние через `TranslationResultPresentationResolver` / `FormattingStatus`. Menu bar status — `main.capture.statusMessage`; capture — `main.capture.triggerCapture()`.
 
 ## Покрытие тестами (Phase 0)
 
@@ -120,5 +120,5 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — Phase 3 завершена
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели в `Domain/Models`
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — завершённый Phase 1
-- [v0.2 Product Plan](v0-2-product-plan.md) — product shell after refactor (inc. 1–3, 10)
+- [v0.2 Product Plan](v0-2-product-plan.md) — product shell after refactor (inc. 1–4, 10)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный пофазный план (архивный snapshot на 2026-05-26)

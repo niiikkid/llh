@@ -1,14 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 4 translation result state completion](../../raw/refactoring/2026-05-27-v0-2-increment-4-translation-result-state-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); single main window (Inc. 10). Remaining: translation UX, study tabs, automation, overlay close, reading overview details, Dock badge.
+**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); unified translation result state without raw/formatted tabs (Inc. 4); single main window (Inc. 10). Remaining: study tabs, automation, overlay close, reading overview details, Dock badge.
 
 ## Release progress
 
@@ -17,7 +17,7 @@
 | 1 | Quick UI polish | **Done** (2026-05-27) |
 | 2 | Session list page | **Done** (2026-05-27) |
 | 3 | Settings page | **Done** (2026-05-27) |
-| 4 | Translation result state | Planned |
+| 4 | Translation result state | **Done** (2026-05-27) |
 | 5 | Words and grammar tabs | Planned |
 | 6 | Session-level automation | Planned |
 | 7 | Overlay closing | Planned |
@@ -130,9 +130,11 @@ Risk:
 
 ## Increment 4: Translation Result State
 
+**Status: done** (2026-05-27).
+
 Goal: remove raw/formatted tabs and make loading/error state understandable.
 
-Scope:
+Scope (all delivered):
 
 - Remove `Сырой текст` and `Форматированный` tabs.
 - While formatting is running, show the raw OCR text with a loading indicator.
@@ -141,10 +143,25 @@ Scope:
 - Remove the always-visible refresh action.
 - Show an icon-only retry action only when the current content failed to load.
 
-Implementation notes:
+### Implemented
 
-- Use the existing `FormattingStatus` as the source of truth where possible.
-- Avoid putting formatting rules in SwiftUI; the view should render status and call ViewModel actions.
+| Area | What shipped |
+|------|----------------|
+| Presentation state | `TranslationResultPresentation` + `TranslationResultPresentationResolver` from `FormattingStatus` |
+| Editor UI | `TranslationEditorView`: loading banner + raw text; failure banner + raw; formatted scroll + study |
+| Retry | Icon-only `arrow.clockwise` in footer when `.failed`; removed centered retry in `FormattedTranslationContentView` |
+| Cleanup | Removed `TranslationTextTab` and `selectedTextTab` bindings from `ContentView` / workspace shell |
+
+New files: `TranslationResultPresentation.swift`, `llhTests/TranslationResultPresentationResolverTests.swift`.
+
+Implementation notes (as built):
+
+- Resolver is pure; `EditorViewModel.translationResultPresentation` delegates to it.
+- `formattingFailureMessage` prefers `statusMessage` when it starts with «Не удалось отформатировать».
+
+Risk:
+
+- Low. Presentation-only; formatting pipeline unchanged.
 
 ## Increment 5: Words And Grammar Tabs
 
@@ -262,8 +279,8 @@ New file: `App/MainWindowActivator.swift`.
 2. ~~Single main window bug fix.~~ **Done.**
 3. ~~Session list page and rename.~~ **Done.**
 4. ~~Settings page layout and routing polish.~~ **Done.**
-5. Translation result state cleanup. **Next recommended.**
-6. Words/grammar tabs and grammar OpenAI path.
+5. ~~Translation result state cleanup.~~ **Done.**
+6. Words/grammar tabs and grammar OpenAI path. **Next recommended.**
 7. Session-level automation flags.
 8. Overlay close/Escape behavior.
 9. Session reading overview details.
@@ -272,9 +289,10 @@ New file: `App/MainWindowActivator.swift`.
 ## Testing Focus
 
 - Settings route: `testSettingsRouteOpensAndReturns` (toolbar «Настройки» → «Общие» → «Назад»); launch chrome uses Russian product name.
+- **Inc. 4 (done):** `TranslationResultPresentationResolverTests` — loading / formatted / failed / rawOnly from `FormattingStatus`.
 - Session rename persists and does not change language.
 - Existing sessions decode with default automation flags.
-- Formatting failure shows raw text and retry.
+- Formatting failure shows raw text and icon-only retry (manual UI verification).
 - Successful formatting triggers enabled words/grammar requests exactly once.
 - Words and grammar failures are independently retryable.
 - `Open Window` does not create duplicate windows.
@@ -287,5 +305,5 @@ New file: `App/MainWindowActivator.swift`.
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
-- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke for settings route and launch title
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke (inc. 1–3); resolver tests (inc. 4)
 - [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md)

@@ -38,6 +38,8 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 - Settings: `testSettingsRouteOpensAndReturns` — «Настройки» → маршрут `AppMainRoute.settings` (inc. 2) → вкладка «Общие» → «Назад» (inc. 3; без кнопки «Закрыть»).
 - Без live capture/OpenAI; performance test удалён из основного файла.
 
+**v0.2 Inc. 4:** unit-тесты `TranslationResultPresentationResolverTests` — матрица loading / formatted / failed / rawOnly от `FormattingStatus` (без UI-теста вкладок; вкладки удалены).
+
 ## Исправления существующих тестов
 
 - `OCREngine.openai` → `.ai` в Phase 1/3 tests.
@@ -49,6 +51,7 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 | Слой / фаза | Файлы |
 |-------------|--------|
 | Baseline (0) | `RefactorBaselineTests`, `llhTests` |
+| Presentation (v0.2 inc. 4) | `TranslationResultPresentationResolverTests` |
 | Repositories (1) | `Phase1RepositoryTests` |
 | Domain (2) | `Phase2DomainModelsTests` |
 | Use cases (3) | `Phase3*UseCaseTests`, `Phase3CaptureRegionUseCaseTests` |
@@ -95,5 +98,5 @@ xcodebuild -scheme llh -destination 'platform=macOS' test -only-testing:llhTests
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
-- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke aligned with inc. 1–3 navigation
+- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke (inc. 1–3); `TranslationResultPresentationResolverTests` (inc. 4)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot §Phase 9–10

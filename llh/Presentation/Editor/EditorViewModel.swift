@@ -79,6 +79,26 @@ final class EditorViewModel: ObservableObject {
         }
     }
 
+    var translationResultPresentation: TranslationResultPresentation {
+        TranslationResultPresentationResolver.resolve(
+            formattingStatus: selectedEntryFormattingStatus,
+            isFormattingRecognizedText: isFormattingRecognizedText,
+            formattedText: formattedRecognizedText
+        )
+    }
+
+    var showsFormattingRetryAction: Bool {
+        translationResultPresentation == .failed
+    }
+
+    var formattingFailureMessage: String {
+        let message = statusMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        if message.hasPrefix("Не удалось отформатировать") {
+            return message
+        }
+        return "Не удалось отформатировать текст. Проверьте подключение к сети и настройки OpenAI."
+    }
+
     var canRetryFormatting: Bool {
         guard let profileIndex = history.selectedProfileIndex,
               let entryIndex = history.selectedEntryIndex else { return false }

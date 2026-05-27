@@ -194,9 +194,11 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 
 | Файл | Строк (≈) | Назначение |
 |------|-----------|------------|
-| `Presentation/Editor/EditorViewModel.swift` | 198 | Editor state, `FormatCapturedTextUseCase`, selection sync, post-capture format |
+| `Presentation/Editor/EditorViewModel.swift` | 198+ | Editor state, `FormatCapturedTextUseCase`, selection sync, post-capture format; v0.2 inc. 4: `translationResultPresentation` |
+| `Presentation/Editor/TranslationResultPresentation.swift` | — | Pure resolver: loading / formatted / failed / rawOnly (v0.2 inc. 4) |
+| `Presentation/Editor/TranslationEditorView.swift` | — | Unified translation panel без raw/formatted tabs (v0.2 inc. 4) |
 | `MainViewModel.swift` | 157 | Фасад: `statusMessage`, overlay shortcuts, study retry proxies |
-| `ContentView.swift` | 513 | Editor UI через `viewModel.editor`; язык профиля — `viewModel.history` |
+| `ContentView.swift` | — | Editor UI через `viewModel.editor`; без `selectedTextTab` (v0.2 inc. 4) |
 
 ### Состояние в EditorViewModel (4 `@Published`)
 
@@ -206,6 +208,8 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 | `formattedRecognizedText` | Форматированный перевод для UI |
 | `capturedImage` | Превью скриншота in-memory |
 | `isFormattingRecognizedText` | Идёт запрос format в OpenAI |
+
+**v0.2 Inc. 4:** `translationResultPresentation` (через `TranslationResultPresentationResolver`), `formattingFailureMessage`, `showsFormattingRetryAction`; `TranslationEditorView` без вкладок raw/formatted.
 
 ### Публичные действия EditorViewModel
 
@@ -271,5 +275,5 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — session navigation (Increment 2); settings page layout (Increment 3)
+- [v0.2 Product Plan](v0-2-product-plan.md) — session navigation (Inc. 2); settings page (Inc. 3); translation result state (Inc. 4)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план

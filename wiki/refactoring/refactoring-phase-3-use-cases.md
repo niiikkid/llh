@@ -313,5 +313,5 @@ Phase 3 завершена; **Phases 6–10 завершены** — integration
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — протоколы и контейнер
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь MainViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — `renameProfile` / `deleteProfile(profileID:)` (Increment 2); settings UX in Presentation (Increment 3)
+- [v0.2 Product Plan](v0-2-product-plan.md) — `renameProfile` / `deleteProfile(profileID:)` (Inc. 2); settings UX (Inc. 3); `FormattingStatus` drives translation UI (Inc. 4)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

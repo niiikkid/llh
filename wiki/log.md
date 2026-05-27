@@ -1,5 +1,19 @@
 # Wiki Log
 
+## [2026-05-27] lint | 3 issues found, 8 auto-fixed
+- Updated: Refactoring Phase 4 Presentation (Inc. 4 files in Editor section, not Settings)
+- Updated: Refactoring Phase 8 UI Decomposition (See Also inc. 1–4)
+- Updated: Refactoring Phase 9 Testing Strategy (resolver tests, test map)
+- Updated: Refactoring Phase 0 Baseline (Inc. 4 UI shell)
+- Updated: Refactoring Phase 3 Use Cases (See Also Inc. 4)
+- Updated: v0.2 Product Plan (Testing Focus, See Also Phase 9)
+- Updated: wiki/index.md (Phase 9 summary)
+
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 4 completion)
+- Updated: Refactoring Phase 4 Presentation
+- Updated: Refactoring Phase 8 UI Decomposition
+- Updated: wiki/index.md
+
 ## [2026-05-27] lint | 2 issues found, 4 auto-fixed
 - Updated: Refactoring Phase 9 Testing Strategy (UI tests: RU product name, settings route/back, inc. 3)
 - Updated: Refactoring Phase 0 Baseline (SettingsView inc. 3, See Also v0.2)
