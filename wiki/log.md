@@ -1,5 +1,9 @@
 # Wiki Log
 
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 1 completion)
+- Updated: Refactoring Phase 8 UI Decomposition
+- Updated: Refactoring Phase 2 Domain Models
+
 ## [2026-05-27] ingest | v0.2 Product Plan
 
 ## [2026-05-27] lint | 0 issues found, 11 auto-fixed

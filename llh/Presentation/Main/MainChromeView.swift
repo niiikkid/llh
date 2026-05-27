@@ -12,11 +12,11 @@ struct MainChromeView: View {
 
     var body: some View {
         HStack {
-            Text("Language Learning Helper")
+            Text(AppDisplayStrings.productName)
                 .font(.title3.weight(.semibold))
             Spacer()
             Picker(
-                "Движок OCR",
+                "",
                 selection: Binding(
                     get: { settings.selectedOCREngine },
                     set: { settings.selectOCREngine($0) }
@@ -26,23 +26,29 @@ struct MainChromeView: View {
                     Text(engine.title).tag(engine)
                 }
             }
+            .labelsHidden()
             .pickerStyle(.menu)
-            .frame(width: 150)
+            .frame(width: 200)
+            .help("Движок OCR: \(settings.selectedOCREngine.title)")
+            .accessibilityLabel("Движок OCR")
+
             Button {
                 isSessionsPanelCollapsed.toggle()
             } label: {
-                Label(
-                    isSessionsPanelCollapsed ? "Показать сессии" : "Скрыть сессии",
-                    systemImage: isSessionsPanelCollapsed ? "sidebar.left" : "sidebar.leading"
+                Image(
+                    systemName: isSessionsPanelCollapsed ? "sidebar.left" : "sidebar.leading"
                 )
             }
             .buttonStyle(.bordered)
+            .help(isSessionsPanelCollapsed ? "Показать сессии" : "Скрыть сессии")
+
             Button {
                 isSettingsPresented = true
             } label: {
-                Label("Настройки", systemImage: "gearshape")
+                Image(systemName: "gearshape")
             }
             .buttonStyle(.bordered)
+            .help("Настройки")
         }
     }
 }

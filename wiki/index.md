@@ -6,7 +6,7 @@
 
 | Article | Summary | Updated |
 |---------|---------|---------|
-| [v0.2 Product Plan](refactoring/v0-2-product-plan.md) | Product/UI plan for sessions, settings page, translation state, words+grammar automation, overlay closing, Dock language badge, and single-window behavior. | 2026-05-27 |
+| [v0.2 Product Plan](refactoring/v0-2-product-plan.md) | v0.2 plan: **Increment 1 (UI polish) done**; increments 2–10 pending (sessions page, settings, translation state, study tabs, automation, overlay, Dock badge, single window). | 2026-05-27 |
 | [Refactoring Phase 10 Cleanup](refactoring/refactoring-phase-10-cleanup.md) | Phase 10: removed unwired phrase/grammar OpenAI API; product decisions; `overlayPrimaryText` dedup; relocated `Services/` → Data/Infrastructure; hotkey cancel test. | 2026-05-27 |
 | [Refactoring Phase 9 Testing Strategy](refactoring/refactoring-phase-9-testing-strategy.md) | Phase 9: `Phase9*` integration/migration/prompt/VM tests; UI launch+settings; migration verify failure; bootstrap JSON fallback; fixes Phase 1/3 stale OCR tests. | 2026-05-27 |
 | [Refactoring Phase 8 UI Decomposition](refactoring/refactoring-phase-8-ui-decomposition.md) | Phase 8 завершена: `Presentation/Main/ContentView` + feature views; `StructuredFormattedText` display helpers; per-VM `statusMessage`; Main без `@Published`. | 2026-05-27 |

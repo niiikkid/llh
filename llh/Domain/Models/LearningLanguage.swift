@@ -25,4 +25,14 @@ enum LearningLanguage: String, CaseIterable, Identifiable, Codable {
     var supportsWordStudy: Bool {
         self != .auto
     }
+
+    /// Flag emoji for session language UI; `auto` uses a globe symbol in views instead.
+    var flagEmoji: String? {
+        switch self {
+        case .auto: return nil
+        case .english: return "🇬🇧"
+        case .spanish: return "🇪🇸"
+        case .chinese: return "🇨🇳"
+        }
+    }
 }

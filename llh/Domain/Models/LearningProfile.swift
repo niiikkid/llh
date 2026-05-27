@@ -76,6 +76,15 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         kind == .default
     }
 
+    /// User-visible session name; legacy persisted `"Default"` stays in storage.
+    var displayName: String {
+        if isDefaultProfile || name == "Default" {
+            return "По умолчанию"
+        }
+        return name
+    }
+}
+
     enum CodingKeys: String, CodingKey {
         case id
         case name

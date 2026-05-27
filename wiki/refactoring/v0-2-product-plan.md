@@ -1,11 +1,27 @@
 # v0.2 Product Plan
 
-> Sources: Cursor planning discussion, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md)
+> Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md)
+> Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
+
+## Release progress
+
+| Increment | Topic | Status |
+|-----------|--------|--------|
+| 1 | Quick UI polish | **Done** (2026-05-27) |
+| 2 | Session list page | Planned |
+| 3 | Settings page | Planned |
+| 4 | Translation result state | Planned |
+| 5 | Words and grammar tabs | Planned |
+| 6 | Session-level automation | Planned |
+| 7 | Overlay closing | Planned |
+| 8 | Session reading overview details | Planned |
+| 9 | Dock language badge | Planned |
+| 10 | Single main window | Planned |
 
 ## Product Decisions
 
@@ -17,9 +33,11 @@
 
 ## Increment 1: Quick UI Polish
 
+**Status: done** (2026-05-27). UI-only; no persistence or workflow changes.
+
 Goal: remove obvious friction without changing data flow.
 
-Scope:
+Scope (all delivered):
 
 - Remove the visible `Движок OCR` label from the toolbar and widen the OCR picker so selected values fit.
 - Make `Скрыть сессии` and `Настройки` toolbar actions icon-only, with help text/tooltips preserving clarity.
@@ -27,9 +45,27 @@ Scope:
 - Show the session language with a language icon/flag plus localized language title.
 - Translate remaining English UI strings to Russian, including menu bar actions such as `Capture`, `Open Window`, app panel title text, and default session labels where user-visible.
 
+### Implemented
+
+| Area | What shipped |
+|------|----------------|
+| Toolbar | `MainChromeView`: hidden OCR label, picker width 200, icon-only sidebar/settings with `.help` |
+| Sessions list | `HistoryView`: no dates in entry list; `SessionLanguageBadge` (globe or 🇬🇧/🇪🇸/🇨🇳 + title) |
+| Localization | `AppDisplayStrings.productName` → «Помощник по изучению языков»; menu bar «Захват» / «Открыть окно» |
+| Default session | `LearningProfile.displayName` maps stored `"Default"` → «По умолчанию» in UI only |
+| Permissions banner | `CapturePermissionBannerView` fully Russian, including settings button |
+| Domain helpers | `LearningLanguage.flagEmoji`; `HistoryViewModel.selectedProfileDisplayName` |
+
+New file: `Presentation/Shared/AppDisplayStrings.swift`.
+
+### Not in this increment
+
+- **Increment 10** not started: `MenuBarPanelView` still calls `openWindow(id: "main-window")` — labels are Russian, duplicate-window bug remains.
+- Settings tab label **OpenAI** kept as product brand.
+
 Risk:
 
-- Low. Keep this as a focused UI-only change.
+- Low. Kept as a focused UI-only change.
 
 ## Increment 2: Main Window And Session Navigation
 
@@ -188,8 +224,8 @@ Implementation notes:
 
 ## Suggested Order
 
-1. Quick UI polish and Russian localization.
-2. Single main window bug fix.
+1. ~~Quick UI polish and Russian localization.~~ **Done.**
+2. Single main window bug fix. **Next recommended.**
 3. Session list page and rename.
 4. Settings page routing.
 5. Translation result state cleanup.

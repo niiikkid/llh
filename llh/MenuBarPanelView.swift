@@ -11,7 +11,7 @@ struct MenuBarPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Language Learning Helper")
+            Text(AppDisplayStrings.productName)
                 .font(.headline)
 
             Text(viewModel.capture.statusMessage)
@@ -20,12 +20,12 @@ struct MenuBarPanelView: View {
                 .lineLimit(2)
 
             HStack {
-                Button("Capture") {
+                Button("Захват") {
                     viewModel.capture.triggerCapture()
                 }
                 .disabled(viewModel.capture.isProcessing)
 
-                Button("Open Window") {
+                Button("Открыть окно") {
                     openWindow(id: "main-window")
                     NSApp.activate(ignoringOtherApps: true)
                 }

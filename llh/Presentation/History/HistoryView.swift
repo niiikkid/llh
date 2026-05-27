@@ -25,7 +25,7 @@ struct HistoryView: View {
                     )
                 ) {
                     ForEach(viewModel.profiles) { profile in
-                        Text(profile.name).tag(Optional(profile.id))
+                        Text(profile.displayName).tag(Optional(profile.id))
                     }
                 }
                 .labelsHidden()
@@ -50,14 +50,7 @@ struct HistoryView: View {
                 Text("Язык сессии:")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Text(viewModel.currentProfileLearningLanguage.title)
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(.background.secondary)
-                    )
+                SessionLanguageBadge(language: viewModel.currentProfileLearningLanguage)
                 Spacer()
             }
 
@@ -105,19 +98,13 @@ struct HistoryView: View {
                         )
                     ) { item in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline) {
-                                Text(
-                                    item.sessionListTitleLine(
-                                        learningLanguage: viewModel.currentProfileLearningLanguage
-                                    )
+                            Text(
+                                item.sessionListTitleLine(
+                                    learningLanguage: viewModel.currentProfileLearningLanguage
                                 )
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                                Spacer(minLength: 8)
-                                Text(viewModel.formattedDate(for: item.createdAt))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
+                            )
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
                             Text(item.sessionListPreviewLine())
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -166,7 +153,9 @@ struct HistoryView: View {
             }
             Button("Отмена", role: .cancel) {}
         } message: {
-            Text("Сессия \"\(viewModel.selectedProfileName)\" будет удалена вместе со всеми переводами внутри нее.")
+            Text(
+                "Сессия «\(viewModel.selectedProfileDisplayName)» будет удалена вместе со всеми переводами внутри неё."
+            )
         }
     }
 
@@ -184,5 +173,32 @@ struct HistoryView: View {
         .controlSize(.regular)
         .frame(width: 32, height: 30)
         .help(helpText)
+    }
+}
+
+private struct SessionLanguageBadge: View {
+    let language: LearningLanguage
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if language == .auto {
+                Image(systemName: "globe")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let flagEmoji = language.flagEmoji {
+                Text(flagEmoji)
+                    .font(.caption)
+            }
+            Text(language.title)
+                .font(.caption)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.background.secondary)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Язык сессии: \(language.title)")
     }
 }

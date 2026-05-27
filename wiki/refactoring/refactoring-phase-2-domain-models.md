@@ -2,7 +2,7 @@
 
 > Sources: llh project, 2026-05-26
 > Raw: [Phase 2 domain models completion](../../raw/refactoring/2026-05-26-phase-2-domain-models-completion.md); [Phase 2 Data/OpenAI completion](../../raw/refactoring/2026-05-26-phase-2-data-openai-completion.md)
-> Updated: 2026-05-27
+> Updated: 2026-05-27 (v0.2 increment 1 display helpers)
 
 ## Overview
 
@@ -18,14 +18,14 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 | Файл | Содержимое |
 |------|------------|
 | `FormattingStatus.swift` | Статусы форматирования и study |
-| `LearningLanguage.swift` | Язык сессии (UI: `title`, `supportsWordStudy`) |
+| `LearningLanguage.swift` | Язык сессии (`title`, `supportsWordStudy`, `flagEmoji` для UI — v0.2 inc. 1) |
 | `OCREngine.swift` | local / AI |
 | `OCRResult.swift` | Structured OCR: `text`, `lines`, `isEmpty` (Phase 7) |
 | `ScreenRecordingPermissionStatus.swift` | `.authorized` / `.denied` (Phase 7) |
 | `StructuredFormattedText.swift` | Очищенный текст, пиньинь, перевод; display helpers (Phase 8); `overlayPrimaryText` (Phase 10) |
 | `StudyMaterials.swift` | Study payloads, legacy `StudyAssistantData` decode |
 | `CapturedTextEntry.swift` | Запись истории, legacy `Codable`, `NSImage?` только in-memory |
-| `LearningProfile.swift` | Профиль, `LearningProfileKind`, default profile |
+| `LearningProfile.swift` | Профиль, `LearningProfileKind`, default profile; `displayName` для UI (v0.2 inc. 1) |
 | `SessionReadingSequenceItem.swift` | Режим «вся сессия» |
 | `TranslationOverlayTiming.swift` | `LatestTranslationLookup`, расчёт длительности overlay |
 
@@ -113,6 +113,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 - [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `StructuredFormattedText.overlayPrimaryText`
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — display/prompt helpers в `Phase2DomainModelsTests` + `Phase9OpenAIPromptTests`
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — UI использует display helpers `StructuredFormattedText`
+- [v0.2 Product Plan](v0-2-product-plan.md) — `LearningLanguage.flagEmoji`, `LearningProfile.displayName` (Increment 1)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, Infrastructure OCR/capture (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, models/OCR/translation/study services
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — SQLite слой для snapshot

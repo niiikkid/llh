@@ -91,6 +91,10 @@ final class HistoryViewModel: ObservableObject {
         Self.plainTextForSessionReadingCopy(items: sessionReadingSequence)
     }
 
+    var selectedProfileDisplayName: String {
+        activeProfile?.displayName ?? "Сессия"
+    }
+
     var selectedProfileName: String {
         activeProfile?.name ?? "Профиль"
     }
@@ -178,7 +182,7 @@ final class HistoryViewModel: ObservableObject {
         applySession(updated)
         onSelectionChanged()
         persist()
-        publishStatus("Профиль \"\(profile.name)\" создан для языка \(learningLanguage.title.lowercased()).")
+        publishStatus("Сессия «\(profile.displayName)» создана для языка \(learningLanguage.title.lowercased()).")
     }
 
     func selectProfile(_ id: LearningProfile.ID?) {
@@ -188,7 +192,9 @@ final class HistoryViewModel: ObservableObject {
         applySession(updated)
         onSelectionChanged()
         if let activeProfile {
-            publishStatus("Выбрана история \"\(activeProfile.name)\" (\(activeProfile.learningLanguage.title.lowercased())).")
+            publishStatus(
+                "Выбрана сессия «\(activeProfile.displayName)» (\(activeProfile.learningLanguage.title.lowercased()))."
+            )
         }
     }
 
