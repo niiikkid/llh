@@ -101,7 +101,7 @@ Use case не меняет `formattingStatus`, не пишет историю и
 
 | Файл | Назначение |
 |------|------------|
-| `Domain/UseCases/ManageProfilesUseCase.swift` | Create/select/delete профилей, защита Default |
+| `Domain/UseCases/ManageProfilesUseCase.swift` | Create/select/delete/rename профилей, защита Default (v0.2 inc. 2: rename, delete by ID) |
 
 ### ManageProfilesDeleteOutcome
 
@@ -110,6 +110,14 @@ Use case не меняет `formattingStatus`, не пишет историю и
 | `deleted(removedName:)` | Профиль удалён; выбран первый в списке |
 | `cannotDeleteDefaultProfile` | Default нельзя удалить |
 | `noSelectedProfile` | Нет активного профиля |
+| `profileNotFound` | ID не найден (v0.2 inc. 2) |
+
+### ManageProfilesRenameOutcome (v0.2 inc. 2)
+
+| Исход | Смысл |
+|-------|--------|
+| `renamed(displayName:)` | Имя обновлено и сохранено через VM persist |
+| `profileNotFound` | ID не найден |
 
 ### Операции ManageProfilesUseCase
 
@@ -118,8 +126,9 @@ Use case не меняет `formattingStatus`, не пишет историю и
 | `normalizedProfileName(from:)` | Trim; пустое имя → `"Новый профиль"` |
 | `createProfile` | Insert at 0, select profile, resolve entry |
 | `selectProfile` | Смена профиля + resolve/clear entry |
-| `deleteSelectedProfile` | Удаление с защитой Default |
-| `canDeleteSelectedProfile` | `false` для Default |
+| `renameProfile` | Переименование по ID (v0.2 inc. 2) |
+| `deleteProfile` / `deleteSelectedProfile` | Удаление по ID или выбранного; Default защищён |
+| `canDeleteProfile` / `canDeleteSelectedProfile` | `false` для Default |
 
 После create/select/delete вызывается `ManageHistoryUseCase.resolveEntrySelectionForSelectedProfile`.
 
@@ -249,18 +258,19 @@ Use case не меняет `wordsStatus`, не пишет историю и не
 - load fallback `selectedProfileID`, delete/insert/resolve selection, update text reset
 - save roundtrip, `mutateEntry`
 
-`llhTests/Phase3ManageProfilesUseCaseTests.swift` (8 тестов):
+`llhTests/Phase3ManageProfilesUseCaseTests.swift` (12 тестов):
 
 - normalized name; createProfile insert/select
 - selectProfile resolve/clear entry
 - canDelete false for Default; delete custom/default/no selection
+- renameProfile; deleteProfile non-selected / profileNotFound (v0.2 inc. 2)
 
 `llhTests/Phase3LoadWordStudyUseCaseTests.swift` (9 тестов):
 
 - preflight: unsupported profile, missing key/model, skip без formatted text, skip succeeded/processing, ready при forceReload
 - perform: success, propagation `OpenAIServiceError`
 
-**Итого Phase 3 unit-тестов:** 56 (7 + 8 + 10 + 8 + 9 + 14).
+**Итого Phase 3 unit-тестов:** 60 (7 + 8 + 10 + 12 + 9 + 14).
 
 `llhTests/Phase3ManageOpenAISettingsUseCaseTests.swift` (14 тестов):
 
@@ -303,4 +313,5 @@ Phase 3 завершена; **Phases 6–10 завершены** — integration
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — модели и Data/OpenAI границы до use cases
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — протоколы и контейнер
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь MainViewModel
+- [v0.2 Product Plan](v0-2-product-plan.md) — `renameProfile` / `deleteProfile(profileID:)` (Increment 2)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — полный план (архивный snapshot)

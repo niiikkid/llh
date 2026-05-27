@@ -9,6 +9,12 @@ enum ManageProfilesDeleteOutcome: Equatable {
     case deleted(removedName: String)
     case cannotDeleteDefaultProfile
     case noSelectedProfile
+    case profileNotFound
+}
+
+enum ManageProfilesRenameOutcome: Equatable {
+    case renamed(displayName: String)
+    case profileNotFound
 }
 
 @MainActor
@@ -24,9 +30,16 @@ struct ManageProfilesUseCase {
         return trimmed.isEmpty ? "Новый профиль" : trimmed
     }
 
-    func canDeleteSelectedProfile(state: HistorySessionState) -> Bool {
-        guard let profileIndex = state.selectedProfileIndex else { return false }
+    func canDeleteProfile(state: HistorySessionState, profileID: LearningProfile.ID) -> Bool {
+        guard let profileIndex = state.profiles.firstIndex(where: { $0.id == profileID }) else {
+            return false
+        }
         return !state.profiles[profileIndex].isDefaultProfile
+    }
+
+    func canDeleteSelectedProfile(state: HistorySessionState) -> Bool {
+        guard let profileID = state.selectedProfileID else { return false }
+        return canDeleteProfile(state: state, profileID: profileID)
     }
 
     @discardableResult
@@ -54,21 +67,46 @@ struct ManageProfilesUseCase {
         }
     }
 
-    func deleteSelectedProfile(state: inout HistorySessionState) -> ManageProfilesDeleteOutcome {
-        guard let profileIndex = state.selectedProfileIndex else {
-            return .noSelectedProfile
+    func renameProfile(
+        state: inout HistorySessionState,
+        profileID: LearningProfile.ID,
+        named rawName: String
+    ) -> ManageProfilesRenameOutcome {
+        guard let profileIndex = state.profiles.firstIndex(where: { $0.id == profileID }) else {
+            return .profileNotFound
+        }
+        state.profiles[profileIndex].name = Self.normalizedProfileName(from: rawName)
+        return .renamed(displayName: state.profiles[profileIndex].displayName)
+    }
+
+    func deleteProfile(
+        state: inout HistorySessionState,
+        profileID: LearningProfile.ID
+    ) -> ManageProfilesDeleteOutcome {
+        guard let profileIndex = state.profiles.firstIndex(where: { $0.id == profileID }) else {
+            return .profileNotFound
         }
         guard !state.profiles[profileIndex].isDefaultProfile else {
             return .cannotDeleteDefaultProfile
         }
         let removedName = state.profiles[profileIndex].name
+        let wasSelected = state.selectedProfileID == profileID
         state.profiles.remove(at: profileIndex)
-        state.selectedProfileID = state.profiles.first?.id
-        if state.selectedProfileIndex != nil {
-            manageHistoryUseCase.resolveEntrySelectionForSelectedProfile(state: &state)
-        } else {
-            state.selectedEntryID = nil
+        if wasSelected {
+            state.selectedProfileID = state.profiles.first?.id
+            if state.selectedProfileIndex != nil {
+                manageHistoryUseCase.resolveEntrySelectionForSelectedProfile(state: &state)
+            } else {
+                state.selectedEntryID = nil
+            }
         }
         return .deleted(removedName: removedName)
+    }
+
+    func deleteSelectedProfile(state: inout HistorySessionState) -> ManageProfilesDeleteOutcome {
+        guard let profileID = state.selectedProfileID else {
+            return .noSelectedProfile
+        }
+        return deleteProfile(state: &state, profileID: profileID)
     }
 }

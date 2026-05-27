@@ -1,22 +1,22 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** quick UI polish and Russian strings (Increment 1); menu bar «Открыть окно» no longer spawns duplicate main windows (Increment 10). Remaining work: session list page, settings page, translation UX, study tabs, automation, overlay close, reading overview details, Dock badge.
+**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); single main window (Inc. 10). Remaining: settings page polish (Inc. 3 partial — settings already in-window), translation UX, study tabs, automation, overlay close, reading overview details, Dock badge.
 
 ## Release progress
 
 | Increment | Topic | Status |
 |-----------|--------|--------|
 | 1 | Quick UI polish | **Done** (2026-05-27) |
-| 2 | Session list page | Planned |
-| 3 | Settings page | Planned |
+| 2 | Session list page | **Done** (2026-05-27) |
+| 3 | Settings page | **Partial** (routing done; layout pending) |
 | 4 | Translation result state | Planned |
 | 5 | Words and grammar tabs | Planned |
 | 6 | Session-level automation | Planned |
@@ -52,7 +52,7 @@ Scope (all delivered):
 | Area | What shipped |
 |------|----------------|
 | Toolbar | `MainChromeView`: hidden OCR label, picker width 200, icon-only sidebar/settings with `.help` |
-| Sessions list | `HistoryView`: no dates in entry list; `SessionLanguageBadge` (globe or 🇬🇧/🇪🇸/🇨🇳 + title) |
+| Translation list | `HistoryView`: no dates in entry list; `SessionLanguageBadge` in list rows (later moved to `Presentation/Shared/`) |
 | Localization | `AppDisplayStrings.productName` → «Помощник по изучению языков»; menu bar «Захват» / «Открыть окно» |
 | Default session | `LearningProfile.displayName` maps stored `"Default"` → «По умолчанию» in UI only |
 | Permissions banner | `CapturePermissionBannerView` fully Russian, including settings button |
@@ -70,37 +70,53 @@ Risk:
 
 ## Increment 2: Main Window And Session Navigation
 
+**Status: done** (2026-05-27).
+
 Goal: replace the cramped session picker flow with a real session management page.
 
-Scope:
+Scope (all delivered):
 
-- Add a main-window page for all sessions.
-- Support create, open, delete, and rename.
-- Keep language immutable after creation.
-- Keep the existing selected-session translation list behavior when a session is opened.
-- Add navigation between the session list page, selected session page, and settings page.
-- Keep the existing history repository boundary; do not introduce a new persistence technology for this release.
+- Main-window page for all sessions with create, open, delete, rename.
+- Language immutable after creation (picker only on create sheet).
+- Workspace keeps translation list for the opened session (`HistoryView` sidebar).
+- `AppMainRoute` navigation: `sessions`, `workspace`, `settings` in `ContentView` (settings no longer a sheet).
+- Rename/delete via `ManageProfilesUseCase`; persist through existing save path.
 
-Implementation notes:
+### Implemented
 
-- Add session rename support at the domain/use-case level rather than mutating UI state directly.
-- Persist rename through the existing history/session save path.
-- Consider a simple app route enum in Presentation, for example `main`, `sessions`, `settings`, to avoid piling more boolean sheet state into `ContentView`.
+| Area | What shipped |
+|------|----------------|
+| Routes | `AppMainRoute`; `MainChromeView` toolbar: all sessions, back, settings with return route |
+| Sessions page | `SessionsListView` — list, create/rename sheets, delete alert |
+| Workspace sidebar | `HistoryView` — translations only; group box «Переводы» |
+| Domain | `renameProfile`, `deleteProfile(profileID:)`, `canDeleteProfile(profileID:)` |
+| Shared UI | `SessionLanguageBadge` extracted to `Presentation/Shared/` |
+
+New files: `SessionsListView.swift`, `AppMainRoute.swift`, `SessionLanguageBadge.swift`.
+
+### Partial overlap with Increment 3
+
+Settings open as an in-window route (not modal sheet). Increment 3 still covers full settings page layout and tab polish.
 
 ## Increment 3: Settings As A Page
 
+**Status: partial** (2026-05-27). Increment 2 delivered in-window `AppMainRoute.settings` and removed the modal sheet; layout polish remains.
+
 Goal: make settings feel native and spacious.
 
-Scope:
+Scope remaining:
 
-- Replace the modal settings sheet with an in-app settings page.
-- Keep tabs such as `Общие` and `OpenAI`.
 - Re-layout settings groups so controls align and the page uses available width.
+- Keep tabs such as `Общие` and `OpenAI`.
 - Keep existing settings ownership in `SettingsViewModel`; UI should remain thin.
+
+Already shipped (Increment 2):
+
+- `SettingsView` embedded in main window via route navigation; back returns to prior route.
 
 Risk:
 
-- Medium UI churn because `ContentView` currently presents `SettingsView` as a sheet.
+- Low–medium UI churn limited to `SettingsView` layout (routing already in place).
 
 ## Increment 4: Translation Result State
 
@@ -234,8 +250,8 @@ New file: `App/MainWindowActivator.swift`.
 
 1. ~~Quick UI polish and Russian localization.~~ **Done.**
 2. ~~Single main window bug fix.~~ **Done.**
-3. Session list page and rename. **Next recommended.**
-4. Settings page routing.
+3. ~~Session list page and rename.~~ **Done.**
+4. Settings page layout and routing polish. **Next recommended.**
 5. Translation result state cleanup.
 6. Words/grammar tabs and grammar OpenAI path.
 7. Session-level automation flags.
@@ -256,6 +272,7 @@ New file: `App/MainWindowActivator.swift`.
 
 ## See Also
 
+- [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — `ManageProfilesUseCase` rename/delete by ID
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)

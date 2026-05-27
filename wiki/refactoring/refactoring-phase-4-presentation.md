@@ -53,9 +53,10 @@ MainViewModel
 | Файл | Строк (≈) | Назначение |
 |------|-----------|------------|
 | `Presentation/History/HistoryViewModel.swift` | 253 | Профили, выбор записи, load/persist/mutate session |
-| `Presentation/History/HistoryView.swift` | 188 | Sidebar: сессии, список переводов, create/delete profile |
+| `Presentation/History/HistoryView.swift` | ~120 | Sidebar: список переводов активной сессии (v0.2 inc. 2) |
+| `Presentation/History/SessionsListView.swift` | — | Страница сессий: create/open/rename/delete (v0.2 inc. 2) |
 | `MainViewModel.swift` | 509 | Фасад: `let history`; capture/format/study/editor |
-| `ContentView.swift` | 513 | Sidebar через `HistoryView`; detail — editor + session reading |
+| `ContentView.swift` | — | `AppMainRoute`: sessions / workspace / settings (v0.2 inc. 2) |
 
 ### Состояние в HistoryViewModel (4 `@Published`)
 
@@ -68,7 +69,7 @@ MainViewModel
 
 ### Публичные действия HistoryViewModel
 
-`deleteSelectedEntry`, `selectEntry`, `createProfile`, `selectProfile`, `deleteSelectedProfile`, `toggleSessionReadingOverview`, `copySessionReadingOverviewToPasteboard`, `formattedDate`.
+`deleteSelectedEntry`, `selectEntry`, `createProfile`, `selectProfile`, `renameProfile`, `deleteProfile`, `deleteSelectedProfile`, `toggleSessionReadingOverview`, `copySessionReadingOverviewToPasteboard`, `formattedDate`.
 
 API для Main: `session`, `applySession`, `persist`, `loadFromDisk`, `mutateEntry`, `insertEntry`, `updateSelectedEntryText`, индексы `selectedProfileIndex` / `selectedEntryIndex`.
 
@@ -249,9 +250,11 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 
 Критерий Phase 4 «ContentView split» закрыт в Phase 8:
 
-- `Presentation/Main/ContentView.swift` — тонкая композиция (~45 строк)
-- Feature views: `MainChromeView`, `MainWorkspaceView`, `TranslationDetailPanelView`, `TranslationEditorView`, `StudyAssistantView`, `SessionReadingOverviewView`, `CapturePermissionBannerView`
+- `Presentation/Main/ContentView.swift` — маршруты `AppMainRoute` (v0.2 inc. 2)
+- Feature views: `MainChromeView`, `MainWorkspaceView`, `SessionsListView`, `HistoryView`, `TranslationDetailPanelView`, …
 - `statusMessage` перенесён с Main на feature ViewModels; Main без `@Published` (~129 строк)
+
+**v0.2 Increment 2:** профили управляются на `SessionsListView`; `HistoryView` — только переводы выбранной сессии в workspace.
 
 ## Следующий шаг
 
@@ -268,4 +271,5 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel
+- [v0.2 Product Plan](v0-2-product-plan.md) — session navigation (Increment 2)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план

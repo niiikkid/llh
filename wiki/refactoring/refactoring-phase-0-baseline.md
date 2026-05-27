@@ -83,7 +83,7 @@ Settings VM: OpenAI models/token, OCR engine, default profile language, overlay 
 
 ### UI зависимости
 
-`llhApp` владеет `StateObject` `MainViewModel`; `Presentation/Main/ContentView` и `MenuBarPanelView` наблюдают Main. Композиция UI: `MainChromeView`, `MainWorkspaceView`, `HistoryView`, `TranslationDetailPanelView`, `TranslationEditorView`, `StudyAssistantView`, `CapturePermissionBannerView`. Sidebar — `HistoryView(main.history)`; settings sheet — `SettingsView(main.settings)`; menu bar status — `main.capture.statusMessage`; capture — `main.capture.triggerCapture()`.
+`llhApp` владеет `StateObject` `MainViewModel`; `Presentation/Main/ContentView` и `MenuBarPanelView` наблюдают Main. Композиция UI: `MainChromeView`, `MainWorkspaceView`, `SessionsListView`, `HistoryView`, `TranslationDetailPanelView`, … **v0.2 inc. 2+:** `AppMainRoute` (sessions / workspace / settings); sidebar переводов — `HistoryView`; управление сессиями — `SessionsListView`; настройки — `SettingsView` по маршруту, не sheet. Menu bar status — `main.capture.statusMessage`; capture — `main.capture.triggerCapture()`.
 
 ## Покрытие тестами (Phase 0)
 

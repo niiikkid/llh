@@ -35,7 +35,7 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 ## UI tests (`llhUITests/`)
 
 - Launch: заголовок «Language Learning Helper».
-- Settings: кнопка «Настройки» → sheet с «Общие» → «Закрыть».
+- Settings: кнопка «Настройки» → экран настроек (с v0.2 inc. 2 — маршрут, не sheet) → «Общие» → «Назад».
 - Без live capture/OpenAI; performance test удалён из основного файла.
 
 ## Исправления существующих тестов

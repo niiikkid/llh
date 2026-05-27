@@ -5,45 +5,17 @@
 
 import SwiftUI
 
+/// Translation list for the active session (sidebar in workspace).
 struct HistoryView: View {
     @ObservedObject var viewModel: HistoryViewModel
-    var defaultNewProfileLearningLanguage: LearningLanguage
-
-    @State private var newProfileName = ""
-    @State private var newProfileLearningLanguage: LearningLanguage = .english
-    @State private var isCreateProfilePresented = false
-    @State private var isDeleteProfileConfirmationPresented = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Picker(
-                    "Сессия",
-                    selection: Binding(
-                        get: { viewModel.selectedProfileID },
-                        set: { viewModel.selectProfile($0) }
-                    )
-                ) {
-                    ForEach(viewModel.profiles) { profile in
-                        Text(profile.displayName).tag(Optional(profile.id))
-                    }
-                }
-                .labelsHidden()
-
-                sidebarActionButton(systemName: "plus", helpText: "Создать сессию") {
-                    newProfileName = ""
-                    newProfileLearningLanguage = defaultNewProfileLearningLanguage
-                    isCreateProfilePresented = true
-                }
-
-                sidebarActionButton(
-                    systemName: "trash",
-                    helpText: "Удалить текущую сессию",
-                    role: .destructive
-                ) {
-                    isDeleteProfileConfirmationPresented = true
-                }
-                .disabled(!viewModel.canDeleteSelectedProfile)
+                Text(viewModel.selectedProfileDisplayName)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
             }
 
             HStack(spacing: 8) {
@@ -118,87 +90,5 @@ struct HistoryView: View {
                 }
             }
         }
-        .sheet(isPresented: $isCreateProfilePresented) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Новая сессия")
-                    .font(.headline)
-                TextField("Название сессии", text: $newProfileName)
-                Picker("Язык изучения", selection: $newProfileLearningLanguage) {
-                    ForEach(LearningLanguage.allCases.filter(\.supportsWordStudy)) { language in
-                        Text(language.title).tag(language)
-                    }
-                }
-                .pickerStyle(.segmented)
-                HStack {
-                    Spacer()
-                    Button("Отмена") {
-                        isCreateProfilePresented = false
-                    }
-                    Button("Создать") {
-                        viewModel.createProfile(
-                            named: newProfileName,
-                            learningLanguage: newProfileLearningLanguage
-                        )
-                        isCreateProfilePresented = false
-                    }
-                    .keyboardShortcut(.defaultAction)
-                }
-            }
-            .padding(16)
-            .frame(width: 360)
-        }
-        .alert("Удалить сессию?", isPresented: $isDeleteProfileConfirmationPresented) {
-            Button("Удалить", role: .destructive) {
-                viewModel.deleteSelectedProfile()
-            }
-            Button("Отмена", role: .cancel) {}
-        } message: {
-            Text(
-                "Сессия «\(viewModel.selectedProfileDisplayName)» будет удалена вместе со всеми переводами внутри неё."
-            )
-        }
-    }
-
-    private func sidebarActionButton(
-        systemName: String,
-        helpText: String,
-        role: ButtonRole? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(role: role, action: action) {
-            Image(systemName: systemName)
-                .frame(width: 14, height: 14)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
-        .frame(width: 32, height: 30)
-        .help(helpText)
-    }
-}
-
-private struct SessionLanguageBadge: View {
-    let language: LearningLanguage
-
-    var body: some View {
-        HStack(spacing: 6) {
-            if language == .auto {
-                Image(systemName: "globe")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if let flagEmoji = language.flagEmoji {
-                Text(flagEmoji)
-                    .font(.caption)
-            }
-            Text(language.title)
-                .font(.caption)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            Capsule(style: .continuous)
-                .fill(.background.secondary)
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Язык сессии: \(language.title)")
     }
 }

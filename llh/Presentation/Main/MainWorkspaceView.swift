@@ -11,8 +11,7 @@ struct MainWorkspaceView: View {
     @ObservedObject var study: StudyViewModel
     @ObservedObject var capture: CaptureViewModel
 
-    var defaultNewProfileLearningLanguage: LearningLanguage
-    var isSessionsPanelCollapsed: Bool
+    var isTranslationsSidebarCollapsed: Bool
 
     @Binding var selectedTextTab: TranslationTextTab
 
@@ -22,7 +21,7 @@ struct MainWorkspaceView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let spacing = isSessionsPanelCollapsed ? 0 : columnSpacing
+            let spacing = isTranslationsSidebarCollapsed ? 0 : columnSpacing
             let availableWidth = max(geometry.size.width - spacing, 0)
             let sidebarWidth = min(
                 max(sidebarMinimumWidth, availableWidth * 0.25),
@@ -30,12 +29,9 @@ struct MainWorkspaceView: View {
             )
 
             HStack(alignment: .top, spacing: spacing) {
-                if !isSessionsPanelCollapsed {
-                    GroupBox("Сессии") {
-                        HistoryView(
-                            viewModel: history,
-                            defaultNewProfileLearningLanguage: defaultNewProfileLearningLanguage
-                        )
+                if !isTranslationsSidebarCollapsed {
+                    GroupBox("Переводы") {
+                        HistoryView(viewModel: history)
                     }
                     .groupBoxStyle(PanelGroupBoxStyle())
                     .frame(

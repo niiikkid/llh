@@ -1,5 +1,18 @@
 # Wiki Log
 
+## [2026-05-27] lint | 6 issues found, 11 auto-fixed
+- Updated: wiki/index.md (Phase 3, 4, 8 summaries)
+- Updated: v0.2 Product Plan (Inc. 1 table, Inc. 3 partial status, progress table, See Also)
+- Updated: Refactoring Phase 8 UI Decomposition (file tree, status consumer, See Also)
+- Updated: Refactoring Phase 3 Use Cases (test count 60, See Also)
+- Updated: Refactoring Phase 4 Presentation (History/SessionsList, Phase 8 note)
+- Updated: Refactoring Phase 0 Baseline, Phase 2 Domain Models, Phase 9 Testing Strategy
+
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 2 completion)
+- Updated: Refactoring Phase 8 UI Decomposition
+- Updated: Refactoring Phase 3 Use Cases
+- Updated: wiki/index.md
+
 ## [2026-05-27] lint | 0 issues found, 0 auto-fixed
 - Updated: Refactoring Phase 8 UI Decomposition (cascade: v0.2 Increment 10)
 - Updated: v0.2 Product Plan (overview shipped summary)

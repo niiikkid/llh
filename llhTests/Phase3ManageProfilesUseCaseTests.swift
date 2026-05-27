@@ -144,4 +144,68 @@ struct Phase3ManageProfilesUseCaseTests {
 
         #expect(outcome == .noSelectedProfile)
     }
+
+    @Test
+    @MainActor
+    func renameProfile_updatesStoredName() {
+        let custom = LearningProfile(name: "Old", learningLanguage: .spanish)
+        var state = HistorySessionState(
+            profiles: [custom],
+            selectedProfileID: custom.id,
+            selectedEntryID: nil
+        )
+        let useCase = makeProfilesUseCase()
+
+        let outcome = useCase.renameProfile(state: &state, profileID: custom.id, named: "  New Name  ")
+
+        #expect(outcome == .renamed(displayName: "New Name"))
+        #expect(state.profiles[0].name == "New Name")
+        #expect(state.profiles[0].learningLanguage == .spanish)
+    }
+
+    @Test
+    @MainActor
+    func renameProfile_profileNotFound() {
+        var state = HistorySessionState(profiles: [], selectedProfileID: nil, selectedEntryID: nil)
+        let useCase = makeProfilesUseCase()
+
+        let outcome = useCase.renameProfile(
+            state: &state,
+            profileID: UUID(),
+            named: "Name"
+        )
+
+        #expect(outcome == .profileNotFound)
+    }
+
+    @Test
+    @MainActor
+    func deleteProfile_nonSelected_keepsSelection() {
+        let defaultProfile = LearningProfile.defaultProfile()
+        let customA = LearningProfile(name: "A", learningLanguage: .english)
+        let customB = LearningProfile(name: "B", learningLanguage: .chinese)
+        var state = HistorySessionState(
+            profiles: [defaultProfile, customA, customB],
+            selectedProfileID: customA.id,
+            selectedEntryID: nil
+        )
+        let useCase = makeProfilesUseCase()
+
+        let outcome = useCase.deleteProfile(state: &state, profileID: customB.id)
+
+        #expect(outcome == .deleted(removedName: "B"))
+        #expect(state.profiles.count == 2)
+        #expect(state.selectedProfileID == customA.id)
+    }
+
+    @Test
+    @MainActor
+    func deleteProfile_profileNotFound() {
+        var state = HistorySessionState(profiles: [], selectedProfileID: nil, selectedEntryID: nil)
+        let useCase = makeProfilesUseCase()
+
+        let outcome = useCase.deleteProfile(state: &state, profileID: UUID())
+
+        #expect(outcome == .profileNotFound)
+    }
 }

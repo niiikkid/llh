@@ -103,6 +103,10 @@ final class HistoryViewModel: ObservableObject {
         manageProfilesUseCase.canDeleteSelectedProfile(state: session)
     }
 
+    func canDeleteProfile(id: LearningProfile.ID) -> Bool {
+        manageProfilesUseCase.canDeleteProfile(state: session, profileID: id)
+    }
+
     var canDeleteSelectedEntry: Bool {
         selectedEntryIndex != nil
     }
@@ -198,19 +202,36 @@ final class HistoryViewModel: ObservableObject {
         }
     }
 
-    func deleteSelectedProfile() {
+    func renameProfile(id: LearningProfile.ID, named rawName: String) {
         var updated = session
-        switch manageProfilesUseCase.deleteSelectedProfile(state: &updated) {
+        switch manageProfilesUseCase.renameProfile(state: &updated, profileID: id, named: rawName) {
+        case .renamed(let displayName):
+            applySession(updated)
+            persist()
+            publishStatus("Сессия переименована в «\(displayName)».")
+        case .profileNotFound:
+            break
+        }
+    }
+
+    func deleteProfile(id: LearningProfile.ID) {
+        var updated = session
+        switch manageProfilesUseCase.deleteProfile(state: &updated, profileID: id) {
         case .deleted(let removedName):
             applySession(updated)
             onSelectionChanged()
             persist()
-            publishStatus("Профиль \"\(removedName)\" удален.")
+            publishStatus("Сессия «\(removedName)» удалена.")
         case .cannotDeleteDefaultProfile:
-            publishStatus("Сессию Default удалить нельзя.")
-        case .noSelectedProfile:
+            publishStatus("Сессию по умолчанию удалить нельзя.")
+        case .noSelectedProfile, .profileNotFound:
             break
         }
+    }
+
+    func deleteSelectedProfile() {
+        guard let profileID = selectedProfileID else { return }
+        deleteProfile(id: profileID)
     }
 
     func selectEntry(_ id: CapturedTextEntry.ID?) {

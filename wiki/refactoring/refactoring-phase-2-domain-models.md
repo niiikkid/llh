@@ -113,7 +113,7 @@ Phase 2 («Extract Domain Models And Errors») **завершена по осн�
 - [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md) — `StructuredFormattedText.overlayPrimaryText`
 - [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — display/prompt helpers в `Phase2DomainModelsTests` + `Phase9OpenAIPromptTests`
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md) — UI использует display helpers `StructuredFormattedText`
-- [v0.2 Product Plan](v0-2-product-plan.md) — `LearningLanguage.flagEmoji`, `LearningProfile.displayName` (Increment 1)
+- [v0.2 Product Plan](v0-2-product-plan.md) — `LearningLanguage.flagEmoji`, `LearningProfile.displayName` (Inc. 1); immutable session language after create (Inc. 2)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md) — `OCRResult`, Infrastructure OCR/capture (завершена)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md) — `OpenAIHTTPClient`, models/OCR/translation/study services
 - [Refactoring Phase 5 SQLite Persistence](refactoring-phase-5-sqlite-persistence.md) — SQLite слой для snapshot
