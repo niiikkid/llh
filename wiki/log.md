@@ -1,5 +1,7 @@
 # Wiki Log
 
+## [2026-05-27] ingest | v0.2 Product Plan
+
 ## [2026-05-27] lint | 0 issues found, 11 auto-fixed
 - Updated: Refactoring Phase 0–8, 9 (cascade: Phase 10 complete, See Also, «Следующий шаг»)
 - Updated: Refactoring Phase 6 OpenAI Integration (facade path `Data/OpenAI/`)
