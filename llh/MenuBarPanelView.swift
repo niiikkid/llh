@@ -26,7 +26,9 @@ struct MenuBarPanelView: View {
                 .disabled(viewModel.capture.isProcessing)
 
                 Button("Открыть окно") {
-                    openWindow(id: "main-window")
+                    if !MainWindowActivator.activateExisting() {
+                        openWindow(id: "main-window")
+                    }
                     NSApp.activate(ignoringOtherApps: true)
                 }
             }

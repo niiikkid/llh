@@ -35,6 +35,7 @@ struct ContentView: View {
         }
         .padding(16)
         .frame(minWidth: 760, minHeight: 500)
+        .background(MainWindowIdentityView())
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView(viewModel: viewModel.settings)
         }

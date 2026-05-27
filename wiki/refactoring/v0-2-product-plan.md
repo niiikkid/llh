@@ -1,12 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
+
+**Shipped so far (2026-05-27):** quick UI polish and Russian strings (Increment 1); menu bar «Открыть окно» no longer spawns duplicate main windows (Increment 10). Remaining work: session list page, settings page, translation UX, study tabs, automation, overlay close, reading overview details, Dock badge.
 
 ## Release progress
 
@@ -21,7 +23,7 @@
 | 7 | Overlay closing | Planned |
 | 8 | Session reading overview details | Planned |
 | 9 | Dock language badge | Planned |
-| 10 | Single main window | Planned |
+| 10 | Single main window | **Done** (2026-05-27) |
 
 ## Product Decisions
 
@@ -60,7 +62,6 @@ New file: `Presentation/Shared/AppDisplayStrings.swift`.
 
 ### Not in this increment
 
-- **Increment 10** not started: `MenuBarPanelView` still calls `openWindow(id: "main-window")` — labels are Russian, duplicate-window bug remains.
 - Settings tab label **OpenAI** kept as product brand.
 
 Risk:
@@ -208,25 +209,32 @@ Implementation notes:
 
 ## Increment 10: Single Main Window Behavior
 
+**Status: done** (2026-05-27).
+
 Goal: fix menu bar `Open Window` so it activates the existing main window instead of creating duplicates.
 
-Scope:
+Scope (all delivered):
 
 - Replace blind `openWindow(id: "main-window")` behavior with single-window activation.
-- If the main window exists, bring it forward.
-- If it does not exist, create it once.
+- If the main window exists, bring it forward (including deminiaturize when minimized).
+- If it does not exist, create it once via `openWindow`.
 - Keep `NSApp.activate(ignoringOtherApps: true)`.
 
-Implementation notes:
+### Implemented
 
-- This likely needs an AppKit window accessor/coordinator or a SwiftUI scene strategy such as stable window identity plus explicit window lookup.
-- Keep the fix isolated from menu bar UI labels.
+| Area | What shipped |
+|------|----------------|
+| Activation | `MainWindowActivator.activateExisting()` — finds window by `accessibilityIdentifier` |
+| Window tag | `MainWindowIdentityView` on `ContentView` sets `llh.main-window` on host `NSWindow` |
+| Menu bar | `MenuBarPanelView` calls `openWindow` only when no existing main window |
+
+New file: `App/MainWindowActivator.swift`.
 
 ## Suggested Order
 
 1. ~~Quick UI polish and Russian localization.~~ **Done.**
-2. Single main window bug fix. **Next recommended.**
-3. Session list page and rename.
+2. ~~Single main window bug fix.~~ **Done.**
+3. Session list page and rename. **Next recommended.**
 4. Settings page routing.
 5. Translation result state cleanup.
 6. Words/grammar tabs and grammar OpenAI path.

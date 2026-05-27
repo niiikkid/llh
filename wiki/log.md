@@ -1,5 +1,12 @@
 # Wiki Log
 
+## [2026-05-27] lint | 0 issues found, 0 auto-fixed
+- Updated: Refactoring Phase 8 UI Decomposition (cascade: v0.2 Increment 10)
+- Updated: v0.2 Product Plan (overview shipped summary)
+- Updated: wiki/index.md (Phase 8 summary)
+
+## [2026-05-27] ingest | v0.2 Product Plan (Increment 10 completion)
+
 ## [2026-05-27] ingest | v0.2 Product Plan (Increment 1 completion)
 - Updated: Refactoring Phase 8 UI Decomposition
 - Updated: Refactoring Phase 2 Domain Models

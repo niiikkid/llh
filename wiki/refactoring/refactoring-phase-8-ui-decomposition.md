@@ -4,7 +4,7 @@
 > Raw: [Phase 8 UI decomposition completion](../../raw/refactoring/2026-05-27-phase-8-ui-decomposition-completion.md)
 > Updated: 2026-05-27
 
-**Post–Phase 8 (v0.2):** [Increment 1 UI polish](v0-2-product-plan.md#increment-1-quick-ui-polish) updated `MainChromeView`, `HistoryView`, `MenuBarPanelView`, `CapturePermissionBannerView`; added `AppDisplayStrings` and `SessionLanguageBadge` in History.
+**Post–Phase 8 (v0.2):** [Increment 1 UI polish](v0-2-product-plan.md#increment-1-quick-ui-polish) updated `MainChromeView`, `HistoryView`, `MenuBarPanelView`, `CapturePermissionBannerView`; added `AppDisplayStrings` and `SessionLanguageBadge` in History. [Increment 10 single main window](v0-2-product-plan.md#increment-10-single-main-window-behavior) added `MainWindowActivator` / `MainWindowIdentityView`; `ContentView` tags its `NSWindow`; `MenuBarPanelView` activates existing window instead of duplicating.
 
 ## Overview
 
@@ -13,9 +13,11 @@ Phase 8 («UI Decomposition And State Clarity») **завершена**. `Conten
 ## Структура Presentation
 
 ```text
+App/
+  MainWindowActivator.swift    — v0.2 inc. 10: single main window activation
 Presentation/
   Main/
-    ContentView.swift          — композиция (~45 строк)
+    ContentView.swift          — композиция; MainWindowIdentityView (v0.2 inc. 10)
     MainChromeView.swift       — заголовок, OCR picker (icon-only chrome), sessions/settings
     MainWorkspaceView.swift    — sidebar + detail layout
   Capture/
@@ -94,5 +96,5 @@ Presentation/
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — `StructuredFormattedText` display helpers
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — feature ViewModels (Phase 4) + views (Phase 8)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
-- [v0.2 Product Plan](v0-2-product-plan.md) — Increment 1 UI polish on Phase 8 views
+- [v0.2 Product Plan](v0-2-product-plan.md) — v0.2 Increments 1 and 10 on Phase 8 / menu bar views
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot; Phase 8 exit criteria в roadmap §Phase 8

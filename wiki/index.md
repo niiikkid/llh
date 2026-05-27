@@ -6,10 +6,10 @@
 
 | Article | Summary | Updated |
 |---------|---------|---------|
-| [v0.2 Product Plan](refactoring/v0-2-product-plan.md) | v0.2 plan: **Increment 1 (UI polish) done**; increments 2–10 pending (sessions page, settings, translation state, study tabs, automation, overlay, Dock badge, single window). | 2026-05-27 |
+| [v0.2 Product Plan](refactoring/v0-2-product-plan.md) | v0.2 plan: **Increments 1 and 10 done**; increments 2–9 pending (sessions page, settings, translation state, study tabs, automation, overlay, Dock badge). | 2026-05-27 |
 | [Refactoring Phase 10 Cleanup](refactoring/refactoring-phase-10-cleanup.md) | Phase 10: removed unwired phrase/grammar OpenAI API; product decisions; `overlayPrimaryText` dedup; relocated `Services/` → Data/Infrastructure; hotkey cancel test. | 2026-05-27 |
 | [Refactoring Phase 9 Testing Strategy](refactoring/refactoring-phase-9-testing-strategy.md) | Phase 9: `Phase9*` integration/migration/prompt/VM tests; UI launch+settings; migration verify failure; bootstrap JSON fallback; fixes Phase 1/3 stale OCR tests. | 2026-05-27 |
-| [Refactoring Phase 8 UI Decomposition](refactoring/refactoring-phase-8-ui-decomposition.md) | Phase 8 завершена: `Presentation/Main/ContentView` + feature views; `StructuredFormattedText` display helpers; per-VM `statusMessage`; Main без `@Published`. | 2026-05-27 |
+| [Refactoring Phase 8 UI Decomposition](refactoring/refactoring-phase-8-ui-decomposition.md) | Phase 8 завершена: feature views + `StructuredFormattedText`; v0.2 inc. 1 (UI polish) и inc. 10 (`MainWindowActivator`, single main window). | 2026-05-27 |
 | [Refactoring Phase 7 OCR Capture Permission](refactoring/refactoring-phase-7-ocr-capture-permission.md) | Phase 7: `OCRResult`, Vision/ScreenCaptureKit, cancellation; Phase 10 — capture services в `Infrastructure/Capture/`, hotkey cancel test. | 2026-05-27 |
 | [Refactoring Phase 6 OpenAI Integration](refactoring/refactoring-phase-6-openai-integration.md) | Phase 6: HTTP/models/OCR/translation/study; Phase 10 — facade в `Data/OpenAI/`, только words study API. | 2026-05-27 |
 | [Refactoring Phase 5 SQLite Persistence](refactoring/refactoring-phase-5-sqlite-persistence.md) | Phase 5: GRDB + JSON→SQLite; Phase 10 — JSON backup сохранён, `HistoryPersistenceService` в `Data/Persistence/`. | 2026-05-27 |
