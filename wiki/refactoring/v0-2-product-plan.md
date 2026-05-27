@@ -1,14 +1,14 @@
 # v0.2 Product Plan
 
 > Sources: Cursor planning discussion, 2026-05-27; llh implementation, 2026-05-27
-> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
+> Raw: [v0.2 product plan](../../raw/refactoring/2026-05-27-v0-2-product-plan.md); [v0.2 increment 1 UI polish completion](../../raw/refactoring/2026-05-27-v0-2-increment-1-ui-polish-completion.md); [v0.2 increment 2 session navigation completion](../../raw/refactoring/2026-05-27-v0-2-increment-2-session-navigation-completion.md); [v0.2 increment 3 settings page completion](../../raw/refactoring/2026-05-27-v0-2-increment-3-settings-page-completion.md); [v0.2 increment 10 single window completion](../../raw/refactoring/2026-05-27-v0-2-increment-10-single-window-completion.md)
 > Updated: 2026-05-27
 
 ## Overview
 
 `v0.2` is a product polish and learning-flow release for `llh`. The main goal is to make sessions easier to manage, make translation results clearer, and turn word translation plus grammar explanation into session-level modes that can run automatically after the main formatting/translation step.
 
-**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); single main window (Inc. 10). Remaining: settings page polish (Inc. 3 partial — settings already in-window), translation UX, study tabs, automation, overlay close, reading overview details, Dock badge.
+**Shipped so far (2026-05-27):** UI polish (Inc. 1); session list page with create/open/delete/rename and `AppMainRoute` navigation (Inc. 2); settings page layout in main window (Inc. 3); single main window (Inc. 10). Remaining: translation UX, study tabs, automation, overlay close, reading overview details, Dock badge.
 
 ## Release progress
 
@@ -16,7 +16,7 @@
 |-----------|--------|--------|
 | 1 | Quick UI polish | **Done** (2026-05-27) |
 | 2 | Session list page | **Done** (2026-05-27) |
-| 3 | Settings page | **Partial** (routing done; layout pending) |
+| 3 | Settings page | **Done** (2026-05-27) |
 | 4 | Translation result state | Planned |
 | 5 | Words and grammar tabs | Planned |
 | 6 | Session-level automation | Planned |
@@ -94,29 +94,39 @@ Scope (all delivered):
 
 New files: `SessionsListView.swift`, `AppMainRoute.swift`, `SessionLanguageBadge.swift`.
 
-### Partial overlap with Increment 3
+### Overlap with Increment 3
 
-Settings open as an in-window route (not modal sheet). Increment 3 still covers full settings page layout and tab polish.
+Increment 2 introduced in-window settings route; Increment 3 completed layout and removed sheet-era chrome.
 
 ## Increment 3: Settings As A Page
 
-**Status: partial** (2026-05-27). Increment 2 delivered in-window `AppMainRoute.settings` and removed the modal sheet; layout polish remains.
+**Status: done** (2026-05-27).
 
 Goal: make settings feel native and spacious.
 
-Scope remaining:
+Scope (all delivered):
 
 - Re-layout settings groups so controls align and the page uses available width.
 - Keep tabs such as `Общие` and `OpenAI`.
 - Keep existing settings ownership in `SettingsViewModel`; UI should remain thin.
+- Remove modal sheet remnants (fixed size, «Закрыть»); navigation via `MainChromeView` «Назад».
 
-Already shipped (Increment 2):
+### Implemented
 
-- `SettingsView` embedded in main window via route navigation; back returns to prior route.
+| Area | What shipped |
+|------|----------------|
+| Layout | Full-route `TabView`; `GroupBox` + `PanelGroupBoxStyle` sections |
+| Alignment | `SettingsLabeledControlRow`, `SettingsShortcutRow`, `SettingsDurationSliderRow` |
+| OpenAI | Groups «Подключение» / «Модель»; `statusMessage` under actions |
+| Routing | From Inc. 2: `AppMainRoute.settings`, back restores prior route |
+
+### Shipped with Increment 2
+
+- `SettingsView` embedded in main window via route navigation (no sheet).
 
 Risk:
 
-- Low–medium UI churn limited to `SettingsView` layout (routing already in place).
+- Low. UI-only in `SettingsView` (+ UI test for back navigation).
 
 ## Increment 4: Translation Result State
 
@@ -251,8 +261,8 @@ New file: `App/MainWindowActivator.swift`.
 1. ~~Quick UI polish and Russian localization.~~ **Done.**
 2. ~~Single main window bug fix.~~ **Done.**
 3. ~~Session list page and rename.~~ **Done.**
-4. Settings page layout and routing polish. **Next recommended.**
-5. Translation result state cleanup.
+4. ~~Settings page layout and routing polish.~~ **Done.**
+5. Translation result state cleanup. **Next recommended.**
 6. Words/grammar tabs and grammar OpenAI path.
 7. Session-level automation flags.
 8. Overlay close/Escape behavior.
@@ -261,6 +271,7 @@ New file: `App/MainWindowActivator.swift`.
 
 ## Testing Focus
 
+- Settings route: `testSettingsRouteOpensAndReturns` (toolbar «Настройки» → «Общие» → «Назад»); launch chrome uses Russian product name.
 - Session rename persists and does not change language.
 - Existing sessions decode with default automation flags.
 - Formatting failure shows raw text and retry.
@@ -276,4 +287,5 @@ New file: `App/MainWindowActivator.swift`.
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 8 UI Decomposition](refactoring-phase-8-ui-decomposition.md)
+- [Refactoring Phase 9 Testing Strategy](refactoring-phase-9-testing-strategy.md) — UI smoke for settings route and launch title
 - [Refactoring Phase 10 Cleanup](refactoring-phase-10-cleanup.md)

@@ -16,11 +16,11 @@ final class llhUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["Language Learning Helper"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Помощник по изучению языков"].waitForExistence(timeout: 5))
     }
 
     @MainActor
-    func testSettingsSheetOpensAndCloses() throws {
+    func testSettingsRouteOpensAndReturns() throws {
         let app = XCUIApplication()
         app.launch()
 
@@ -28,11 +28,13 @@ final class llhUITests: XCTestCase {
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.click()
 
-        let closeButton = app.buttons["Закрыть"]
-        XCTAssertTrue(closeButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Настройки"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Общие"].exists)
 
-        closeButton.click()
+        let backButton = app.buttons["Назад"]
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+        backButton.click()
+
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
     }
 }

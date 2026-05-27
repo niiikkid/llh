@@ -8,7 +8,6 @@ import KeyboardShortcuts
 
 struct SettingsView: View {
     @ObservedObject var viewModel: SettingsViewModel
-    @Environment(\.dismiss) private var dismiss
     @State private var selectedTab: SettingsTab = .general
 
     private enum SettingsTab: Hashable {
@@ -17,117 +16,110 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            TabView(selection: $selectedTab) {
-                GeneralSettingsTab(viewModel: viewModel)
-                    .tabItem {
-                        Label("Общие", systemImage: "keyboard")
-                    }
-                    .tag(SettingsTab.general)
-
-                OpenAISettingsTab(viewModel: viewModel)
-                    .tabItem {
-                        Label("OpenAI", systemImage: "brain.head.profile")
-                    }
-                    .tag(SettingsTab.openAI)
-            }
-
-            Divider()
-
-            HStack {
-                Spacer()
-                Button("Закрыть") {
-                    dismiss()
+        TabView(selection: $selectedTab) {
+            GeneralSettingsTab(viewModel: viewModel)
+                .tabItem {
+                    Label("Общие", systemImage: "keyboard")
                 }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(16)
+                .tag(SettingsTab.general)
+
+            OpenAISettingsTab(viewModel: viewModel)
+                .tabItem {
+                    Label("OpenAI", systemImage: "brain.head.profile")
+                }
+                .tag(SettingsTab.openAI)
         }
-        .frame(width: 620, height: 420)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+// MARK: - General
 
 private struct GeneralSettingsTab: View {
     @ObservedObject var viewModel: SettingsViewModel
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Горячие клавиши")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 16) {
+                GroupBox("Горячие клавиши") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(
+                            "Настройте shortcut для захвата, переключения OCR, закрытия оверлея и показа последнего перевода."
+                        )
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text("Настройте shortcut для захвата, переключения OCR, закрытия оверлея и показа последнего перевода.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
-                KeyboardShortcuts.Recorder("Захват области:", name: .captureArea)
-                KeyboardShortcuts.Recorder("Переключить движок OCR:", name: .switchOCREngine)
-                KeyboardShortcuts.Recorder("Закрыть компактное окно:", name: .closeTranslationOverlay)
-                KeyboardShortcuts.Recorder("Показать или скрыть последний перевод:", name: .toggleLastTranslationOverlay)
-
-                Divider()
-
-                Text("Компактное окно перевода")
-                    .font(.headline)
-
-                Text("Когда приложение неактивно и перевод запущен через shortcut, снизу по центру появится маленькое окно. Время показа считается по формуле: максимум из минимального времени и `количество слов x секунд на слово`. Последний перевод можно открыть отдельной горячей клавишей и держать на экране, пока вы его сами не закроете.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
-                HStack(alignment: .center, spacing: 12) {
-                    Stepper(
-                        value: Binding(
-                            get: { Int(viewModel.translationOverlayMinimumDuration.rounded()) },
-                            set: { viewModel.setTranslationOverlayMinimumDuration(Double($0)) }
-                        ),
-                        in: 1...15
-                    ) {
-                        Text("Минимальное время: \(Int(viewModel.translationOverlayMinimumDuration.rounded())) сек.")
+                        SettingsShortcutRow(
+                            title: "Захват области",
+                            shortcut: .captureArea
+                        )
+                        SettingsShortcutRow(
+                            title: "Переключить движок OCR",
+                            shortcut: .switchOCREngine
+                        )
+                        SettingsShortcutRow(
+                            title: "Закрыть компактное окно",
+                            shortcut: .closeTranslationOverlay
+                        )
+                        SettingsShortcutRow(
+                            title: "Показать или скрыть последний перевод",
+                            shortcut: .toggleLastTranslationOverlay
+                        )
                     }
-                    .frame(maxWidth: 280, alignment: .leading)
-
-                    Slider(
-                        value: Binding(
-                            get: { viewModel.translationOverlayMinimumDuration },
-                            set: { viewModel.setTranslationOverlayMinimumDuration($0) }
-                        ),
-                        in: 1...15,
-                        step: 1
-                    )
                 }
+                .groupBoxStyle(PanelGroupBoxStyle())
 
-                HStack(alignment: .center, spacing: 12) {
-                    Stepper(
-                        value: Binding(
-                            get: { viewModel.translationOverlaySecondsPerWord },
-                            set: { viewModel.setTranslationOverlaySecondsPerWord($0) }
-                        ),
-                        in: 0.1...2,
-                        step: 0.01
-                    ) {
-                        Text("Секунд на слово: \(viewModel.translationOverlaySecondsPerWord, format: .number.precision(.fractionLength(2)))")
+                GroupBox("Компактное окно перевода") {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(
+                            "Когда приложение неактивно и перевод запущен через shortcut, снизу по центру появится маленькое окно. Время показа считается по формуле: максимум из минимального времени и «количество слов × секунд на слово». Последний перевод можно открыть отдельной горячей клавишей и держать на экране, пока вы его сами не закроете."
+                        )
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        SettingsDurationSliderRow(
+                            title: "Минимальное время",
+                            valueText: "\(Int(viewModel.translationOverlayMinimumDuration.rounded())) сек.",
+                            value: Binding(
+                                get: { viewModel.translationOverlayMinimumDuration },
+                                set: { viewModel.setTranslationOverlayMinimumDuration($0) }
+                            ),
+                            range: 1...15,
+                            step: 1
+                        )
+
+                        SettingsDurationSliderRow(
+                            title: "Секунд на слово",
+                            valueText: viewModel.translationOverlaySecondsPerWord.formatted(
+                                .number.precision(.fractionLength(2))
+                            ),
+                            value: Binding(
+                                get: { viewModel.translationOverlaySecondsPerWord },
+                                set: { viewModel.setTranslationOverlaySecondsPerWord($0) }
+                            ),
+                            range: 0.1...2,
+                            step: 0.01
+                        )
+
+                        Text(
+                            "Например: 10 слов × 0.33 = 3.3 сек. Если результат меньше минимума, используется минимум."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
-                    .frame(maxWidth: 280, alignment: .leading)
-
-                    Slider(
-                        value: Binding(
-                            get: { viewModel.translationOverlaySecondsPerWord },
-                            set: { viewModel.setTranslationOverlaySecondsPerWord($0) }
-                        ),
-                        in: 0.1...2,
-                        step: 0.01
-                    )
                 }
-
-                Text("Например: 10 слов x 0.33 = 3.3 сек. Если результат меньше минимума, используется минимум.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .groupBoxStyle(PanelGroupBoxStyle())
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+            .padding(.vertical, 4)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
+
+// MARK: - OpenAI
 
 private struct OpenAISettingsTab: View {
     @ObservedObject var viewModel: SettingsViewModel
@@ -135,87 +127,158 @@ private struct OpenAISettingsTab: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Настройки OpenAI")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 16) {
+                GroupBox("Подключение") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(
+                            "Вставьте API token, затем проверьте подключение. Токен сохраняется безопасно в Keychain."
+                        )
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text("Вставьте API token, затем проверьте подключение. Токен сохраняется безопасно в Keychain.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
-                if viewModel.hasOpenAIToken {
-                    HStack(spacing: 12) {
-                        Label("Токен подключен", systemImage: "checkmark.seal.fill")
-                            .foregroundStyle(.green)
-                        Spacer()
-                        Button("Удалить") {
-                            tokenInput = ""
-                            viewModel.deleteOpenAIToken()
+                        if viewModel.hasOpenAIToken {
+                            HStack(spacing: 12) {
+                                Label("Токен подключен", systemImage: "checkmark.seal.fill")
+                                    .foregroundStyle(.green)
+                                Spacer()
+                                Button("Удалить") {
+                                    tokenInput = ""
+                                    viewModel.deleteOpenAIToken()
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(.quaternary.opacity(0.5))
+                            )
+                        } else {
+                            SecureField("sk-...", text: $tokenInput)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(maxWidth: 480)
                         }
-                        .buttonStyle(.bordered)
-                    }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(.background.secondary)
-                    )
-                } else {
-                    SecureField("sk-...", text: $tokenInput)
-                        .textFieldStyle(.roundedBorder)
-                }
 
-                HStack(spacing: 10) {
-                    if !viewModel.hasOpenAIToken {
-                        Button("Подключить") {
-                            Task {
-                                await viewModel.validateAndSaveOpenAIToken(tokenInput)
-                                tokenInput = ""
+                        HStack(spacing: 10) {
+                            if !viewModel.hasOpenAIToken {
+                                Button("Подключить") {
+                                    Task {
+                                        await viewModel.validateAndSaveOpenAIToken(tokenInput)
+                                        tokenInput = ""
+                                    }
+                                }
+                                .disabled(
+                                    viewModel.isLoadingOpenAIModels
+                                        || tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                )
+                            }
+
+                            Button("Обновить модели") {
+                                Task {
+                                    await viewModel.refreshOpenAIModels()
+                                }
+                            }
+                            .disabled(viewModel.isLoadingOpenAIModels || !viewModel.hasOpenAIToken)
+                        }
+
+                        if viewModel.isLoadingOpenAIModels {
+                            ProgressView("Проверка подключения к OpenAI...")
+                        }
+
+                        if !viewModel.statusMessage.isEmpty {
+                            Text(viewModel.statusMessage)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .groupBoxStyle(PanelGroupBoxStyle())
+
+                GroupBox("Модель") {
+                    SettingsLabeledControlRow(title: "Модель OpenAI") {
+                        Picker(
+                            "Модель OpenAI",
+                            selection: Binding(
+                                get: { viewModel.selectedOpenAIModelID },
+                                set: { viewModel.selectOpenAIModel($0) }
+                            )
+                        ) {
+                            if viewModel.availableOpenAIModels.isEmpty {
+                                Text("Список моделей пуст").tag(Optional<String>.none)
+                            } else {
+                                ForEach(viewModel.availableOpenAIModels) { model in
+                                    Text(model.id).tag(Optional(model.id))
+                                }
                             }
                         }
-                        .disabled(viewModel.isLoadingOpenAIModels || tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-
-                    Button("Обновить модели") {
-                        Task {
-                            await viewModel.refreshOpenAIModels()
-                        }
-                    }
-                    .disabled(viewModel.isLoadingOpenAIModels || !viewModel.hasOpenAIToken)
-                }
-
-                if viewModel.isLoadingOpenAIModels {
-                    ProgressView("Проверка подключения к OpenAI...")
-                }
-
-                Divider()
-
-                Text("Модель")
-                    .font(.subheadline.weight(.semibold))
-
-                Picker(
-                    "Модель OpenAI",
-                    selection: Binding(
-                        get: { viewModel.selectedOpenAIModelID },
-                        set: { viewModel.selectOpenAIModel($0) }
-                    )
-                ) {
-                    if viewModel.availableOpenAIModels.isEmpty {
-                        Text("Список моделей пуст").tag(Optional<String>.none)
-                    } else {
-                        ForEach(viewModel.availableOpenAIModels) { model in
-                            Text(model.id).tag(Optional(model.id))
-                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 320, alignment: .leading)
+                        .disabled(viewModel.availableOpenAIModels.isEmpty)
                     }
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .disabled(viewModel.availableOpenAIModels.isEmpty)
+                .groupBoxStyle(PanelGroupBoxStyle())
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+            .padding(.vertical, 4)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             tokenInput = ""
+        }
+    }
+}
+
+// MARK: - Shared rows
+
+private struct SettingsShortcutRow: View {
+    let title: String
+    let shortcut: KeyboardShortcuts.Name
+
+    var body: some View {
+        SettingsLabeledControlRow(title: title) {
+            KeyboardShortcuts.Recorder("", name: shortcut)
+                .frame(maxWidth: 320, alignment: .leading)
+        }
+    }
+}
+
+private struct SettingsLabeledControlRow<Control: View>: View {
+    let title: String
+    @ViewBuilder var control: () -> Control
+
+    private let labelWidth: CGFloat = 280
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            Text(title)
+                .frame(width: labelWidth, alignment: .leading)
+            control()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct SettingsDurationSliderRow: View {
+    let title: String
+    let valueText: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+
+    var body: some View {
+        SettingsLabeledControlRow(title: title) {
+            HStack(spacing: 12) {
+                Text(valueText)
+                    .monospacedDigit()
+                    .frame(width: 88, alignment: .leading)
+
+                Slider(value: $value, in: range, step: step)
+                    .frame(minWidth: 160, maxWidth: 360)
+            }
         }
     }
 }

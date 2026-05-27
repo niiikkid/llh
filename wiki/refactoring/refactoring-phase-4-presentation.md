@@ -43,7 +43,7 @@ MainViewModel
 | Файл | Строк (≈) | Назначение |
 |------|-----------|------------|
 | `Presentation/Settings/SettingsViewModel.swift` | 147 | Состояние и действия настроек |
-| `Presentation/Settings/SettingsView.swift` | 221 | Sheet: вкладки «Общие» и «OpenAI» |
+| `Presentation/Settings/SettingsView.swift` | — | Full-page settings: вкладки «Общие» / «OpenAI», `PanelGroupBoxStyle` (v0.2 inc. 3) |
 | `MainViewModel.swift` | — | Фасад: `let settings` |
 
 7 `@Published` на Settings; OCR hotkey toast в Settings VM.
@@ -271,5 +271,5 @@ Main сохраняет публичные прокси `closeTranslationOverlay
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md) — use cases до split presentation
 - [Refactoring Phase 1 Boundaries And DI](refactoring-phase-1-boundaries.md) — контейнер и протоколы под feature VMs
 - [Refactoring Phase 0 Baseline](refactoring-phase-0-baseline.md) — инвентарь поверхности ViewModel
-- [v0.2 Product Plan](v0-2-product-plan.md) — session navigation (Increment 2)
+- [v0.2 Product Plan](v0-2-product-plan.md) — session navigation (Increment 2); settings page layout (Increment 3)
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный полный план

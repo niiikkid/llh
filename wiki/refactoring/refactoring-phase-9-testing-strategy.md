@@ -34,8 +34,8 @@ Phase 9 («Testing Strategy») **завершена**. Покрытие выро
 
 ## UI tests (`llhUITests/`)
 
-- Launch: заголовок «Language Learning Helper».
-- Settings: кнопка «Настройки» → экран настроек (с v0.2 inc. 2 — маршрут, не sheet) → «Общие» → «Назад».
+- Launch: `testLaunchShowsMainChrome` — заголовок «Помощник по изучению языков» (`AppDisplayStrings.productName`, v0.2 inc. 1).
+- Settings: `testSettingsRouteOpensAndReturns` — «Настройки» → маршрут `AppMainRoute.settings` (inc. 2) → вкладка «Общие» → «Назад» (inc. 3; без кнопки «Закрыть»).
 - Без live capture/OpenAI; performance test удалён из основного файла.
 
 ## Исправления существующих тестов
@@ -95,4 +95,5 @@ xcodebuild -scheme llh -destination 'platform=macOS' test -only-testing:llhTests
 - [Refactoring Phase 3 Use Cases](refactoring-phase-3-use-cases.md)
 - [Refactoring Phase 6 OpenAI Integration](refactoring-phase-6-openai-integration.md)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
+- [v0.2 Product Plan](v0-2-product-plan.md) — UI smoke aligned with inc. 1–3 navigation
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot §Phase 9–10

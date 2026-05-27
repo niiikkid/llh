@@ -4,7 +4,7 @@
 > Raw: [Phase 8 UI decomposition completion](../../raw/refactoring/2026-05-27-phase-8-ui-decomposition-completion.md)
 > Updated: 2026-05-27
 
-**Post–Phase 8 (v0.2):** [Increment 1 UI polish](v0-2-product-plan.md#increment-1-quick-ui-polish) updated `MainChromeView`, `HistoryView`, `MenuBarPanelView`, `CapturePermissionBannerView`; added `AppDisplayStrings` and `SessionLanguageBadge`. [Increment 2 session navigation](v0-2-product-plan.md#increment-2-main-window-and-session-navigation) added `SessionsListView`, `AppMainRoute`, route-based `ContentView`; `HistoryView` is translations-only sidebar; `SessionLanguageBadge` in `Presentation/Shared/`. [Increment 10 single main window](v0-2-product-plan.md#increment-10-single-main-window-behavior) added `MainWindowActivator` / `MainWindowIdentityView`; `MenuBarPanelView` activates existing window instead of duplicating.
+**Post–Phase 8 (v0.2):** [Increment 1 UI polish](v0-2-product-plan.md#increment-1-quick-ui-polish) updated `MainChromeView`, `HistoryView`, `MenuBarPanelView`, `CapturePermissionBannerView`; added `AppDisplayStrings` and `SessionLanguageBadge`. [Increment 2 session navigation](v0-2-product-plan.md#increment-2-main-window-and-session-navigation) added `SessionsListView`, `AppMainRoute`, route-based `ContentView`; `HistoryView` is translations-only sidebar; `SessionLanguageBadge` in `Presentation/Shared/`. [Increment 3 settings page](v0-2-product-plan.md#increment-3-settings-as-a-page) relaid out `SettingsView` with `PanelGroupBoxStyle` sections and aligned rows; removed sheet-era fixed size and «Закрыть». [Increment 10 single main window](v0-2-product-plan.md#increment-10-single-main-window-behavior) added `MainWindowActivator` / `MainWindowIdentityView`; `MenuBarPanelView` activates existing window instead of duplicating.
 
 ## Overview
 
@@ -37,7 +37,7 @@ Presentation/
     StudyAssistantView.swift
     WordStudyEntriesView.swift
   Settings/
-    SettingsView.swift         (Phase 4)
+    SettingsView.swift         — full-page tabs + GroupBox sections (v0.2 inc. 3; private row helpers in-file)
   Shared/
     AppDisplayStrings.swift    — product name (v0.2 inc. 1)
     SessionLanguageBadge.swift — language badge (v0.2 inc. 2)
@@ -63,7 +63,7 @@ Presentation/
 | ViewModel | `statusMessage` | UI consumer |
 |-----------|-----------------|-------------|
 | `CaptureViewModel` | idle: shortcut hint | `MenuBarPanelView` |
-| `SettingsViewModel` | OpenAI/OCR feedback | `SettingsView` via `AppMainRoute.settings` (v0.2 inc. 2) |
+| `SettingsViewModel` | OpenAI/OCR feedback | `SettingsView` via `AppMainRoute.settings` (v0.2 inc. 2–3) |
 | `HistoryViewModel` | load/save/profile actions | — |
 | `EditorViewModel` | format workflow | — |
 | `StudyViewModel` | word study workflow | — |
@@ -99,5 +99,5 @@ Presentation/
 - [Refactoring Phase 2 Domain Models](refactoring-phase-2-domain-models.md) — `StructuredFormattedText` display helpers
 - [Refactoring Phase 4 Presentation](refactoring-phase-4-presentation.md) — feature ViewModels (Phase 4) + views (Phase 8)
 - [Refactoring Phase 7 OCR Capture Permission](refactoring-phase-7-ocr-capture-permission.md)
-- [v0.2 Product Plan](v0-2-product-plan.md) — v0.2 Increments 1, 2, and 10 on Presentation shell
+- [v0.2 Product Plan](v0-2-product-plan.md) — v0.2 Increments 1–3 and 10 on Presentation shell
 - [LLH Project Refactoring Roadmap](project-refactoring-roadmap.md) — архивный snapshot; Phase 8 exit criteria в roadmap §Phase 8
