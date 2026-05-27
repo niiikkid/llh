@@ -180,12 +180,14 @@ struct Phase3ManageProfilesUseCaseTests {
             state: &state,
             profileID: custom.id,
             automaticallyLoadWords: true,
-            automaticallyLoadGrammar: false
+            automaticallyLoadGrammar: false,
+            showWordsInCompactOverlay: true
         )
 
         #expect(outcome == .updated)
         #expect(state.profiles[0].automaticallyLoadWords)
         #expect(!state.profiles[0].automaticallyLoadGrammar)
+        #expect(state.profiles[0].showWordsInCompactOverlay)
     }
 
     @Test

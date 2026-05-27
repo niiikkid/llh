@@ -55,7 +55,8 @@ struct Phase5HistoryPersistenceTests {
       name: "Auto",
       learningLanguage: .chinese,
       automaticallyLoadWords: true,
-      automaticallyLoadGrammar: true
+      automaticallyLoadGrammar: true,
+      showWordsInCompactOverlay: true
     )
     let snapshot = HistoryStoreSnapshot(profiles: [profile], selectedProfileID: profile.id)
 
@@ -64,6 +65,7 @@ struct Phase5HistoryPersistenceTests {
 
     #expect(loaded.profiles[0].automaticallyLoadWords)
     #expect(loaded.profiles[0].automaticallyLoadGrammar)
+    #expect(loaded.profiles[0].showWordsInCompactOverlay)
   }
 
   @Test

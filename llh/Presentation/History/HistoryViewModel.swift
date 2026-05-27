@@ -175,7 +175,8 @@ final class HistoryViewModel: ObservableObject {
         named rawName: String,
         learningLanguage: LearningLanguage,
         automaticallyLoadWords: Bool = false,
-        automaticallyLoadGrammar: Bool = false
+        automaticallyLoadGrammar: Bool = false,
+        showWordsInCompactOverlay: Bool = false
     ) {
         var updated = session
         let profile = manageProfilesUseCase.createProfile(
@@ -183,7 +184,8 @@ final class HistoryViewModel: ObservableObject {
             named: rawName,
             learningLanguage: learningLanguage,
             automaticallyLoadWords: automaticallyLoadWords,
-            automaticallyLoadGrammar: automaticallyLoadGrammar
+            automaticallyLoadGrammar: automaticallyLoadGrammar,
+            showWordsInCompactOverlay: showWordsInCompactOverlay
         )
         onPersistDefaultLanguageForNewProfile(learningLanguage)
         applySession(updated)
@@ -220,14 +222,16 @@ final class HistoryViewModel: ObservableObject {
     func updateSessionAutomation(
         profileID: LearningProfile.ID,
         automaticallyLoadWords: Bool,
-        automaticallyLoadGrammar: Bool
+        automaticallyLoadGrammar: Bool,
+        showWordsInCompactOverlay: Bool
     ) {
         var updated = session
         switch manageProfilesUseCase.updateSessionAutomation(
             state: &updated,
             profileID: profileID,
             automaticallyLoadWords: automaticallyLoadWords,
-            automaticallyLoadGrammar: automaticallyLoadGrammar
+            automaticallyLoadGrammar: automaticallyLoadGrammar,
+            showWordsInCompactOverlay: showWordsInCompactOverlay
         ) {
         case .updated:
             applySession(updated)

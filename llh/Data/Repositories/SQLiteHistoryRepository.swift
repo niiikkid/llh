@@ -73,6 +73,7 @@ struct SQLiteHistoryRepository: HistoryRepository {
 
                 let autoLoadWords: Int = profileRow["auto_load_words"] ?? 0
                 let autoLoadGrammar: Int = profileRow["auto_load_grammar"] ?? 0
+                let showWordsInOverlay: Int = profileRow["show_words_in_compact_overlay"] ?? 0
 
                 profiles.append(
                     LearningProfile(
@@ -84,7 +85,8 @@ struct SQLiteHistoryRepository: HistoryRepository {
                         history: history,
                         selectedEntryID: selectedEntryID,
                         automaticallyLoadWords: autoLoadWords != 0,
-                        automaticallyLoadGrammar: autoLoadGrammar != 0
+                        automaticallyLoadGrammar: autoLoadGrammar != 0,
+                        showWordsInCompactOverlay: showWordsInOverlay != 0
                     )
                 )
             }
@@ -104,8 +106,8 @@ struct SQLiteHistoryRepository: HistoryRepository {
                     INSERT INTO \(HistoryDatabaseSchema.profilesTable) (
                         id, name, learning_language, kind, created_at,
                         selected_entry_id, profile_sort_index,
-                        auto_load_words, auto_load_grammar
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        auto_load_words, auto_load_grammar, show_words_in_compact_overlay
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     arguments: [
                         profile.id.uuidString,
@@ -117,6 +119,7 @@ struct SQLiteHistoryRepository: HistoryRepository {
                         profileIndex,
                         profile.automaticallyLoadWords ? 1 : 0,
                         profile.automaticallyLoadGrammar ? 1 : 0,
+                        profile.showWordsInCompactOverlay ? 1 : 0,
                     ]
                 )
 

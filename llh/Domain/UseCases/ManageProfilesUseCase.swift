@@ -53,13 +53,15 @@ struct ManageProfilesUseCase {
         named rawName: String,
         learningLanguage: LearningLanguage,
         automaticallyLoadWords: Bool = false,
-        automaticallyLoadGrammar: Bool = false
+        automaticallyLoadGrammar: Bool = false,
+        showWordsInCompactOverlay: Bool = false
     ) -> LearningProfile {
         let profile = LearningProfile(
             name: Self.normalizedProfileName(from: rawName),
             learningLanguage: learningLanguage,
             automaticallyLoadWords: automaticallyLoadWords,
-            automaticallyLoadGrammar: automaticallyLoadGrammar
+            automaticallyLoadGrammar: automaticallyLoadGrammar,
+            showWordsInCompactOverlay: showWordsInCompactOverlay
         )
         state.profiles.insert(profile, at: 0)
         state.selectedProfileID = profile.id
@@ -80,13 +82,15 @@ struct ManageProfilesUseCase {
         state: inout HistorySessionState,
         profileID: LearningProfile.ID,
         automaticallyLoadWords: Bool,
-        automaticallyLoadGrammar: Bool
+        automaticallyLoadGrammar: Bool,
+        showWordsInCompactOverlay: Bool
     ) -> ManageProfilesAutomationOutcome {
         guard let profileIndex = state.profiles.firstIndex(where: { $0.id == profileID }) else {
             return .profileNotFound
         }
         state.profiles[profileIndex].automaticallyLoadWords = automaticallyLoadWords
         state.profiles[profileIndex].automaticallyLoadGrammar = automaticallyLoadGrammar
+        state.profiles[profileIndex].showWordsInCompactOverlay = showWordsInCompactOverlay
         return .updated
     }
 

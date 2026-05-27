@@ -32,17 +32,18 @@ final class MainViewModel: ObservableObject {
                 settingsViewModel.defaultNewProfileLearningLanguage
             }
         )
-        study = StudyViewModel(
-            loadWordStudyUseCase: dependencies.loadWordStudyUseCase,
-            loadGrammarStudyUseCase: dependencies.loadGrammarStudyUseCase,
-            settings: settingsViewModel,
-            history: history
-        )
         overlay = TranslationOverlayCoordinator(
             translationOverlayService: dependencies.translationOverlayService,
             settings: settingsViewModel,
             history: history,
             shouldUseCompactOverlay: { !NSApp.isActive }
+        )
+        study = StudyViewModel(
+            loadWordStudyUseCase: dependencies.loadWordStudyUseCase,
+            loadGrammarStudyUseCase: dependencies.loadGrammarStudyUseCase,
+            settings: settingsViewModel,
+            history: history,
+            overlayCoordinator: overlay
         )
         editor = EditorViewModel(
             formatCapturedTextUseCase: dependencies.formatCapturedTextUseCase,

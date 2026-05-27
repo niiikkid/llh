@@ -16,17 +16,20 @@ final class StudyViewModel: ObservableObject {
     private let loadGrammarStudyUseCase: LoadGrammarStudyUseCase
     private let settings: SettingsViewModel
     private let history: HistoryViewModel
+    private weak var overlayCoordinator: TranslationOverlayCoordinator?
 
     init(
         loadWordStudyUseCase: LoadWordStudyUseCase,
         loadGrammarStudyUseCase: LoadGrammarStudyUseCase,
         settings: SettingsViewModel,
-        history: HistoryViewModel
+        history: HistoryViewModel,
+        overlayCoordinator: TranslationOverlayCoordinator
     ) {
         self.loadWordStudyUseCase = loadWordStudyUseCase
         self.loadGrammarStudyUseCase = loadGrammarStudyUseCase
         self.settings = settings
         self.history = history
+        self.overlayCoordinator = overlayCoordinator
     }
 
     func applyStudyMaterialsFromEntry(_ materials: StudyMaterials) {
@@ -58,6 +61,10 @@ final class StudyViewModel: ObservableObject {
         }
         let profile = history.profiles[profileIndex]
         if profile.automaticallyLoadWords {
+            Task {
+                await loadWordStudy(for: entryID, forceReload: false)
+            }
+        } else if profile.showWordsInCompactOverlay {
             Task {
                 await loadWordStudy(for: entryID, forceReload: false)
             }
@@ -174,6 +181,10 @@ final class StudyViewModel: ObservableObject {
             publishStatus("Выберите модель OpenAI.")
             return
         case .skipped:
+            overlayCoordinator?.refreshOverlayWordStudy(
+                profileID: history.profiles[profileIndex].id,
+                entryID: entryID
+            )
             return
         case .ready:
             break
@@ -187,6 +198,7 @@ final class StudyViewModel: ObservableObject {
         }
         syncStudyMaterialsToEditorIfSelected(entryID: entryID)
         history.persist()
+        overlayCoordinator?.refreshOverlayWordStudy(profileID: activeProfileID, entryID: entryID)
 
         do {
             let result = try await loadWordStudyUseCase.perform(
@@ -265,6 +277,7 @@ final class StudyViewModel: ObservableObject {
         }
         syncStudyMaterialsToEditorIfSelected(entryID: entryID)
         history.persist()
+        overlayCoordinator?.refreshOverlayWordStudy(profileID: profileID, entryID: entryID)
         publishStatus("Перевод слов готов.")
     }
 
@@ -281,6 +294,7 @@ final class StudyViewModel: ObservableObject {
         }
         syncStudyMaterialsToEditorIfSelected(entryID: entryID)
         history.persist()
+        overlayCoordinator?.refreshOverlayWordStudy(profileID: profileID, entryID: entryID)
         publishStatus("Не удалось получить перевод слов: \(error.localizedDescription)")
     }
 

@@ -55,6 +55,11 @@ enum HistoryDatabaseSchema {
                 table.add(column: "auto_load_grammar", .integer).notNull().defaults(to: 0)
             }
         }
+        migrator.registerMigration("v3_profile_overlay_words") { db in
+            try db.alter(table: profilesTable) { table in
+                table.add(column: "show_words_in_compact_overlay", .integer).notNull().defaults(to: 0)
+            }
+        }
         return migrator
     }
 }

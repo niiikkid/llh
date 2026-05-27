@@ -22,6 +22,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
     var automaticallyLoadWords: Bool
     /// After formatting succeeds, load grammar study automatically for new results in this session.
     var automaticallyLoadGrammar: Bool
+    /// When compact overlay is used, show word study below the translation and keep the overlay open until dismissed.
+    var showWordsInCompactOverlay: Bool
 
     init(
         id: UUID = UUID(),
@@ -32,7 +34,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         history: [CapturedTextEntry] = [],
         selectedEntryID: CapturedTextEntry.ID? = nil,
         automaticallyLoadWords: Bool = false,
-        automaticallyLoadGrammar: Bool = false
+        automaticallyLoadGrammar: Bool = false,
+        showWordsInCompactOverlay: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -43,6 +46,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         self.selectedEntryID = selectedEntryID
         self.automaticallyLoadWords = automaticallyLoadWords
         self.automaticallyLoadGrammar = automaticallyLoadGrammar
+        self.showWordsInCompactOverlay = showWordsInCompactOverlay
     }
 
     init(
@@ -52,7 +56,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         history: [CapturedTextEntry] = [],
         selectedEntryID: CapturedTextEntry.ID? = nil,
         automaticallyLoadWords: Bool = false,
-        automaticallyLoadGrammar: Bool = false
+        automaticallyLoadGrammar: Bool = false,
+        showWordsInCompactOverlay: Bool = false
     ) {
         self.init(
             id: id,
@@ -63,7 +68,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
             history: history,
             selectedEntryID: selectedEntryID,
             automaticallyLoadWords: automaticallyLoadWords,
-            automaticallyLoadGrammar: automaticallyLoadGrammar
+            automaticallyLoadGrammar: automaticallyLoadGrammar,
+            showWordsInCompactOverlay: showWordsInCompactOverlay
         )
     }
 
@@ -73,7 +79,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         history: [CapturedTextEntry] = [],
         selectedEntryID: CapturedTextEntry.ID? = nil,
         automaticallyLoadWords: Bool = false,
-        automaticallyLoadGrammar: Bool = false
+        automaticallyLoadGrammar: Bool = false,
+        showWordsInCompactOverlay: Bool = false
     ) -> LearningProfile {
         LearningProfile(
             id: id,
@@ -84,7 +91,8 @@ struct LearningProfile: Identifiable, Equatable, Codable {
             history: history,
             selectedEntryID: selectedEntryID,
             automaticallyLoadWords: automaticallyLoadWords,
-            automaticallyLoadGrammar: automaticallyLoadGrammar
+            automaticallyLoadGrammar: automaticallyLoadGrammar,
+            showWordsInCompactOverlay: showWordsInCompactOverlay
         )
     }
 
@@ -110,6 +118,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         case selectedEntryID
         case automaticallyLoadWords
         case automaticallyLoadGrammar
+        case showWordsInCompactOverlay
     }
 
     init(from decoder: Decoder) throws {
@@ -123,6 +132,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         selectedEntryID = try container.decodeIfPresent(CapturedTextEntry.ID.self, forKey: .selectedEntryID)
         automaticallyLoadWords = try container.decodeIfPresent(Bool.self, forKey: .automaticallyLoadWords) ?? false
         automaticallyLoadGrammar = try container.decodeIfPresent(Bool.self, forKey: .automaticallyLoadGrammar) ?? false
+        showWordsInCompactOverlay = try container.decodeIfPresent(Bool.self, forKey: .showWordsInCompactOverlay) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -136,6 +146,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
         try container.encodeIfPresent(selectedEntryID, forKey: .selectedEntryID)
         try container.encode(automaticallyLoadWords, forKey: .automaticallyLoadWords)
         try container.encode(automaticallyLoadGrammar, forKey: .automaticallyLoadGrammar)
+        try container.encode(showWordsInCompactOverlay, forKey: .showWordsInCompactOverlay)
     }
 
     mutating func deleteEntry(with id: CapturedTextEntry.ID) -> Bool {

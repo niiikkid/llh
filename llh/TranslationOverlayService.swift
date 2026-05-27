@@ -6,6 +6,36 @@
 import AppKit
 import SwiftUI
 
+enum CompactOverlayWordsPhase: Equatable {
+    case loading
+    case ready(WordStudyPayload)
+    case failed
+    case unavailable
+
+    static func from(
+        materials: StudyMaterials?,
+        profileSupportsWordStudy: Bool
+    ) -> Self {
+        guard profileSupportsWordStudy else {
+            return .unavailable
+        }
+        guard let materials else {
+            return .loading
+        }
+        switch materials.wordsStatus {
+        case .processing, .notRequested:
+            return .loading
+        case .succeeded:
+            if let payload = materials.words, payload.hasContent {
+                return .ready(payload)
+            }
+            return .loading
+        case .failed:
+            return .failed
+        }
+    }
+}
+
 @MainActor
 final class TranslationOverlayService {
     enum DisplayMode: Equatable {
@@ -49,10 +79,43 @@ final class TranslationOverlayService {
         present(
             content: .translation(
                 primaryText: formattedText.overlayPrimaryText,
-                secondaryText: formattedText.russianTranslation
+                secondaryText: formattedText.russianTranslation,
+                wordsPhase: nil
             ),
             dismissAfter: duration,
             displayMode: .temporary
+        )
+    }
+
+    func showTranslationWithWords(
+        _ formattedText: StructuredFormattedText,
+        wordsPhase: CompactOverlayWordsPhase
+    ) {
+        present(
+            content: .translation(
+                primaryText: formattedText.overlayPrimaryText,
+                secondaryText: formattedText.russianTranslation,
+                wordsPhase: wordsPhase
+            ),
+            dismissAfter: nil,
+            displayMode: .temporary
+        )
+    }
+
+    func updateTranslationWithWords(
+        _ formattedText: StructuredFormattedText,
+        wordsPhase: CompactOverlayWordsPhase
+    ) {
+        guard panel.isVisible else { return }
+        guard case .translation = currentContentKind else { return }
+        present(
+            content: .translation(
+                primaryText: formattedText.overlayPrimaryText,
+                secondaryText: formattedText.russianTranslation,
+                wordsPhase: wordsPhase
+            ),
+            dismissAfter: nil,
+            displayMode: displayMode ?? .temporary
         )
     }
 
@@ -60,7 +123,8 @@ final class TranslationOverlayService {
         present(
             content: .translation(
                 primaryText: formattedText.overlayPrimaryText,
-                secondaryText: formattedText.russianTranslation
+                secondaryText: formattedText.russianTranslation,
+                wordsPhase: nil
             ),
             dismissAfter: nil,
             displayMode: .persistentLastTranslation
@@ -85,6 +149,10 @@ final class TranslationOverlayService {
 
     var isShowingPersistentLastTranslation: Bool {
         panel.isVisible && displayMode == .persistentLastTranslation
+    }
+
+    private var currentContentKind: CompactOverlayContentKind {
+        hostingView.rootView.contentKind
     }
 
     private func present(content: CompactOverlayContent, dismissAfter: TimeInterval?, displayMode: DisplayMode) {
@@ -163,8 +231,22 @@ private final class OverlayPanel: NSPanel {
 
 private enum CompactOverlayContent: Equatable {
     case loading(String)
-    case translation(primaryText: String, secondaryText: String)
+    case translation(primaryText: String, secondaryText: String, wordsPhase: CompactOverlayWordsPhase?)
     case message(title: String, subtitle: String?)
+
+    var contentKind: CompactOverlayContentKind {
+        switch self {
+        case .loading: .loading
+        case .translation: .translation
+        case .message: .message
+        }
+    }
+}
+
+private enum CompactOverlayContentKind {
+    case loading
+    case translation
+    case message
 }
 
 enum TranslationOverlayDismissSchedule {
@@ -177,6 +259,10 @@ enum TranslationOverlayDismissSchedule {
 private struct CompactOverlayView: View {
     let content: CompactOverlayContent
     let onClose: () -> Void
+
+    var contentKind: CompactOverlayContentKind {
+        content.contentKind
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -191,7 +277,7 @@ private struct CompactOverlayView: View {
                             .foregroundStyle(.primary)
                     }
 
-                case .translation(let primaryText, let secondaryText):
+                case .translation(let primaryText, let secondaryText, let wordsPhase):
                     if !primaryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(primaryText)
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -203,6 +289,10 @@ private struct CompactOverlayView: View {
                         .font(.system(size: 13))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
+
+                    if let wordsPhase {
+                        CompactOverlayWordsSectionView(phase: wordsPhase)
+                    }
 
                 case .message(let title, let subtitle):
                     HStack(spacing: 8) {
@@ -251,5 +341,77 @@ private struct CompactOverlayView: View {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(Color.black.opacity(0.24))
             )
+    }
+}
+
+private struct CompactOverlayWordsSectionView: View {
+    let phase: CompactOverlayWordsPhase
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+                .padding(.vertical, 2)
+
+            switch phase {
+            case .loading:
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Перевожу слова…")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            case .ready(let payload):
+                Text("Перевод слов")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(payload.entries.enumerated()), id: \.offset) { _, entry in
+                            CompactOverlayWordEntryRowView(entry: entry)
+                        }
+                    }
+                }
+                .frame(maxHeight: 180)
+
+            case .failed:
+                Text("Не удалось перевести слова.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+
+            case .unavailable:
+                Text("Перевод слов недоступен для этой сессии.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct CompactOverlayWordEntryRowView: View {
+    let entry: WordStudyEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(entry.termPinyin)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                if !entry.russianPronunciationGuide.isEmpty {
+                    Text("(\(entry.russianPronunciationGuide))")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                Text("—")
+                    .foregroundStyle(.secondary)
+                Text(entry.termTranslation)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

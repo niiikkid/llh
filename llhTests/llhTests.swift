@@ -307,6 +307,7 @@ struct llhTests {
 
         #expect(!profile.automaticallyLoadWords)
         #expect(!profile.automaticallyLoadGrammar)
+        #expect(!profile.showWordsInCompactOverlay)
     }
 
     @Test
@@ -439,6 +440,33 @@ struct llhTests {
     func translationOverlayDismissSchedule_onlyTimesTemporaryContent() {
         #expect(TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss(dismissAfter: nil) == false)
         #expect(TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss(dismissAfter: 3) == true)
+    }
+
+    @Test
+    func compactOverlayWordsPhase_mapsWordStudyStatuses() {
+        let words = WordStudyPayload(entries: [
+            WordStudyEntry(termPinyin: "hello", termTranslation: "привет", characterBreakdown: []),
+        ])
+        let succeeded = StudyMaterials(words: words, wordsStatus: .succeeded)
+
+        #expect(
+            CompactOverlayWordsPhase.from(materials: succeeded, profileSupportsWordStudy: true) == .ready(words)
+        )
+        #expect(
+            CompactOverlayWordsPhase.from(
+                materials: StudyMaterials(wordsStatus: .processing),
+                profileSupportsWordStudy: true
+            ) == .loading
+        )
+        #expect(
+            CompactOverlayWordsPhase.from(
+                materials: StudyMaterials(wordsStatus: .failed),
+                profileSupportsWordStudy: true
+            ) == .failed
+        )
+        #expect(
+            CompactOverlayWordsPhase.from(materials: succeeded, profileSupportsWordStudy: false) == .unavailable
+        )
     }
 
     @Test
