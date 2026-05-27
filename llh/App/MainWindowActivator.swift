@@ -24,19 +24,19 @@ enum MainWindowActivator {
 
     private static var existingMainWindow: NSWindow? {
         NSApp.windows.first { window in
-            window.accessibilityIdentifier == accessibilityIdentifier
+            window.accessibilityIdentifier() == accessibilityIdentifier
         }
     }
 }
 
 /// Tags the hosting `NSWindow` so menu bar actions can find it without calling `openWindow` again.
 struct MainWindowIdentityView: NSViewRepresentable {
-    func makeNSView(context: Context) -> MainWindowIdentityHostView {
+    func makeNSView(context: Context) -> NSView {
         MainWindowIdentityHostView()
     }
 
-    func updateNSView(_ nsView: MainWindowIdentityHostView, context: Context) {
-        nsView.applyMainWindowIdentifier()
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? MainWindowIdentityHostView)?.applyMainWindowIdentifier()
     }
 }
 
@@ -47,6 +47,6 @@ private final class MainWindowIdentityHostView: NSView {
     }
 
     func applyMainWindowIdentifier() {
-        window?.accessibilityIdentifier = MainWindowActivator.accessibilityIdentifier
+        window?.setAccessibilityIdentifier(MainWindowActivator.accessibilityIdentifier)
     }
 }
