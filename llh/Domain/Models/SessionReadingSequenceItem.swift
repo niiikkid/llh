@@ -10,7 +10,6 @@ struct SessionReadingSequenceItem: Identifiable, Equatable {
     let sourceLine: String
     let translationLine: String
     let wordStudy: WordStudyPayload?
-    let grammarStudy: GrammarExplanationPayload?
 
     /// Плейсхолдер пустого оригинала в режиме «вся сессия» (совпадает с подписью в интерфейсе).
     static let missingSourcePlaceholder = "—"
@@ -21,14 +20,12 @@ struct SessionReadingSequenceItem: Identifiable, Equatable {
         id: CapturedTextEntry.ID,
         sourceLine: String,
         translationLine: String,
-        wordStudy: WordStudyPayload? = nil,
-        grammarStudy: GrammarExplanationPayload? = nil
+        wordStudy: WordStudyPayload? = nil
     ) {
         self.id = id
         self.sourceLine = sourceLine
         self.translationLine = translationLine
         self.wordStudy = wordStudy
-        self.grammarStudy = grammarStudy
     }
 
     init(entry: CapturedTextEntry, learningLanguage: LearningLanguage) {
@@ -36,13 +33,12 @@ struct SessionReadingSequenceItem: Identifiable, Equatable {
             id: entry.id,
             sourceLine: entry.sessionReadingSourceLine(learningLanguage: learningLanguage),
             translationLine: entry.sessionReadingTranslationLine(),
-            wordStudy: Self.availableWordStudy(from: entry.studyMaterials),
-            grammarStudy: Self.availableGrammarStudy(from: entry.studyMaterials)
+            wordStudy: Self.availableWordStudy(from: entry.studyMaterials)
         )
     }
 
     var hasExpandableDetails: Bool {
-        wordStudy != nil || grammarStudy != nil
+        wordStudy != nil
     }
 
     /// Строка оригинала для отображения и копирования.
@@ -61,13 +57,5 @@ struct SessionReadingSequenceItem: Identifiable, Equatable {
               words.hasContent
         else { return nil }
         return words
-    }
-
-    static func availableGrammarStudy(from materials: StudyMaterials) -> GrammarExplanationPayload? {
-        guard materials.grammarStatus == .succeeded,
-              let grammar = materials.grammar,
-              grammar.hasContent
-        else { return nil }
-        return grammar
     }
 }

@@ -50,16 +50,6 @@ private final class WordStudyFakeOpenAIServing: OpenAIServing {
         }
         return wordsResult
     }
-
-    func buildGrammarStudyData(
-        provider: AIProvider,
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) async throws -> GrammarExplanationPayload {
-        GrammarExplanationPayload(structures: [])
-    }
 }
 
 @MainActor

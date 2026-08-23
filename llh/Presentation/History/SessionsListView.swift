@@ -13,7 +13,6 @@ struct SessionsListView: View {
     @State private var newProfileName = ""
     @State private var newProfileLearningLanguage: LearningLanguage = .english
     @State private var newProfileAutomaticallyLoadWords = false
-    @State private var newProfileAutomaticallyLoadGrammar = false
     @State private var newProfileShowWordsInCompactOverlay = false
     @State private var isCreateProfilePresented = false
     @State private var profilePendingDelete: LearningProfile?
@@ -21,7 +20,6 @@ struct SessionsListView: View {
     @State private var profilePendingAutomation: LearningProfile?
     @State private var renameProfileName = ""
     @State private var automationLoadWords = false
-    @State private var automationLoadGrammar = false
     @State private var automationShowWordsInCompactOverlay = false
 
     var body: some View {
@@ -32,7 +30,6 @@ struct SessionsListView: View {
                     newProfileName = ""
                     newProfileLearningLanguage = defaultNewProfileLearningLanguage
                     newProfileAutomaticallyLoadWords = false
-                    newProfileAutomaticallyLoadGrammar = false
                     newProfileShowWordsInCompactOverlay = false
                     isCreateProfilePresented = true
                 } label: {
@@ -107,7 +104,7 @@ struct SessionsListView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                if profile.automaticallyLoadWords || profile.automaticallyLoadGrammar || profile.showWordsInCompactOverlay {
+                if profile.automaticallyLoadWords || profile.showWordsInCompactOverlay {
                     Text(sessionAutomationSummary(for: profile))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -134,7 +131,6 @@ struct SessionsListView: View {
 
                 Button {
                     automationLoadWords = profile.automaticallyLoadWords
-                    automationLoadGrammar = profile.automaticallyLoadGrammar
                     automationShowWordsInCompactOverlay = profile.showWordsInCompactOverlay
                     profilePendingAutomation = profile
                 } label: {
@@ -174,7 +170,6 @@ struct SessionsListView: View {
                 .foregroundStyle(.secondary)
             SessionAutomationTogglesView(
                 loadWords: $newProfileAutomaticallyLoadWords,
-                loadGrammar: $newProfileAutomaticallyLoadGrammar,
                 showWordsInCompactOverlay: $newProfileShowWordsInCompactOverlay
             )
             HStack {
@@ -187,7 +182,6 @@ struct SessionsListView: View {
                         named: newProfileName,
                         learningLanguage: newProfileLearningLanguage,
                         automaticallyLoadWords: newProfileAutomaticallyLoadWords,
-                        automaticallyLoadGrammar: newProfileAutomaticallyLoadGrammar,
                         showWordsInCompactOverlay: newProfileShowWordsInCompactOverlay
                     )
                     isCreateProfilePresented = false
@@ -232,7 +226,6 @@ struct SessionsListView: View {
                 .foregroundStyle(.secondary)
             SessionAutomationTogglesView(
                 loadWords: $automationLoadWords,
-                loadGrammar: $automationLoadGrammar,
                 showWordsInCompactOverlay: $automationShowWordsInCompactOverlay
             )
             HStack {
@@ -244,7 +237,6 @@ struct SessionsListView: View {
                     viewModel.updateSessionAutomation(
                         profileID: profile.id,
                         automaticallyLoadWords: automationLoadWords,
-                        automaticallyLoadGrammar: automationLoadGrammar,
                         showWordsInCompactOverlay: automationShowWordsInCompactOverlay
                     )
                     profilePendingAutomation = nil
@@ -260,9 +252,6 @@ struct SessionsListView: View {
         var parts: [String] = []
         if profile.automaticallyLoadWords {
             parts.append("слова")
-        }
-        if profile.automaticallyLoadGrammar {
-            parts.append("грамматика")
         }
         if profile.showWordsInCompactOverlay {
             parts.append("слова в компактном окне")

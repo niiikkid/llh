@@ -20,7 +20,7 @@ struct LearningProfile: Identifiable, Equatable, Codable {
     var selectedEntryID: CapturedTextEntry.ID?
     /// After formatting succeeds, load word study automatically for new results in this session.
     var automaticallyLoadWords: Bool
-    /// After formatting succeeds, load grammar study automatically for new results in this session.
+    /// Persisted for older sessions; grammar study is no longer generated.
     var automaticallyLoadGrammar: Bool
     /// When compact overlay is used, show word study below the translation and keep the overlay open until dismissed.
     var showWordsInCompactOverlay: Bool

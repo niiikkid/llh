@@ -128,14 +128,12 @@ enum RefactorBaselineInventory {
     case recognizeTextInImage
     case formatRecognizedText
     case buildWordsStudyData
-    case buildGrammarStudyData
   }
 
   static let openAIPromptBuilders: [OpenAICallSite: String] = [
     .formatRecognizedText: "OpenAIPromptBuilder.formatRecognizedTextSystemPrompt/UserPrompt",
     .recognizeTextInImage: "OpenAIPromptBuilder.recognizeTextInImageUserPrompt",
     .buildWordsStudyData: "OpenAIPromptBuilder.wordsAnalysisPrompt(for:)",
-    .buildGrammarStudyData: "OpenAIPromptBuilder.grammarStudySystemPrompt/UserPrompt",
     .fetchModels: "GET /v1/models (no prompt)",
   ]
 

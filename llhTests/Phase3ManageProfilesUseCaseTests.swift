@@ -155,14 +155,13 @@ struct Phase3ManageProfilesUseCaseTests {
             state: &state,
             named: "Chinese",
             learningLanguage: .chinese,
-            automaticallyLoadWords: true,
-            automaticallyLoadGrammar: true
+            automaticallyLoadWords: true
         )
 
         #expect(profile.automaticallyLoadWords)
-        #expect(profile.automaticallyLoadGrammar)
+        #expect(!profile.automaticallyLoadGrammar)
         #expect(state.profiles[0].automaticallyLoadWords)
-        #expect(state.profiles[0].automaticallyLoadGrammar)
+        #expect(!state.profiles[0].automaticallyLoadGrammar)
     }
 
     @Test
@@ -180,7 +179,6 @@ struct Phase3ManageProfilesUseCaseTests {
             state: &state,
             profileID: custom.id,
             automaticallyLoadWords: true,
-            automaticallyLoadGrammar: false,
             showWordsInCompactOverlay: true
         )
 

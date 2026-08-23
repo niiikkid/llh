@@ -13,7 +13,6 @@ struct HistoryView: View {
     @State private var newProfileName = ""
     @State private var newProfileLearningLanguage: LearningLanguage = .english
     @State private var newProfileAutomaticallyLoadWords = false
-    @State private var newProfileAutomaticallyLoadGrammar = false
     @State private var newProfileShowWordsInCompactOverlay = false
     @State private var isCreateProfilePresented = false
     @State private var isDeleteProfileConfirmationPresented = false
@@ -133,7 +132,7 @@ struct HistoryView: View {
                 newProfileName = ""
                 newProfileLearningLanguage = defaultNewProfileLearningLanguage
                 newProfileAutomaticallyLoadWords = false
-                newProfileAutomaticallyLoadGrammar = false
+                newProfileShowWordsInCompactOverlay = false
                 isCreateProfilePresented = true
             }
 
@@ -155,7 +154,6 @@ struct HistoryView: View {
                 .foregroundStyle(.secondary)
             SessionAutomationTogglesView(
                 loadWords: automationLoadWordsBinding,
-                loadGrammar: automationLoadGrammarBinding,
                 showWordsInCompactOverlay: showWordsInCompactOverlayBinding
             )
             .font(.caption)
@@ -170,22 +168,6 @@ struct HistoryView: View {
                 viewModel.updateSessionAutomation(
                     profileID: profileID,
                     automaticallyLoadWords: newValue,
-                    automaticallyLoadGrammar: viewModel.activeProfile?.automaticallyLoadGrammar ?? false,
-                    showWordsInCompactOverlay: viewModel.activeProfile?.showWordsInCompactOverlay ?? false
-                )
-            }
-        )
-    }
-
-    private var automationLoadGrammarBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.activeProfile?.automaticallyLoadGrammar ?? false },
-            set: { newValue in
-                guard let profileID = viewModel.selectedProfileID else { return }
-                viewModel.updateSessionAutomation(
-                    profileID: profileID,
-                    automaticallyLoadWords: viewModel.activeProfile?.automaticallyLoadWords ?? false,
-                    automaticallyLoadGrammar: newValue,
                     showWordsInCompactOverlay: viewModel.activeProfile?.showWordsInCompactOverlay ?? false
                 )
             }
@@ -200,7 +182,6 @@ struct HistoryView: View {
                 viewModel.updateSessionAutomation(
                     profileID: profileID,
                     automaticallyLoadWords: viewModel.activeProfile?.automaticallyLoadWords ?? false,
-                    automaticallyLoadGrammar: viewModel.activeProfile?.automaticallyLoadGrammar ?? false,
                     showWordsInCompactOverlay: newValue
                 )
             }
@@ -223,7 +204,6 @@ struct HistoryView: View {
                 .foregroundStyle(.secondary)
             SessionAutomationTogglesView(
                 loadWords: $newProfileAutomaticallyLoadWords,
-                loadGrammar: $newProfileAutomaticallyLoadGrammar,
                 showWordsInCompactOverlay: $newProfileShowWordsInCompactOverlay
             )
             HStack {
@@ -236,7 +216,6 @@ struct HistoryView: View {
                         named: newProfileName,
                         learningLanguage: newProfileLearningLanguage,
                         automaticallyLoadWords: newProfileAutomaticallyLoadWords,
-                        automaticallyLoadGrammar: newProfileAutomaticallyLoadGrammar,
                         showWordsInCompactOverlay: newProfileShowWordsInCompactOverlay
                     )
                     isCreateProfilePresented = false

@@ -106,21 +106,6 @@ struct OpenAIService: OpenAIServing {
         )
     }
 
-    func buildGrammarStudyData(
-        provider: AIProvider,
-        apiKey: String,
-        modelID: String,
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) async throws -> GrammarExplanationPayload {
-        try await stack(for: provider).studyService.buildGrammarStudyData(
-            apiKey: apiKey,
-            modelID: modelID,
-            targetLanguage: targetLanguage,
-            formattedText: formattedText
-        )
-    }
-
     private func stack(for provider: AIProvider) -> ProviderStack {
         switch provider {
         case .openAI: openAIStack

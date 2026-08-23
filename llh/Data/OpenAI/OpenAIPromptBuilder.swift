@@ -172,78 +172,11 @@ enum OpenAIPromptBuilder {
         )
     }
 
-    static func grammarStudySystemPrompt(for targetLanguage: LearningLanguage) -> String {
-        """
-        You produce JSON only for grammar explanation aimed at a Russian-speaking learner.
-        Never use hieroglyphs or source script in the response.
-        Use only transliteration and Russian.
-        \(pinyinTonePromptParagraph(for: targetLanguage))
-        Tone: explain like to a curious 14-year-old who does not know school grammar terms.
-        Never use linguistic jargon or “smart words” (for example: существительное, глагол, прилагательное,
-        наречие, часть речи, падеж, время, согласование, субъект, предикат, конструкция, конъюнкция).
-        Describe what happens in the sentence in plain, physical, lived language — who does what, what comes
-        first, what the phrase feels like, why it reads with this meaning.
-        Brevity is required: minimum words, maximum clarity.
-        Return JSON object with key `structures`.
-        Return at most 2 structures; prefer 1 unless two clearly different patterns matter.
-        Each structure has:
-        title
-        explanation
-        usage_notes
-        examples
-        `examples` is an array of objects with:
-        pinyin_text
-        russian_translation
-        Limits per structure:
-        - title: a few words in Russian
-        - explanation: at most 2 short sentences (about 35 words total)
-        - usage_notes: at most 1 short sentence, or empty string
-        - examples: at most 1 brief example, or an empty array
-        Do not restate the full translation or pad with generic grammar lectures.
-        """
-    }
-
-    static func grammarStudyUserPrompt(
-        targetLanguage: LearningLanguage,
-        formattedText: StructuredFormattedText
-    ) -> String {
-        """
-        Target language: \(openAIInstructionName(for: targetLanguage))
-        Cleaned text:
-        \(formattedText.cleanedText)
-
-        Pronunciation:
-        \(formattedText.pinyinText)
-
-        Translation:
-        \(formattedText.russianTranslation)
-
-        In very simple Russian, briefly explain only what helps feel the sentence from the inside.
-        No grammar terminology — only everyday words, as if talking to a smart teenager who never studied linguistics.
-        Pick the single most useful point; add a second structure only if truly necessary.
-        Skip obvious trivia, repetition, and long background.
-        For each structure:
-        - title: 2–5 words in Russian
-        - explanation: max 2 short sentences — how the parts link and why the meaning arises
-        - usage_notes: one short sentence or empty
-        - examples: 0–1 mini example with transliteration only (no source script), only if it clarifies
-        One structure is usually enough.
-        """
-    }
-
     static func pinyinTonePromptLine(for targetLanguage: LearningLanguage) -> String {
         guard targetLanguage == .chinese || targetLanguage == .auto else {
             return "2a) If pinyin_text is empty, return empty string."
         }
 
         return "2a) If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
-    }
-
-    static func pinyinTonePromptParagraph(for targetLanguage: LearningLanguage) -> String {
-        guard targetLanguage == .chinese || targetLanguage == .auto else {
-            return "If transliteration is used, keep it readable and consistent."
-        }
-
-        return "If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
     }
 }

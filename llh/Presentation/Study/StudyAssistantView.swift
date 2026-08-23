@@ -10,31 +10,23 @@ struct StudyAssistantView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Учебные материалы", selection: $study.selectedLearningTab) {
-                ForEach(StudyLearningTab.allCases) { tab in
-                    Text(tab.title).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-
             HStack {
-                Text(study.selectedLearningTab.title)
+                Text("Перевод слов")
                     .font(.headline)
                 Spacer()
-                Button(study.activeTabRetryButtonTitle) {
+                Button(study.wordsRetryButtonTitle) {
                     study.retryStudyAssistantDataForSelectedEntry()
                 }
-                .disabled(study.activeLearningTabStatus == .processing)
+                .disabled(study.selectedEntryWordsStatus == .processing)
             }
 
             Group {
-                if study.hasActiveTabContent {
+                if study.hasVisibleWordsContent {
                     ScrollView {
-                        activeTabBody
+                        wordsBody
                     }
                 } else {
-                    activeTabBody
+                    wordsBody
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -49,19 +41,9 @@ struct StudyAssistantView: View {
     }
 
     @ViewBuilder
-    private var activeTabBody: some View {
-        switch study.selectedLearningTab {
-        case .words:
-            wordsTabBody
-        case .grammar:
-            grammarTabBody
-        }
-    }
-
-    @ViewBuilder
-    private var wordsTabBody: some View {
+    private var wordsBody: some View {
         if study.selectedEntryWordsStatus == .processing {
-            StudyTabLoadingView(
+            StudyWordsLoadingView(
                 title: "Готовлю перевод слов",
                 subtitle: "Запрашиваю слова для текущего текста."
             )
@@ -86,50 +68,15 @@ struct StudyAssistantView: View {
         }
     }
 
-    @ViewBuilder
-    private var grammarTabBody: some View {
-        if study.selectedEntryGrammarStatus == .processing {
-            StudyTabLoadingView(
-                title: "Готовлю грамматику",
-                subtitle: "Разбираю, как связаны части предложения."
-            )
-        } else if study.hasGrammarContent {
-            GrammarExplanationView(payload: study.studyMaterials.grammar)
-        } else if study.canRetryGrammarStudy {
-            CenteredContentContainer {
-                ContentUnavailableView(
-                    "Грамматика не загрузилась",
-                    systemImage: "arrow.clockwise.circle",
-                    description: Text("Можно запросить объяснение еще раз.")
-                )
-            }
-        } else {
-            CenteredContentContainer {
-                ContentUnavailableView(
-                    "Загрузить грамматику",
-                    systemImage: "hand.tap",
-                    description: Text(grammarEmptyStateDescription)
-                )
-            }
-        }
-    }
-
     private var wordsEmptyStateDescription: String {
         if study.sessionAutomaticallyLoadsWords {
             return "Перевод слов запустится автоматически после форматирования, если включено в настройках сессии."
         }
         return "Материал загружается по кнопке выше."
     }
-
-    private var grammarEmptyStateDescription: String {
-        if study.sessionAutomaticallyLoadsGrammar {
-            return "Грамматика запустится автоматически после форматирования, если включено в настройках сессии."
-        }
-        return "Объяснение загружается по кнопке выше."
-    }
 }
 
-private struct StudyTabLoadingView: View {
+private struct StudyWordsLoadingView: View {
     let title: String
     let subtitle: String
 

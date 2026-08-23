@@ -158,7 +158,6 @@ struct llhTests {
 
         #expect(item.hasExpandableDetails)
         #expect(item.wordStudy == words)
-        #expect(item.grammarStudy == nil)
     }
 
     @Test
@@ -180,13 +179,15 @@ struct llhTests {
     }
 
     @Test
-    func sessionReadingSequenceItem_exposesGrammarStudyWhenSucceeded() {
+    func sessionReadingSequenceItem_ignoresStoredGrammarStudy() {
         let grammar = GrammarExplanationPayload(structures: [
             GrammarStructure(
                 title: "Порядок слов",
                 explanation: "Субъект перед сказуемым.",
                 usageNotes: "",
-                examples: []
+                examples: [
+                    GrammarExample(pinyinText: "Hola", russianTranslation: "Привет"),
+                ]
             ),
         ])
         let entry = CapturedTextEntry(
@@ -196,31 +197,7 @@ struct llhTests {
 
         let item = SessionReadingSequenceItem(entry: entry, learningLanguage: .english)
 
-        #expect(item.hasExpandableDetails)
-        #expect(item.grammarStudy == grammar)
-    }
-
-    @Test
-    func sessionReadingSequenceItem_exposesGrammarStudyWithExamplesOnly() {
-        let grammar = GrammarExplanationPayload(structures: [
-            GrammarStructure(
-                title: "",
-                explanation: "",
-                usageNotes: "",
-                examples: [
-                    GrammarExample(pinyinText: "Hola", russianTranslation: "Привет"),
-                ]
-            ),
-        ])
-        let entry = CapturedTextEntry(
-            text: "Hola",
-            studyMaterials: StudyMaterials(grammar: grammar, grammarStatus: .succeeded)
-        )
-
-        let item = SessionReadingSequenceItem(entry: entry, learningLanguage: .spanish)
-
-        #expect(item.hasExpandableDetails)
-        #expect(item.grammarStudy == grammar)
+        #expect(item.hasExpandableDetails == false)
         #expect(item.wordStudy == nil)
     }
 
@@ -644,27 +621,6 @@ struct llhTests {
         #expect(prompt.system.contains("Cyrillic"))
         #expect(userPrompt.contains("MUST fill `russian_pronunciation`"))
         #expect(prompt.system.contains("`character_breakdown`: always an empty array"))
-    }
-
-    @Test
-    func openAIService_grammarStudyPrompt_targetsRussianLearner() {
-        let system = OpenAIPromptBuilder.grammarStudySystemPrompt(for: .chinese)
-        let user = OpenAIPromptBuilder.grammarStudyUserPrompt(
-            targetLanguage: .chinese,
-            formattedText: StructuredFormattedText(
-                cleanedText: "你好",
-                pinyinText: "nǐ hǎo",
-                russianTranslation: "привет"
-            )
-        )
-
-        #expect(system.contains("Russian-speaking learner"))
-        #expect(system.contains("Never use hieroglyphs or source script"))
-        #expect(system.contains("Never use linguistic jargon"))
-        #expect(system.contains("существительное"))
-        #expect(system.contains("at most 2 structures"))
-        #expect(user.contains("No grammar terminology"))
-        #expect(user.contains("One structure is usually enough"))
     }
 
     @Test

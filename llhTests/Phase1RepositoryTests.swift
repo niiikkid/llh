@@ -126,7 +126,6 @@ struct Phase1RepositoryTests {
             manageHistoryUseCase: manageHistoryUseCase,
             manageProfilesUseCase: ManageProfilesUseCase(manageHistoryUseCase: manageHistoryUseCase),
             loadWordStudyUseCase: LoadWordStudyUseCase(openAIService: openAIService),
-            loadGrammarStudyUseCase: LoadGrammarStudyUseCase(openAIService: openAIService),
             manageOpenAISettingsUseCase: manageOpenAISettingsUseCase
         )
         let viewModel = dependencies.makeMainViewModel()

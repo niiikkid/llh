@@ -152,13 +152,6 @@ private struct SessionReadingEntryDetailsView: View {
                     fontSizePoints: detailFontSize
                 )
             }
-
-            if let grammarStudy = item.grammarStudy {
-                SessionReadingGrammarStudyDetailsView(
-                    payload: grammarStudy,
-                    fontSizePoints: detailFontSize
-                )
-            }
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -211,31 +204,6 @@ private struct SessionReadingWordStudyDetailsView: View {
                             .textSelection(.enabled)
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-private struct SessionReadingGrammarStudyDetailsView: View {
-    let payload: GrammarExplanationPayload
-    let fontSizePoints: CGFloat
-
-    private var visibleStructures: [GrammarStructure] {
-        payload.structures.filter(\.hasVisibleContent)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Грамматика")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            ForEach(Array(visibleStructures.enumerated()), id: \.offset) { index, structure in
-                GrammarStructureLinesView(structure: structure, fontSizePoints: fontSizePoints)
-                if index < visibleStructures.count - 1 {
-                    Divider()
-                        .padding(.vertical, 2)
                 }
             }
         }
