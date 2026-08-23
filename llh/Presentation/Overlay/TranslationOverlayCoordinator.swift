@@ -73,7 +73,8 @@ final class TranslationOverlayCoordinator {
 
         translationOverlayService.showPersistentLastTranslation(
             latest.formattedText,
-            wordsPhase: PersistentLastTranslationPresentation.wordsPhase(for: latest)
+            wordsPhase: PersistentLastTranslationPresentation.wordsPhase(for: latest),
+            learningLanguage: learningLanguage(for: latest.profileID)
         )
     }
 
@@ -105,13 +106,15 @@ final class TranslationOverlayCoordinator {
                     wordsPhase: CompactOverlayWordsPhase.from(
                         materials: materials,
                         profileSupportsWordStudy: history.currentProfileSupportsWordStudy
-                    )
+                    ),
+                    learningLanguage: profile?.learningLanguage ?? .auto
                 )
             } else {
                 clearOverlayWordStudyTracking()
                 translationOverlayService.showTranslation(
                     formatted,
-                    duration: settings.calculatedTranslationOverlayDuration(for: formatted)
+                    duration: settings.calculatedTranslationOverlayDuration(for: formatted),
+                    learningLanguage: profile?.learningLanguage ?? .auto
                 )
             }
         } else {
@@ -170,6 +173,12 @@ final class TranslationOverlayCoordinator {
             return nil
         }
         return history.profiles[profileIndex].history[entryIndex].studyMaterials
+    }
+
+    private func learningLanguage(for profileID: LearningProfile.ID) -> LearningLanguage {
+        history.profiles.first(where: { $0.id == profileID })?.learningLanguage
+            ?? history.activeProfile?.learningLanguage
+            ?? .auto
     }
 
     private func profileSupportsWordStudy(profileID: LearningProfile.ID) -> Bool {

@@ -77,6 +77,7 @@ final class TranslationOverlayService {
     private var escapeKeyMonitor: Any?
     private var currentContent: CompactOverlayContent = .loading("Обрабатываю перевод...")
     private var chatViewModel: CompactOverlayChatViewModel?
+    private var currentLearningLanguage: LearningLanguage = .auto
     private(set) var displayMode: DisplayMode?
 
     init() {
@@ -97,7 +98,12 @@ final class TranslationOverlayService {
         present(content: .loading(text), dismissAfter: nil, displayMode: .temporary, preserveChat: false)
     }
 
-    func showTranslation(_ formattedText: StructuredFormattedText, duration: TimeInterval) {
+    func showTranslation(
+        _ formattedText: StructuredFormattedText,
+        duration: TimeInterval,
+        learningLanguage: LearningLanguage
+    ) {
+        currentLearningLanguage = learningLanguage
         present(
             content: .translation(formattedText: formattedText, wordsPhase: nil),
             dismissAfter: duration,
@@ -108,8 +114,10 @@ final class TranslationOverlayService {
 
     func showTranslationWithWords(
         _ formattedText: StructuredFormattedText,
-        wordsPhase: CompactOverlayWordsPhase
+        wordsPhase: CompactOverlayWordsPhase,
+        learningLanguage: LearningLanguage
     ) {
+        currentLearningLanguage = learningLanguage
         present(
             content: .translation(formattedText: formattedText, wordsPhase: wordsPhase),
             dismissAfter: nil,
@@ -134,8 +142,10 @@ final class TranslationOverlayService {
 
     func showPersistentLastTranslation(
         _ formattedText: StructuredFormattedText,
-        wordsPhase: CompactOverlayWordsPhase? = nil
+        wordsPhase: CompactOverlayWordsPhase? = nil,
+        learningLanguage: LearningLanguage
     ) {
+        currentLearningLanguage = learningLanguage
         present(
             content: .translation(formattedText: formattedText, wordsPhase: wordsPhase),
             dismissAfter: nil,
@@ -160,6 +170,7 @@ final class TranslationOverlayService {
         removeEscapeKeyMonitor()
         hideChatPanel()
         panel.orderOut(nil)
+        currentLearningLanguage = .auto
         chatViewModel?.reset(context: nil, announceChange: false)
     }
 
@@ -210,7 +221,8 @@ final class TranslationOverlayService {
         case .translation(let formattedText, let wordsPhase):
             let context = TranslationChatContext(
                 formattedText: formattedText,
-                words: wordsPhase?.readyPayload
+                words: wordsPhase?.readyPayload,
+                learningLanguage: currentLearningLanguage
             )
             if preserveChat {
                 chatViewModel.updateContext(context)

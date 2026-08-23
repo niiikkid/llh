@@ -67,6 +67,7 @@ struct Phase9OpenAIPromptTests {
                 pinyinText: "nǐ hǎo",
                 russianTranslation: "привет"
             ),
+            learningLanguage: .chinese,
             words: WordStudyPayload(entries: [
                 WordStudyEntry(
                     termPinyin: "nǐ",
@@ -85,6 +86,34 @@ struct Phase9OpenAIPromptTests {
         #expect(prompt.contains("Russian translation: привет"))
         #expect(prompt.contains("nǐ (ни) — ты"))
         #expect(prompt.contains("parts: nǐ — ты"))
+        #expect(prompt.contains("Never use Chinese characters"))
+        #expect(prompt.contains("pinyin with tone marks"))
+        #expect(prompt.contains("Never write 你, 好, 你好"))
+    }
+
+    @Test
+    func translationChatSystemPrompt_forbidsHanziOnlyForChinese() {
+        let chinese = TranslationChatContext(
+            formattedText: StructuredFormattedText(
+                cleanedText: "你好",
+                pinyinText: "nǐ hǎo",
+                russianTranslation: "привет"
+            ),
+            learningLanguage: .chinese
+        )
+        let english = TranslationChatContext(
+            formattedText: StructuredFormattedText(
+                cleanedText: "hello",
+                pinyinText: "",
+                russianTranslation: "привет"
+            ),
+            learningLanguage: .english
+        )
+
+        #expect(chinese.forbidsHanziInReplies)
+        #expect(!english.forbidsHanziInReplies)
+        #expect(OpenAIPromptBuilder.translationChatSystemPrompt(context: chinese).contains("STRICT OUTPUT RULE for Chinese"))
+        #expect(!OpenAIPromptBuilder.translationChatSystemPrompt(context: english).contains("STRICT OUTPUT RULE for Chinese"))
     }
 
     @Test

@@ -188,11 +188,25 @@ enum OpenAIPromptBuilder {
             "The user asks follow-up questions about the translation they just received.",
             "Answer in Russian unless the user explicitly asks for another language.",
             "Use only the provided translation context. If it is not enough, say so briefly.",
-            "Be concise and practical. Do not invent words or grammar that are absent from the context.",
+            "Be concise and practical. Do not invent words or grammar that are absent from the context."
+        ]
+
+        if context.forbidsHanziInReplies {
+            lines.append(contentsOf: [
+                "",
+                "STRICT OUTPUT RULE for Chinese:",
+                "Never use Chinese characters (hanzi / 汉字), hieroglyphs, or source script in the reply.",
+                "Write every Chinese word or syllable only as Latin-letter pinyin with tone marks (example: nǐ, hǎo, nǐ hǎo).",
+                "Never write 你, 好, 你好, or any other hanzi. If you need to mention a word from the source, repeat it as pinyin only.",
+                "Russian is allowed for explanations. Latin letters are allowed only for pinyin and necessary linguistic terms."
+            ])
+        }
+
+        lines.append(contentsOf: [
             "",
             "Full translation:",
             "Source text: \(context.cleanedText)"
-        ]
+        ])
 
         let trimmedPinyin = context.pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedPinyin.isEmpty {
