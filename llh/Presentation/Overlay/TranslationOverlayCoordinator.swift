@@ -21,7 +21,10 @@ final class TranslationOverlayCoordinator {
         translationOverlayService: TranslationOverlayService,
         settings: SettingsViewModel,
         history: HistoryViewModel,
-        shouldUseCompactOverlay: @escaping () -> Bool
+        shouldUseCompactOverlay: @escaping () -> Bool,
+        transcribeSpeechUseCase: TranscribeSpeechUseCase,
+        askTranslationChatUseCase: AskTranslationChatUseCase,
+        microphoneRecorder: any MicrophoneRecording
     ) {
         self.translationOverlayService = translationOverlayService
         self.settings = settings
@@ -30,6 +33,14 @@ final class TranslationOverlayCoordinator {
         translationOverlayService.onRequestClose = { [weak self] in
             self?.close()
         }
+        translationOverlayService.attachChatViewModel(
+            CompactOverlayChatViewModel(
+                recorder: microphoneRecorder,
+                transcribeUseCase: transcribeSpeechUseCase,
+                chatUseCase: askTranslationChatUseCase,
+                credentials: CompactOverlayChatCredentials(settings: settings)
+            )
+        )
     }
 
     func close(cancelPendingResult: Bool = true) {

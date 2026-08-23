@@ -38,12 +38,29 @@ struct OpenAIHTTPClient: Sendable {
     }
 
     func get(path: String, apiKey: String) async throws -> Data {
-        try await perform(path: path, method: .get, apiKey: apiKey, body: nil)
+        try await perform(path: path, method: .get, apiKey: apiKey, body: nil, contentType: nil)
     }
 
     func post<Body: Encodable>(path: String, apiKey: String, body: Body) async throws -> Data {
         let encodedBody = try JSONEncoder().encode(body)
-        return try await perform(path: path, method: .post, apiKey: apiKey, body: encodedBody)
+        return try await perform(
+            path: path,
+            method: .post,
+            apiKey: apiKey,
+            body: encodedBody,
+            contentType: "application/json"
+        )
+    }
+
+    func postMultipart(path: String, apiKey: String, fields: [MultipartFormField]) async throws -> Data {
+        let encoded = MultipartFormBody.encode(fields)
+        return try await perform(
+            path: path,
+            method: .post,
+            apiKey: apiKey,
+            body: encoded.data,
+            contentType: encoded.contentType
+        )
     }
 
     func decode<Response: Decodable>(_ data: Data, as type: Response.Type = Response.self) throws -> Response {
@@ -54,7 +71,8 @@ struct OpenAIHTTPClient: Sendable {
         path: String,
         method: HTTPMethod,
         apiKey: String,
-        body: Data?
+        body: Data?,
+        contentType: String?
     ) async throws -> Data {
         try Task.checkCancellation()
 
@@ -64,7 +82,9 @@ struct OpenAIHTTPClient: Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let contentType {
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        }
         request.httpBody = body
         request.timeoutInterval = requestTimeout
 

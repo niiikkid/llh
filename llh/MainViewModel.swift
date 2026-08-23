@@ -36,7 +36,10 @@ final class MainViewModel: ObservableObject {
             translationOverlayService: dependencies.translationOverlayService,
             settings: settingsViewModel,
             history: history,
-            shouldUseCompactOverlay: { !NSApp.isActive }
+            shouldUseCompactOverlay: { !NSApp.isActive },
+            transcribeSpeechUseCase: dependencies.transcribeSpeechUseCase,
+            askTranslationChatUseCase: dependencies.askTranslationChatUseCase,
+            microphoneRecorder: dependencies.microphoneRecorder
         )
         study = StudyViewModel(
             loadWordStudyUseCase: dependencies.loadWordStudyUseCase,

@@ -412,11 +412,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2Q4KL6GZCP;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_AUDIO_INPUT = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Приложение записывает голос, чтобы распознать вопрос и отправить его в чат по переводу.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Приложение использует запись экрана для локального OCR выделенной области.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -447,11 +449,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2Q4KL6GZCP;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_AUDIO_INPUT = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Приложение записывает голос, чтобы распознать вопрос и отправить его в чат по переводу.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Приложение использует запись экрана для локального OCR выделенной области.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

@@ -60,6 +60,49 @@ struct Phase9OpenAIPromptTests {
     }
 
     @Test
+    func translationChatSystemPrompt_includesFullTranslationAndWords() {
+        let context = TranslationChatContext(
+            formattedText: StructuredFormattedText(
+                cleanedText: "你好",
+                pinyinText: "nǐ hǎo",
+                russianTranslation: "привет"
+            ),
+            words: WordStudyPayload(entries: [
+                WordStudyEntry(
+                    termPinyin: "nǐ",
+                    termTranslation: "ты",
+                    russianPronunciationGuide: "ни",
+                    characterBreakdown: [
+                        CharacterMeaning(pinyinText: "nǐ", russianTranslation: "ты")
+                    ]
+                )
+            ])
+        )
+        let prompt = OpenAIPromptBuilder.translationChatSystemPrompt(context: context)
+
+        #expect(prompt.contains("Source text: 你好"))
+        #expect(prompt.contains("Pronunciation: nǐ hǎo"))
+        #expect(prompt.contains("Russian translation: привет"))
+        #expect(prompt.contains("nǐ (ни) — ты"))
+        #expect(prompt.contains("parts: nǐ — ты"))
+    }
+
+    @Test
+    func translationChatSystemPrompt_marksMissingWords() {
+        let context = TranslationChatContext(
+            formattedText: StructuredFormattedText(
+                cleanedText: "hello",
+                pinyinText: "",
+                russianTranslation: "привет"
+            )
+        )
+        let prompt = OpenAIPromptBuilder.translationChatSystemPrompt(context: context)
+
+        #expect(prompt.contains("Word-by-word translations: not available yet."))
+        #expect(!prompt.contains("Pronunciation:"))
+    }
+
+    @Test
     func structuredFormattedText_overlayPrimaryText_prefersPinyinThenCleanedThenRussian() {
         let withPinyin = StructuredFormattedText(
             cleanedText: "你好",

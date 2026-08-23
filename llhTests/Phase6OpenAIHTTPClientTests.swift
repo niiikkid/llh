@@ -191,6 +191,38 @@ struct Phase6OpenAIHTTPClientTests {
     }
 
     @Test
+    func postMultipart_setsBoundaryContentTypeAndKeepsJSONGetUnchanged() async throws {
+        let client = OpenAIHTTPClientTestSupport.makeClient()
+        let encoded = MultipartFormBody.encode(
+            [
+                MultipartFormField(name: "model", body: .text("gpt-transcribe")),
+                MultipartFormField(
+                    name: "file",
+                    body: .file(data: Data("abc".utf8), filename: "speech.m4a", mimeType: "audio/mp4")
+                )
+            ],
+            boundary: "test-boundary"
+        )
+        #expect(encoded.contentType == "multipart/form-data; boundary=test-boundary")
+        #expect(String(decoding: encoded.data, as: UTF8.self).contains("gpt-transcribe"))
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
+            #expect(request.value(forHTTPHeaderField: "Content-Type")?.contains("multipart/form-data; boundary=") == true)
+            #expect(request.url?.absoluteString == "https://api.openai.com/v1/audio/transcriptions")
+            let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
+            return (response, Data(#"{"text":"ok"}"#.utf8))
+        }
+
+        _ = try await client.postMultipart(
+            path: "/audio/transcriptions",
+            apiKey: "sk-test",
+            fields: [
+                MultipartFormField(name: "model", body: .text("gpt-transcribe"))
+            ]
+        )
+    }
+
+    @Test
     func get_models_propagatesTaskCancellation() async {
         let client = OpenAIHTTPClientTestSupport.makeClient()
 

@@ -456,6 +456,8 @@ struct llhTests {
         #expect(
             CompactOverlayWordsPhase.from(materials: succeeded, profileSupportsWordStudy: false) == .unavailable
         )
+        #expect(CompactOverlayWordsPhase.ready(words).readyPayload == words)
+        #expect(CompactOverlayWordsPhase.loading.readyPayload == nil)
     }
 
     @Test

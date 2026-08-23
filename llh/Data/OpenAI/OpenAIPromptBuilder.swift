@@ -181,4 +181,61 @@ enum OpenAIPromptBuilder {
 
         return "2a) If pinyin is used, it must always include tone marks on every syllable. Never omit tones and never use toneless pinyin."
     }
+
+    static func translationChatSystemPrompt(context: TranslationChatContext) -> String {
+        var lines = [
+            "You are a language-learning assistant in a compact macOS overlay.",
+            "The user asks follow-up questions about the translation they just received.",
+            "Answer in Russian unless the user explicitly asks for another language.",
+            "Use only the provided translation context. If it is not enough, say so briefly.",
+            "Be concise and practical. Do not invent words or grammar that are absent from the context.",
+            "",
+            "Full translation:",
+            "Source text: \(context.cleanedText)"
+        ]
+
+        let trimmedPinyin = context.pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPinyin.isEmpty {
+            lines.append("Pronunciation: \(context.pinyinText)")
+        }
+        lines.append("Russian translation: \(context.russianTranslation)")
+        lines.append("")
+
+        if context.wordEntries.isEmpty {
+            lines.append("Word-by-word translations: not available yet.")
+        } else {
+            lines.append("Word-by-word translations:")
+            lines.append(contentsOf: context.wordEntries.map(wordStudyEntryPromptLine))
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    static func wordStudyEntryPromptLine(_ entry: WordStudyEntry) -> String {
+        var line = "- \(entry.termPinyin)"
+        let pronunciation = entry.russianPronunciationGuide.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !pronunciation.isEmpty {
+            line += " (\(pronunciation))"
+        }
+        line += " — \(entry.termTranslation)"
+
+        let parts = entry.characterBreakdown.compactMap { part -> String? in
+            let pinyin = part.pinyinText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let translation = part.russianTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !pinyin.isEmpty || !translation.isEmpty else {
+                return nil
+            }
+            if translation.isEmpty {
+                return pinyin
+            }
+            if pinyin.isEmpty {
+                return translation
+            }
+            return "\(pinyin) — \(translation)"
+        }
+        if !parts.isEmpty {
+            line += "; parts: \(parts.joined(separator: "; "))"
+        }
+        return line
+    }
 }

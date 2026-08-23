@@ -23,6 +23,9 @@ struct AppDependencyContainer {
     let manageProfilesUseCase: ManageProfilesUseCase
     let loadWordStudyUseCase: LoadWordStudyUseCase
     let manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
+    let transcribeSpeechUseCase: TranscribeSpeechUseCase
+    let askTranslationChatUseCase: AskTranslationChatUseCase
+    let microphoneRecorder: any MicrophoneRecording
 
     init(
         historyRepository: HistoryRepository,
@@ -40,7 +43,10 @@ struct AppDependencyContainer {
         manageHistoryUseCase: ManageHistoryUseCase,
         manageProfilesUseCase: ManageProfilesUseCase,
         loadWordStudyUseCase: LoadWordStudyUseCase,
-        manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
+        manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase,
+        transcribeSpeechUseCase: TranscribeSpeechUseCase? = nil,
+        askTranslationChatUseCase: AskTranslationChatUseCase? = nil,
+        microphoneRecorder: (any MicrophoneRecording)? = nil
     ) {
         self.historyRepository = historyRepository
         self.settingsRepository = settingsRepository
@@ -58,6 +64,16 @@ struct AppDependencyContainer {
         self.manageProfilesUseCase = manageProfilesUseCase
         self.loadWordStudyUseCase = loadWordStudyUseCase
         self.manageOpenAISettingsUseCase = manageOpenAISettingsUseCase
+        self.transcribeSpeechUseCase = transcribeSpeechUseCase ?? TranscribeSpeechUseCase(
+            service: OpenAITranscriptionService(httpClient: OpenAIHTTPClient())
+        )
+        self.askTranslationChatUseCase = askTranslationChatUseCase ?? AskTranslationChatUseCase(
+            service: OpenAITranslationChatService(
+                openAIHTTPClient: OpenAIHTTPClient(),
+                deepSeekHTTPClient: OpenAIHTTPClient(baseURL: AIProvider.deepSeek.apiBaseURL)
+            )
+        )
+        self.microphoneRecorder = microphoneRecorder ?? AVAudioMicrophoneRecorder()
     }
 
     static func live() -> AppDependencyContainer {
@@ -109,7 +125,17 @@ struct AppDependencyContainer {
             manageHistoryUseCase: manageHistoryUseCase,
             manageProfilesUseCase: manageProfilesUseCase,
             loadWordStudyUseCase: loadWordStudyUseCase,
-            manageOpenAISettingsUseCase: manageOpenAISettingsUseCase
+            manageOpenAISettingsUseCase: manageOpenAISettingsUseCase,
+            transcribeSpeechUseCase: TranscribeSpeechUseCase(
+                service: OpenAITranscriptionService(httpClient: openAIClient)
+            ),
+            askTranslationChatUseCase: AskTranslationChatUseCase(
+                service: OpenAITranslationChatService(
+                    openAIHTTPClient: openAIClient,
+                    deepSeekHTTPClient: deepSeekClient
+                )
+            ),
+            microphoneRecorder: AVAudioMicrophoneRecorder()
         )
     }
 

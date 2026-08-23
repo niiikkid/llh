@@ -18,6 +18,9 @@ enum OpenAIServiceError: LocalizedError, Equatable {
     case invalidStructuredResponse
     case invalidImageData
     case emptyRecognizedText
+    case emptyTranscription
+    case emptyChatMessage
+    case emptyChatReply
     case timeout
     case cancelled
 
@@ -47,6 +50,12 @@ enum OpenAIServiceError: LocalizedError, Equatable {
             return "Не удалось подготовить изображение для распознавания."
         case .emptyRecognizedText:
             return "OpenAI не вернул распознанный текст."
+        case .emptyTranscription:
+            return "Не удалось распознать речь. Надиктуйте ещё раз."
+        case .emptyChatMessage:
+            return "Сначала надиктуйте вопрос."
+        case .emptyChatReply:
+            return "Модель вернула пустой ответ."
         case .timeout:
             return "Превышено время ожидания ответа от провайдера ИИ. Проверьте сеть и повторите попытку."
         case .cancelled:

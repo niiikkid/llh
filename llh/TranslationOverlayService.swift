@@ -34,6 +34,13 @@ enum CompactOverlayWordsPhase: Equatable {
             return .failed
         }
     }
+
+    var readyPayload: WordStudyPayload? {
+        if case .ready(let payload) = self {
+            return payload
+        }
+        return nil
+    }
 }
 
 @MainActor
@@ -53,10 +60,16 @@ final class TranslationOverlayService {
         defer: false
     )
     private let hostingView = NSHostingView(
-        rootView: CompactOverlayView(content: .loading("Обрабатываю перевод..."), onClose: {})
+        rootView: CompactOverlayView(
+            content: .loading("Обрабатываю перевод..."),
+            chatViewModel: nil,
+            onClose: {}
+        )
     )
     private var dismissTask: Task<Void, Never>?
     private var escapeKeyMonitor: Any?
+    private var currentContent: CompactOverlayContent = .loading("Обрабатываю перевод...")
+    private var chatViewModel: CompactOverlayChatViewModel?
     private(set) var displayMode: DisplayMode?
 
     init() {
@@ -68,22 +81,27 @@ final class TranslationOverlayService {
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.ignoresMouseEvents = false
+        panel.becomesKeyOnlyIfNeeded = true
         panel.contentView = hostingView
     }
 
+    func attachChatViewModel(_ viewModel: CompactOverlayChatViewModel) {
+        chatViewModel = viewModel
+        viewModel.onPresentationChange = { [weak self] in
+            self?.handleChatPresentationChange()
+        }
+    }
+
     func showLoading(_ text: String = "Обрабатываю перевод...") {
-        present(content: .loading(text), dismissAfter: nil, displayMode: .temporary)
+        present(content: .loading(text), dismissAfter: nil, displayMode: .temporary, preserveChat: false)
     }
 
     func showTranslation(_ formattedText: StructuredFormattedText, duration: TimeInterval) {
         present(
-            content: .translation(
-                primaryText: formattedText.overlayPrimaryText,
-                secondaryText: formattedText.russianTranslation,
-                wordsPhase: nil
-            ),
+            content: .translation(formattedText: formattedText, wordsPhase: nil),
             dismissAfter: duration,
-            displayMode: .temporary
+            displayMode: .temporary,
+            preserveChat: false
         )
     }
 
@@ -92,13 +110,10 @@ final class TranslationOverlayService {
         wordsPhase: CompactOverlayWordsPhase
     ) {
         present(
-            content: .translation(
-                primaryText: formattedText.overlayPrimaryText,
-                secondaryText: formattedText.russianTranslation,
-                wordsPhase: wordsPhase
-            ),
+            content: .translation(formattedText: formattedText, wordsPhase: wordsPhase),
             dismissAfter: nil,
-            displayMode: .temporary
+            displayMode: .temporary,
+            preserveChat: false
         )
     }
 
@@ -109,13 +124,10 @@ final class TranslationOverlayService {
         guard panel.isVisible else { return }
         guard case .translation = currentContentKind else { return }
         present(
-            content: .translation(
-                primaryText: formattedText.overlayPrimaryText,
-                secondaryText: formattedText.russianTranslation,
-                wordsPhase: wordsPhase
-            ),
+            content: .translation(formattedText: formattedText, wordsPhase: wordsPhase),
             dismissAfter: nil,
-            displayMode: displayMode ?? .temporary
+            displayMode: displayMode ?? .temporary,
+            preserveChat: true
         )
     }
 
@@ -124,18 +136,20 @@ final class TranslationOverlayService {
         wordsPhase: CompactOverlayWordsPhase? = nil
     ) {
         present(
-            content: .translation(
-                primaryText: formattedText.overlayPrimaryText,
-                secondaryText: formattedText.russianTranslation,
-                wordsPhase: wordsPhase
-            ),
+            content: .translation(formattedText: formattedText, wordsPhase: wordsPhase),
             dismissAfter: nil,
-            displayMode: .persistentLastTranslation
+            displayMode: .persistentLastTranslation,
+            preserveChat: false
         )
     }
 
     func showMessage(title: String, subtitle: String? = nil, duration: TimeInterval) {
-        present(content: .message(title: title, subtitle: subtitle), dismissAfter: duration, displayMode: .temporary)
+        present(
+            content: .message(title: title, subtitle: subtitle),
+            dismissAfter: duration,
+            displayMode: .temporary,
+            preserveChat: false
+        )
     }
 
     func hide() {
@@ -144,6 +158,7 @@ final class TranslationOverlayService {
         displayMode = nil
         removeEscapeKeyMonitor()
         panel.orderOut(nil)
+        chatViewModel?.reset(context: nil, announceChange: false)
     }
 
     var isVisible: Bool {
@@ -155,22 +170,28 @@ final class TranslationOverlayService {
     }
 
     private var currentContentKind: CompactOverlayContentKind {
-        hostingView.rootView.contentKind
+        currentContent.contentKind
     }
 
-    private func present(content: CompactOverlayContent, dismissAfter: TimeInterval?, displayMode: DisplayMode) {
+    private func present(
+        content: CompactOverlayContent,
+        dismissAfter: TimeInterval?,
+        displayMode: DisplayMode,
+        preserveChat: Bool
+    ) {
         dismissTask?.cancel()
         self.displayMode = displayMode
-        hostingView.rootView = CompactOverlayView(content: content) { [weak self] in
-            self?.handleUserDismissRequest()
-        }
+        currentContent = content
+        applyChatContext(from: content, preserveChat: preserveChat)
+        applyHostedView(content: content)
 
-        let targetSize = hostingView.fittingSize
-        let width = max(300, min(targetSize.width, 460))
-        let height = max(90, targetSize.height)
-        panel.setContentSize(NSSize(width: width, height: height))
-        updatePanelFrame(size: NSSize(width: width, height: height))
+        let size = fittedPanelSize()
+        panel.setContentSize(size)
+        updatePanelFrame(size: size)
         panel.orderFrontRegardless()
+        if chatViewModel?.wantsKeyFocus == true {
+            panel.makeKey()
+        }
         installEscapeKeyMonitor()
 
         guard TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss(dismissAfter: dismissAfter) else {
@@ -181,6 +202,65 @@ final class TranslationOverlayService {
             guard !Task.isCancelled else { return }
             self?.hide()
         }
+    }
+
+    private func applyChatContext(from content: CompactOverlayContent, preserveChat: Bool) {
+        guard let chatViewModel else { return }
+        switch content {
+        case .translation(let formattedText, let wordsPhase):
+            let context = TranslationChatContext(
+                formattedText: formattedText,
+                words: wordsPhase?.readyPayload
+            )
+            if preserveChat {
+                chatViewModel.updateContext(context)
+            } else {
+                chatViewModel.reset(context: context, announceChange: false)
+            }
+        case .loading, .message:
+            if !preserveChat {
+                chatViewModel.reset(context: nil, announceChange: false)
+            }
+        }
+    }
+
+    private func applyHostedView(content: CompactOverlayContent) {
+        hostingView.rootView = CompactOverlayView(
+            content: content,
+            chatViewModel: chatViewModel,
+            onClose: { [weak self] in
+                self?.handleUserDismissRequest()
+            }
+        )
+    }
+
+    private func handleChatPresentationChange() {
+        guard panel.isVisible else { return }
+        cancelAutomaticDismiss()
+        applyHostedView(content: currentContent)
+        let size = fittedPanelSize()
+        panel.setContentSize(size)
+        updatePanelFrame(size: size)
+        if chatViewModel?.wantsKeyFocus == true {
+            panel.makeKey()
+        }
+    }
+
+    private func cancelAutomaticDismiss() {
+        dismissTask?.cancel()
+        dismissTask = nil
+    }
+
+    private func fittedPanelSize() -> NSSize {
+        hostingView.layoutSubtreeIfNeeded()
+        let targetSize = hostingView.fittingSize
+        let maxWidth = chatViewModel?.isChatPanelVisible == true
+            ? CompactOverlayLayout.maxWidthWithChat
+            : CompactOverlayLayout.maxWidthWithoutChat
+        return NSSize(
+            width: max(300, min(targetSize.width, maxWidth)),
+            height: max(90, targetSize.height)
+        )
     }
 
     private func handleUserDismissRequest() {
@@ -228,28 +308,8 @@ final class TranslationOverlayService {
 }
 
 private final class OverlayPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
-}
-
-private enum CompactOverlayContent: Equatable {
-    case loading(String)
-    case translation(primaryText: String, secondaryText: String, wordsPhase: CompactOverlayWordsPhase?)
-    case message(title: String, subtitle: String?)
-
-    var contentKind: CompactOverlayContentKind {
-        switch self {
-        case .loading: .loading
-        case .translation: .translation
-        case .message: .message
-        }
-    }
-}
-
-private enum CompactOverlayContentKind {
-    case loading
-    case translation
-    case message
 }
 
 enum PersistentLastTranslationPresentation {
@@ -266,165 +326,5 @@ enum TranslationOverlayDismissSchedule {
     /// Loading and persistent overlays stay until the user closes them; timed translations/messages auto-hide.
     static func shouldScheduleAutomaticDismiss(dismissAfter: TimeInterval?) -> Bool {
         dismissAfter != nil
-    }
-}
-
-private struct CompactOverlayView: View {
-    let content: CompactOverlayContent
-    let onClose: () -> Void
-
-    var contentKind: CompactOverlayContentKind {
-        content.contentKind
-    }
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 10) {
-                switch content {
-                case .loading(let text):
-                    HStack(spacing: 10) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(text)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.primary)
-                    }
-
-                case .translation(let primaryText, let secondaryText, let wordsPhase):
-                    if !primaryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(primaryText)
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.primary)
-                    }
-
-                    Text(secondaryText)
-                        .font(.system(size: 13))
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
-
-                    if let wordsPhase {
-                        CompactOverlayWordsSectionView(phase: wordsPhase)
-                    }
-
-                case .message(let title, let subtitle):
-                    HStack(spacing: 8) {
-                        Text(title)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-
-                        if let subtitle, !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Text(subtitle)
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.primary)
-                        }
-                    }
-                    .multilineTextAlignment(.center)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 6)
-            .padding(.horizontal, 18)
-            .padding(.bottom, 14)
-
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .padding(10)
-            .help("Закрыть (Escape)")
-        }
-        .frame(width: 360)
-        .background(backgroundView)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.22), radius: 18, y: 10)
-    }
-
-    private var backgroundView: some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(.ultraThinMaterial)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.black.opacity(0.24))
-            )
-    }
-}
-
-private struct CompactOverlayWordsSectionView: View {
-    let phase: CompactOverlayWordsPhase
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Divider()
-                .padding(.vertical, 2)
-
-            switch phase {
-            case .loading:
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Перевожу слова…")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            case .ready(let payload):
-                Text("Перевод слов")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(payload.entries.enumerated()), id: \.offset) { _, entry in
-                            CompactOverlayWordEntryRowView(entry: entry)
-                        }
-                    }
-                }
-                .frame(maxHeight: 180)
-
-            case .failed:
-                Text("Не удалось перевести слова.")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-
-            case .unavailable:
-                Text("Перевод слов недоступен для этой сессии.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct CompactOverlayWordEntryRowView: View {
-    let entry: WordStudyEntry
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(entry.termPinyin)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                if !entry.russianPronunciationGuide.isEmpty {
-                    Text("(\(entry.russianPronunciationGuide))")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-                Text("—")
-                    .foregroundStyle(.secondary)
-                Text(entry.termTranslation)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        }
     }
 }

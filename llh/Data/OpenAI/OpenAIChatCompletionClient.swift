@@ -26,13 +26,34 @@ struct OpenAIChatCompletionClient: Sendable {
             throw OpenAIServiceError.invalidResponse
         }
 
-        let requestBody = ChatCompletionsRequest(
-            model: modelID,
+        return try await completeConversation(
+            apiKey: apiKey,
+            modelID: modelID,
             temperature: temperature,
             messages: [
                 .init(role: "system", content: systemPrompt),
                 .init(role: "user", content: userPrompt)
-            ],
+            ]
+        )
+    }
+
+    func completeConversation(
+        apiKey: String,
+        modelID: String,
+        temperature: Double,
+        messages: [ChatCompletionTurn]
+    ) async throws -> String {
+        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+        guard !messages.isEmpty else {
+            throw OpenAIServiceError.invalidResponse
+        }
+
+        let requestBody = ChatCompletionsRequest(
+            model: modelID,
+            temperature: temperature,
+            messages: messages.map { ChatMessage(role: $0.role, content: $0.content) },
             thinking: thinkingConfig
         )
 
@@ -86,6 +107,11 @@ struct OpenAIChatCompletionClient: Sendable {
             ThinkingConfig(type: "disabled")
         }
     }
+}
+
+struct ChatCompletionTurn: Equatable, Sendable {
+    let role: String
+    let content: String
 }
 
 private struct ChatCompletionsRequest: Encodable {
