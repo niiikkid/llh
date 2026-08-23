@@ -510,6 +510,78 @@ struct llhTests {
         )
 
         #expect(LatestTranslationLookup.latestFormattedText(in: [firstProfile, secondProfile]) == newer)
+
+        let latest = LatestTranslationLookup.latest(in: [firstProfile, secondProfile])
+        #expect(latest?.profileID == secondProfile.id)
+        #expect(latest?.formattedText == newer)
+        #expect(latest?.showWordsInCompactOverlay == false)
+        #expect(latest?.profileSupportsWordStudy == true)
+    }
+
+    @Test
+    func latestTranslationLookup_includesWordStudyFromOwningProfile() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "hello",
+            pinyinText: "",
+            russianTranslation: "привет"
+        )
+        let words = WordStudyPayload(entries: [
+            WordStudyEntry(termPinyin: "hello", termTranslation: "привет", characterBreakdown: []),
+        ])
+        let materials = StudyMaterials(words: words, wordsStatus: .succeeded)
+        let entry = CapturedTextEntry(
+            text: "hello",
+            formattedText: formatted,
+            formattingStatus: .succeeded,
+            studyMaterials: materials,
+            createdAt: Date(timeIntervalSince1970: 100)
+        )
+        let profile = LearningProfile(
+            name: "English",
+            learningLanguage: .english,
+            history: [entry],
+            showWordsInCompactOverlay: true
+        )
+
+        let latest = LatestTranslationLookup.latest(in: [profile])
+        #expect(latest?.profileID == profile.id)
+        #expect(latest?.entryID == entry.id)
+        #expect(latest?.formattedText == formatted)
+        #expect(latest?.studyMaterials == materials)
+        #expect(latest?.showWordsInCompactOverlay == true)
+        #expect(latest?.profileSupportsWordStudy == true)
+    }
+
+    @Test
+    func persistentLastTranslationPresentation_showsWordsOnlyWhenSessionToggleIsOn() {
+        let formatted = StructuredFormattedText(
+            cleanedText: "hello",
+            pinyinText: "",
+            russianTranslation: "привет"
+        )
+        let words = WordStudyPayload(entries: [
+            WordStudyEntry(termPinyin: "hello", termTranslation: "привет", characterBreakdown: []),
+        ])
+        let materials = StudyMaterials(words: words, wordsStatus: .succeeded)
+        let withWords = LatestTranslationSnapshot(
+            profileID: UUID(),
+            entryID: UUID(),
+            formattedText: formatted,
+            studyMaterials: materials,
+            showWordsInCompactOverlay: true,
+            profileSupportsWordStudy: true
+        )
+        let withoutToggle = LatestTranslationSnapshot(
+            profileID: UUID(),
+            entryID: UUID(),
+            formattedText: formatted,
+            studyMaterials: materials,
+            showWordsInCompactOverlay: false,
+            profileSupportsWordStudy: true
+        )
+
+        #expect(PersistentLastTranslationPresentation.wordsPhase(for: withWords) == .ready(words))
+        #expect(PersistentLastTranslationPresentation.wordsPhase(for: withoutToggle) == nil)
     }
 
     @Test

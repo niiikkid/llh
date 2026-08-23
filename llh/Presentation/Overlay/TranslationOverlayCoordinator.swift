@@ -49,12 +49,21 @@ final class TranslationOverlayCoordinator {
         entryAwaitingFormattedResult = nil
         clearOverlayWordStudyTracking()
 
-        guard let formattedText = LatestTranslationLookup.latestFormattedText(in: history.profiles) else {
+        guard let latest = LatestTranslationLookup.latest(in: history.profiles) else {
             translationOverlayService.showMessage(title: "Пока нет готового перевода", duration: 2)
             return
         }
 
-        translationOverlayService.showPersistentLastTranslation(formattedText)
+        if latest.showWordsInCompactOverlay {
+            overlayWordStudyEntryID = latest.entryID
+            overlayWordStudyProfileID = latest.profileID
+            overlayWordStudyFormatted = latest.formattedText
+        }
+
+        translationOverlayService.showPersistentLastTranslation(
+            latest.formattedText,
+            wordsPhase: PersistentLastTranslationPresentation.wordsPhase(for: latest)
+        )
     }
 
     func clearAwaitingFormattedEntry() {

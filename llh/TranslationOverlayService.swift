@@ -119,12 +119,15 @@ final class TranslationOverlayService {
         )
     }
 
-    func showPersistentLastTranslation(_ formattedText: StructuredFormattedText) {
+    func showPersistentLastTranslation(
+        _ formattedText: StructuredFormattedText,
+        wordsPhase: CompactOverlayWordsPhase? = nil
+    ) {
         present(
             content: .translation(
                 primaryText: formattedText.overlayPrimaryText,
                 secondaryText: formattedText.russianTranslation,
-                wordsPhase: nil
+                wordsPhase: wordsPhase
             ),
             dismissAfter: nil,
             displayMode: .persistentLastTranslation
@@ -247,6 +250,16 @@ private enum CompactOverlayContentKind {
     case loading
     case translation
     case message
+}
+
+enum PersistentLastTranslationPresentation {
+    static func wordsPhase(for snapshot: LatestTranslationSnapshot) -> CompactOverlayWordsPhase? {
+        guard snapshot.showWordsInCompactOverlay else { return nil }
+        return CompactOverlayWordsPhase.from(
+            materials: snapshot.studyMaterials,
+            profileSupportsWordStudy: snapshot.profileSupportsWordStudy
+        )
+    }
 }
 
 enum TranslationOverlayDismissSchedule {

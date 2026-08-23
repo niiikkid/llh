@@ -5,16 +5,42 @@
 
 import Foundation
 
+struct LatestTranslationSnapshot: Equatable {
+    let profileID: LearningProfile.ID
+    let entryID: CapturedTextEntry.ID
+    let formattedText: StructuredFormattedText
+    let studyMaterials: StudyMaterials
+    let showWordsInCompactOverlay: Bool
+    let profileSupportsWordStudy: Bool
+}
+
 struct LatestTranslationLookup {
-    static func latestFormattedText(in profiles: [LearningProfile]) -> StructuredFormattedText? {
+    static func latest(in profiles: [LearningProfile]) -> LatestTranslationSnapshot? {
         profiles
-            .flatMap(\.history)
-            .compactMap { entry -> (Date, StructuredFormattedText)? in
-                guard let formattedText = entry.formattedText, formattedText.hasContent else { return nil }
-                return (entry.createdAt, formattedText)
+            .flatMap { profile in
+                profile.history.compactMap { entry -> (Date, LatestTranslationSnapshot)? in
+                    guard let formattedText = entry.formattedText, formattedText.hasContent else {
+                        return nil
+                    }
+                    return (
+                        entry.createdAt,
+                        LatestTranslationSnapshot(
+                            profileID: profile.id,
+                            entryID: entry.id,
+                            formattedText: formattedText,
+                            studyMaterials: entry.studyMaterials,
+                            showWordsInCompactOverlay: profile.showWordsInCompactOverlay,
+                            profileSupportsWordStudy: profile.learningLanguage.supportsWordStudy
+                        )
+                    )
+                }
             }
             .max(by: { $0.0 < $1.0 })?
             .1
+    }
+
+    static func latestFormattedText(in profiles: [LearningProfile]) -> StructuredFormattedText? {
+        latest(in: profiles)?.formattedText
     }
 }
 
