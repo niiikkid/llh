@@ -39,6 +39,16 @@ struct Phase9OpenAIPromptTests {
     }
 
     @Test
+    func wordsAnalysisPrompt_chineseRequiresPinyinNotHanzi() {
+        let prompt = OpenAIPromptBuilder.wordsAnalysisPrompt(for: .chinese)
+        let userPrompt = prompt.user("你好", "nǐ hǎo", "привет")
+
+        #expect(prompt.system.contains("Latin-letter pinyin"))
+        #expect(prompt.system.contains("Never write 你, 好, 你好"))
+        #expect(userPrompt.contains("strictly as pinyin, never as Chinese characters"))
+    }
+
+    @Test
     func pinyinTonePromptLine_requiresTonesForChineseAndAuto() {
         let chinese = OpenAIPromptBuilder.pinyinTonePromptLine(for: .chinese)
         let auto = OpenAIPromptBuilder.pinyinTonePromptLine(for: .auto)

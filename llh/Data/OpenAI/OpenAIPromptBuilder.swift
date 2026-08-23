@@ -74,9 +74,10 @@ enum OpenAIPromptBuilder {
             return (
                 system: """
                 You produce JSON only for word-by-word study.
-                Never use hieroglyphs or source script in the response.
-                Use only pinyin/transliteration and Russian.
-                When using pinyin, always include tone marks on every syllable.
+                Never use Chinese characters (hanzi / 汉字), hieroglyphs, or source script in any JSON field.
+                `term_pinyin` and every `character_breakdown.pinyin_text` MUST be Latin-letter pinyin with tone marks (example: nǐ, hǎo, nǐ hǎo). Never write 你, 好, 你好, or any other hanzi there.
+                Use only pinyin (Latin letters plus tone marks) and Russian.
+                When using pinyin, always include tone marks on every syllable. Never omit tones and never use toneless pinyin.
                 Return JSON object with key `entries`.
                 Each entry has `term_pinyin`, `term_translation`, and `character_breakdown`.
                 Each `character_breakdown` item has `pinyin_text` and `russian_translation`.
@@ -96,10 +97,11 @@ enum OpenAIPromptBuilder {
 
                     Extract useful study entries from the text.
                     Return short words or fixed short expressions, not full sentences.
-                    Prefer entries that are usually 1 to 3 characters long. Use 4 only for a natural fixed expression.
+                    Prefer entries that correspond to 1 to 3 source characters. Use 4 only for a natural fixed expression.
                     Include useful standalone words such as pronouns or particles.
-                    If several characters form one word, keep them in one entry.
-                    If an entry has multiple characters or meaningful parts, explain each part separately in `character_breakdown`.
+                    If several source characters form one word, keep them in one entry as one pinyin term.
+                    Write every `term_pinyin` and every `pinyin_text` strictly as pinyin, never as Chinese characters.
+                    If an entry has multiple characters or meaningful parts, explain each part separately in `character_breakdown` using pinyin, not hanzi.
                     Keep the result compact.
                     """
                 }

@@ -654,12 +654,14 @@ struct llhTests {
         let prompt = OpenAIPromptBuilder.wordsAnalysisPrompt(for: .chinese)
         let userPrompt = prompt.user("你好", "ni hao", "привет")
 
-        #expect(prompt.system.contains("Never use hieroglyphs or source script in the response."))
+        #expect(prompt.system.contains("Never use Chinese characters (hanzi / 汉字), hieroglyphs, or source script in any JSON field."))
+        #expect(prompt.system.contains("`term_pinyin` and every `character_breakdown.pinyin_text` MUST be Latin-letter pinyin"))
         #expect(userPrompt.contains("Pronunciation:"))
         #expect(userPrompt.contains("Return short words or fixed short expressions, not full sentences."))
-        #expect(userPrompt.contains("Prefer entries that are usually 1 to 3 characters long. Use 4 only for a natural fixed expression."))
-        #expect(userPrompt.contains("If several characters form one word, keep them in one entry."))
-        #expect(userPrompt.contains("explain each part separately in `character_breakdown`"))
+        #expect(userPrompt.contains("Prefer entries that correspond to 1 to 3 source characters. Use 4 only for a natural fixed expression."))
+        #expect(userPrompt.contains("If several source characters form one word, keep them in one entry as one pinyin term."))
+        #expect(userPrompt.contains("Write every `term_pinyin` and every `pinyin_text` strictly as pinyin, never as Chinese characters."))
+        #expect(userPrompt.contains("explain each part separately in `character_breakdown` using pinyin, not hanzi."))
     }
 
     @Test
