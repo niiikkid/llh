@@ -9,10 +9,16 @@ import Foundation
 struct OpenAIChatCompletionClient: Sendable {
     private let httpClient: OpenAIHTTPClient
     private let provider: AIProvider
+    private let requestLogger: (any AITextRequestLogging)?
 
-    init(httpClient: OpenAIHTTPClient, provider: AIProvider = .openAI) {
+    init(
+        httpClient: OpenAIHTTPClient,
+        provider: AIProvider = .openAI,
+        requestLogger: (any AITextRequestLogging)? = nil
+    ) {
         self.httpClient = httpClient
         self.provider = provider
+        self.requestLogger = requestLogger
     }
 
     func completeText(
@@ -20,20 +26,18 @@ struct OpenAIChatCompletionClient: Sendable {
         modelID: String,
         temperature: Double,
         systemPrompt: String,
-        userPrompt: String
+        userPrompt: String,
+        operation: AITextRequestOperation
     ) async throws -> String {
-        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw OpenAIServiceError.invalidResponse
-        }
-
-        return try await completeConversation(
+        try await completeConversation(
             apiKey: apiKey,
             modelID: modelID,
             temperature: temperature,
             messages: [
                 .init(role: "system", content: systemPrompt),
                 .init(role: "user", content: userPrompt)
-            ]
+            ],
+            operation: operation
         )
     }
 
@@ -41,30 +45,53 @@ struct OpenAIChatCompletionClient: Sendable {
         apiKey: String,
         modelID: String,
         temperature: Double,
-        messages: [ChatCompletionTurn]
+        messages: [ChatCompletionTurn],
+        operation: AITextRequestOperation
     ) async throws -> String {
-        guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw OpenAIServiceError.invalidResponse
-        }
-        guard !messages.isEmpty else {
-            throw OpenAIServiceError.invalidResponse
-        }
+        let startedAt = Date()
+        do {
+            guard !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw OpenAIServiceError.invalidResponse
+            }
+            guard !messages.isEmpty else {
+                throw OpenAIServiceError.invalidResponse
+            }
 
-        let requestBody = ChatCompletionsRequest(
-            model: modelID,
-            temperature: temperature,
-            messages: messages.map { ChatMessage(role: $0.role, content: $0.content) },
-            thinking: thinkingConfig
-        )
+            let requestBody = ChatCompletionsRequest(
+                model: modelID,
+                temperature: temperature,
+                messages: messages.map { ChatMessage(role: $0.role, content: $0.content) },
+                thinking: thinkingConfig
+            )
 
-        let data = try await httpClient.post(
-            path: "/chat/completions",
-            apiKey: apiKey,
-            body: requestBody
-        )
-        let decoded = try httpClient.decode(data, as: ChatCompletionsResponse.self)
-        return decoded.choices.first?.message.content?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let data = try await httpClient.post(
+                path: "/chat/completions",
+                apiKey: apiKey,
+                body: requestBody
+            )
+            let decoded = try httpClient.decode(data, as: ChatCompletionsResponse.self)
+            let content = decoded.choices.first?.message.content?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            record(
+                operation: operation,
+                modelID: modelID,
+                messages: messages,
+                responseText: content,
+                errorDescription: nil,
+                startedAt: startedAt
+            )
+            return content
+        } catch {
+            record(
+                operation: operation,
+                modelID: modelID,
+                messages: messages,
+                responseText: nil,
+                errorDescription: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription,
+                startedAt: startedAt
+            )
+            throw error
+        }
     }
 
     func completeJSON<Response: Decodable>(
@@ -72,14 +99,16 @@ struct OpenAIChatCompletionClient: Sendable {
         modelID: String,
         temperature: Double,
         systemPrompt: String,
-        userPrompt: String
+        userPrompt: String,
+        operation: AITextRequestOperation
     ) async throws -> Response {
         let content = try await completeText(
             apiKey: apiKey,
             modelID: modelID,
             temperature: temperature,
             systemPrompt: systemPrompt,
-            userPrompt: userPrompt
+            userPrompt: userPrompt,
+            operation: operation
         )
         guard !content.isEmpty else {
             throw OpenAIServiceError.invalidStructuredResponse
@@ -95,6 +124,27 @@ struct OpenAIChatCompletionClient: Sendable {
         guard let start = content.firstIndex(of: "{"),
               let end = content.lastIndex(of: "}") else { return nil }
         return String(content[start...end])
+    }
+
+    private func record(
+        operation: AITextRequestOperation,
+        modelID: String,
+        messages: [ChatCompletionTurn],
+        responseText: String?,
+        errorDescription: String?,
+        startedAt: Date
+    ) {
+        requestLogger?.record(
+            AITextRequestLogEntry(
+                operation: operation,
+                provider: provider,
+                modelID: modelID,
+                messages: messages.map { AITextRequestLogMessage(role: $0.role, content: $0.content) },
+                responseText: responseText,
+                errorDescription: errorDescription,
+                duration: Date().timeIntervalSince(startedAt)
+            )
+        )
     }
 
     /// DeepSeek V4 enables thinking by default (high effort on Pro). That makes a non-stream

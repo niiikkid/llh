@@ -9,8 +9,16 @@ import Foundation
 struct OpenAITranslationService: Sendable {
     private let chatClient: OpenAIChatCompletionClient
 
-    init(httpClient: OpenAIHTTPClient, provider: AIProvider = .openAI) {
-        self.chatClient = OpenAIChatCompletionClient(httpClient: httpClient, provider: provider)
+    init(
+        httpClient: OpenAIHTTPClient,
+        provider: AIProvider = .openAI,
+        requestLogger: (any AITextRequestLogging)? = nil
+    ) {
+        self.chatClient = OpenAIChatCompletionClient(
+            httpClient: httpClient,
+            provider: provider,
+            requestLogger: requestLogger
+        )
     }
 
     func formatRecognizedText(
@@ -27,7 +35,8 @@ struct OpenAITranslationService: Sendable {
             userPrompt: OpenAIPromptBuilder.formatRecognizedTextUserPrompt(
                 targetLanguage: targetLanguage,
                 rawText: rawText
-            )
+            ),
+            operation: .formatRecognizedText
         )
         guard !content.isEmpty else {
             throw OpenAIServiceError.emptyFormattedText

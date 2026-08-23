@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var isTranslationsSidebarCollapsed = false
     @State private var route: AppMainRoute = .workspace
     @State private var routeBeforeSettings: AppMainRoute = .workspace
+    @State private var isShowingRequestLogs = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -18,7 +19,8 @@ struct ContentView: View {
                 route: $route,
                 isTranslationsSidebarCollapsed: $isTranslationsSidebarCollapsed,
                 canReturnToWorkspace: viewModel.history.selectedProfileID != nil,
-                onNavigate: navigate(to:)
+                onNavigate: navigate(to:),
+                onShowRequestLogs: { isShowingRequestLogs = true }
             )
 
             if viewModel.capture.showPermissionHelp, route == .workspace {
@@ -30,6 +32,9 @@ struct ContentView: View {
         .padding(16)
         .frame(minWidth: 760, minHeight: 500)
         .background(MainWindowIdentityView())
+        .sheet(isPresented: $isShowingRequestLogs) {
+            AIRequestLogsView(store: viewModel.requestLogs)
+        }
     }
 
     private func navigate(to destination: AppMainRoute) {

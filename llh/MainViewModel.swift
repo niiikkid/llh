@@ -14,6 +14,7 @@ final class MainViewModel: ObservableObject {
     let capture: CaptureViewModel
     let study: StudyViewModel
     let editor: EditorViewModel
+    let requestLogs: InMemoryAITextRequestLogStore
 
     private let overlay: TranslationOverlayCoordinator
     private var cancellables = Set<AnyCancellable>()
@@ -25,6 +26,7 @@ final class MainViewModel: ObservableObject {
             translationOverlayService: dependencies.translationOverlayService
         )
         settings = settingsViewModel
+        requestLogs = dependencies.requestLogStore
         history = HistoryViewModel(
             manageHistoryUseCase: dependencies.manageHistoryUseCase,
             manageProfilesUseCase: dependencies.manageProfilesUseCase,
@@ -109,6 +111,7 @@ final class MainViewModel: ObservableObject {
         subscribeToChildViewModelChanges(capture)
         subscribeToChildViewModelChanges(study)
         subscribeToChildViewModelChanges(editor)
+        subscribeToChildViewModelChanges(requestLogs)
         subscribeToDockLanguageBadge(from: history)
 
         history.loadFromDisk()

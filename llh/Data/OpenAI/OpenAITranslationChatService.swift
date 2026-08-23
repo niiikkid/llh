@@ -10,9 +10,21 @@ struct OpenAITranslationChatService: TranslationChatServing, Sendable {
     private let openAIClient: OpenAIChatCompletionClient
     private let deepSeekClient: OpenAIChatCompletionClient
 
-    init(openAIHTTPClient: OpenAIHTTPClient, deepSeekHTTPClient: OpenAIHTTPClient) {
-        self.openAIClient = OpenAIChatCompletionClient(httpClient: openAIHTTPClient, provider: .openAI)
-        self.deepSeekClient = OpenAIChatCompletionClient(httpClient: deepSeekHTTPClient, provider: .deepSeek)
+    init(
+        openAIHTTPClient: OpenAIHTTPClient,
+        deepSeekHTTPClient: OpenAIHTTPClient,
+        requestLogger: (any AITextRequestLogging)? = nil
+    ) {
+        self.openAIClient = OpenAIChatCompletionClient(
+            httpClient: openAIHTTPClient,
+            provider: .openAI,
+            requestLogger: requestLogger
+        )
+        self.deepSeekClient = OpenAIChatCompletionClient(
+            httpClient: deepSeekHTTPClient,
+            provider: .deepSeek,
+            requestLogger: requestLogger
+        )
     }
 
     func completeTranslationChat(
@@ -36,7 +48,8 @@ struct OpenAITranslationChatService: TranslationChatServing, Sendable {
             apiKey: apiKey,
             modelID: modelID,
             temperature: 0.3,
-            messages: turns
+            messages: turns,
+            operation: .translationChat
         )
         guard !content.isEmpty else {
             throw OpenAIServiceError.emptyChatReply

@@ -11,6 +11,7 @@ struct MainChromeView: View {
     @Binding var isTranslationsSidebarCollapsed: Bool
     var canReturnToWorkspace: Bool
     var onNavigate: (AppMainRoute) -> Void
+    var onShowRequestLogs: () -> Void
 
     var body: some View {
         HStack {
@@ -47,6 +48,13 @@ struct MainChromeView: View {
 
             if route == .workspace {
                 HStack(spacing: 8) {
+                    Button(action: onShowRequestLogs) {
+                        Image(systemName: "doc.text")
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Логи текстовых запросов к ИИ")
+                    .accessibilityLabel("Логи запросов к ИИ")
+
                     Picker(
                         "",
                         selection: Binding(

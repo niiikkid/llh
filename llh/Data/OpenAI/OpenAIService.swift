@@ -30,7 +30,8 @@ struct OpenAIService: OpenAIServing {
         httpClient: OpenAIHTTPClient,
         ocrService: OpenAIOCRService? = nil,
         translationService: OpenAITranslationService? = nil,
-        studyService: OpenAIStudyService? = nil
+        studyService: OpenAIStudyService? = nil,
+        requestLogger: (any AITextRequestLogging)? = nil
     ) {
         let deepSeekClient = OpenAIHTTPClient(baseURL: AIProvider.deepSeek.apiBaseURL)
         self.init(
@@ -38,7 +39,8 @@ struct OpenAIService: OpenAIServing {
             deepSeekHTTPClient: deepSeekClient,
             ocrService: ocrService,
             openAITranslationService: translationService,
-            openAIStudyService: studyService
+            openAIStudyService: studyService,
+            requestLogger: requestLogger
         )
     }
 
@@ -47,15 +49,21 @@ struct OpenAIService: OpenAIServing {
         deepSeekHTTPClient: OpenAIHTTPClient,
         ocrService: OpenAIOCRService? = nil,
         openAITranslationService: OpenAITranslationService? = nil,
-        openAIStudyService: OpenAIStudyService? = nil
+        openAIStudyService: OpenAIStudyService? = nil,
+        requestLogger: (any AITextRequestLogging)? = nil
     ) {
         self.openAIStack = ProviderStack(
             provider: .openAI,
             httpClient: openAIHTTPClient,
             translationService: openAITranslationService,
-            studyService: openAIStudyService
+            studyService: openAIStudyService,
+            requestLogger: requestLogger
         )
-        self.deepSeekStack = ProviderStack(provider: .deepSeek, httpClient: deepSeekHTTPClient)
+        self.deepSeekStack = ProviderStack(
+            provider: .deepSeek,
+            httpClient: deepSeekHTTPClient,
+            requestLogger: requestLogger
+        )
         self.ocrService = ocrService ?? OpenAIOCRService(httpClient: openAIHTTPClient)
     }
 
@@ -123,16 +131,19 @@ private struct ProviderStack: Sendable {
         provider: AIProvider,
         httpClient: OpenAIHTTPClient,
         translationService: OpenAITranslationService? = nil,
-        studyService: OpenAIStudyService? = nil
+        studyService: OpenAIStudyService? = nil,
+        requestLogger: (any AITextRequestLogging)? = nil
     ) {
         self.modelsService = OpenAIModelsService(httpClient: httpClient)
         self.translationService = translationService ?? OpenAITranslationService(
             httpClient: httpClient,
-            provider: provider
+            provider: provider,
+            requestLogger: requestLogger
         )
         self.studyService = studyService ?? OpenAIStudyService(
             httpClient: httpClient,
-            provider: provider
+            provider: provider,
+            requestLogger: requestLogger
         )
     }
 }

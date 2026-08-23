@@ -26,6 +26,7 @@ struct AppDependencyContainer {
     let transcribeSpeechUseCase: TranscribeSpeechUseCase
     let askTranslationChatUseCase: AskTranslationChatUseCase
     let microphoneRecorder: any MicrophoneRecording
+    let requestLogStore: InMemoryAITextRequestLogStore
 
     init(
         historyRepository: HistoryRepository,
@@ -46,7 +47,8 @@ struct AppDependencyContainer {
         manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase,
         transcribeSpeechUseCase: TranscribeSpeechUseCase? = nil,
         askTranslationChatUseCase: AskTranslationChatUseCase? = nil,
-        microphoneRecorder: (any MicrophoneRecording)? = nil
+        microphoneRecorder: (any MicrophoneRecording)? = nil,
+        requestLogStore: InMemoryAITextRequestLogStore? = nil
     ) {
         self.historyRepository = historyRepository
         self.settingsRepository = settingsRepository
@@ -64,13 +66,16 @@ struct AppDependencyContainer {
         self.manageProfilesUseCase = manageProfilesUseCase
         self.loadWordStudyUseCase = loadWordStudyUseCase
         self.manageOpenAISettingsUseCase = manageOpenAISettingsUseCase
+        let resolvedRequestLogStore = requestLogStore ?? InMemoryAITextRequestLogStore()
+        self.requestLogStore = resolvedRequestLogStore
         self.transcribeSpeechUseCase = transcribeSpeechUseCase ?? TranscribeSpeechUseCase(
             service: OpenAITranscriptionService(httpClient: OpenAIHTTPClient())
         )
         self.askTranslationChatUseCase = askTranslationChatUseCase ?? AskTranslationChatUseCase(
             service: OpenAITranslationChatService(
                 openAIHTTPClient: OpenAIHTTPClient(),
-                deepSeekHTTPClient: OpenAIHTTPClient(baseURL: AIProvider.deepSeek.apiBaseURL)
+                deepSeekHTTPClient: OpenAIHTTPClient(baseURL: AIProvider.deepSeek.apiBaseURL),
+                requestLogger: resolvedRequestLogStore.asLogger
             )
         )
         self.microphoneRecorder = microphoneRecorder ?? AVAudioMicrophoneRecorder()
@@ -81,13 +86,15 @@ struct AppDependencyContainer {
         let regionSelectionService = RegionSelectionService()
         let screenshotService = ScreenCaptureKitCaptureService()
         let ocrService = VisionOCRService()
+        let requestLogStore = InMemoryAITextRequestLogStore()
         let openAIClient = OpenAIHTTPClient(baseURL: AIProvider.openAI.apiBaseURL)
         let deepSeekClient = OpenAIHTTPClient(baseURL: AIProvider.deepSeek.apiBaseURL)
         let openAIOCRService = OpenAIOCRService(httpClient: openAIClient)
         let openAIService = OpenAIService(
             openAIHTTPClient: openAIClient,
             deepSeekHTTPClient: deepSeekClient,
-            ocrService: openAIOCRService
+            ocrService: openAIOCRService,
+            requestLogger: requestLogStore.asLogger
         )
         let (recognizeTextUseCase, captureRegionUseCase) = makeCaptureUseCases(
             permissionService: permissionService,
@@ -132,10 +139,12 @@ struct AppDependencyContainer {
             askTranslationChatUseCase: AskTranslationChatUseCase(
                 service: OpenAITranslationChatService(
                     openAIHTTPClient: openAIClient,
-                    deepSeekHTTPClient: deepSeekClient
+                    deepSeekHTTPClient: deepSeekClient,
+                    requestLogger: requestLogStore.asLogger
                 )
             ),
-            microphoneRecorder: AVAudioMicrophoneRecorder()
+            microphoneRecorder: AVAudioMicrophoneRecorder(),
+            requestLogStore: requestLogStore
         )
     }
 

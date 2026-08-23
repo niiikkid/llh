@@ -9,8 +9,16 @@ import Foundation
 struct OpenAIStudyService: Sendable {
     private let chatClient: OpenAIChatCompletionClient
 
-    init(httpClient: OpenAIHTTPClient, provider: AIProvider = .openAI) {
-        self.chatClient = OpenAIChatCompletionClient(httpClient: httpClient, provider: provider)
+    init(
+        httpClient: OpenAIHTTPClient,
+        provider: AIProvider = .openAI,
+        requestLogger: (any AITextRequestLogging)? = nil
+    ) {
+        self.chatClient = OpenAIChatCompletionClient(
+            httpClient: httpClient,
+            provider: provider,
+            requestLogger: requestLogger
+        )
     }
 
     func buildWordsStudyData(
@@ -29,7 +37,8 @@ struct OpenAIStudyService: Sendable {
                 formattedText.cleanedText,
                 formattedText.pinyinText,
                 formattedText.russianTranslation
-            )
+            ),
+            operation: .wordsStudy
         )
         let result = WordStudyPayload(
             entries: dto.entries.map {
