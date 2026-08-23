@@ -96,7 +96,7 @@ final class EditorViewModel: ObservableObject {
         if message.hasPrefix("Не удалось отформатировать") {
             return message
         }
-        return "Не удалось отформатировать текст. Проверьте подключение к сети и настройки OpenAI."
+        return "Не удалось отформатировать текст. Проверьте подключение к сети и настройки ИИ."
     }
 
     var canRetryFormatting: Bool {
@@ -129,18 +129,21 @@ final class EditorViewModel: ObservableObject {
         )
 
         let configuration = FormatCapturedTextConfiguration(
-            apiKey: settings.currentAPIKey(),
-            modelID: settings.selectedOpenAIModelID
+            provider: settings.selectedTextProvider,
+            apiKey: settings.textAPIKey(),
+            modelID: settings.textModelID()
         )
 
         switch formatCapturedTextUseCase.preflight(request: request, configuration: configuration) {
         case .missingAPIKey:
-            publishStatus("Сначала сохраните OpenAI token.")
-            overlay.handleFormattingPreflightFailure(entryID: entryID, title: "Сначала сохраните OpenAI token")
+            let message = "Сначала сохраните token \(settings.selectedTextProvider.title)."
+            publishStatus(message)
+            overlay.handleFormattingPreflightFailure(entryID: entryID, title: message)
             return
         case .missingModel:
-            publishStatus("Выберите модель OpenAI.")
-            overlay.handleFormattingPreflightFailure(entryID: entryID, title: "Выберите модель OpenAI")
+            let message = "Выберите модель \(settings.selectedTextProvider.title)."
+            publishStatus(message)
+            overlay.handleFormattingPreflightFailure(entryID: entryID, title: message)
             return
         case .skipped:
             return

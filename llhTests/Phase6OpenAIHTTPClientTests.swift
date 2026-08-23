@@ -43,6 +43,20 @@ struct Phase6OpenAIHTTPClientTests {
     }
 
     @Test
+    func post_chatCompletions_usesDeepSeekHostWhenConfigured() async throws {
+        let client = OpenAIHTTPClientTestSupport.makeClient(baseURL: AIProvider.deepSeek.apiBaseURL)
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
+            #expect(request.url?.absoluteString == "https://api.deepseek.com/chat/completions")
+            let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
+            return (response, Data(#"{"choices":[{"message":{"content":"{}"}}]}"#.utf8))
+        }
+
+        struct Body: Encodable { let model: String }
+        _ = try await client.post(path: "/chat/completions", apiKey: "sk-test", body: Body(model: "deepseek-chat"))
+    }
+
+    @Test
     func get_models_sendsBearerAuthAndDecodesResponse() async throws {
         let client = OpenAIHTTPClientTestSupport.makeClient()
         let modelsJSON = """

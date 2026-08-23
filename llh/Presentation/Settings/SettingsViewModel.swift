@@ -9,13 +9,14 @@ import Foundation
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
-    @Published private(set) var availableOpenAIModels: [OpenAIModel] = []
-    @Published var selectedOpenAIModelID: String?
+    @Published var selectedTextProvider: AIProvider = .openAI
+    @Published private(set) var availableTextModels: [OpenAIModel] = []
+    @Published var selectedTextModelID: String?
     @Published var selectedOCREngine: OCREngine = .local
     @Published var defaultNewProfileLearningLanguage: LearningLanguage = .english
     @Published var translationOverlayMinimumDuration: Double = 3
     @Published var translationOverlaySecondsPerWord: Double = 0.33
-    @Published private(set) var isLoadingOpenAIModels = false
+    @Published private(set) var isLoadingModels = false
     @Published private(set) var statusMessage = ""
 
     private let manageOpenAISettingsUseCase: ManageOpenAISettingsUseCase
@@ -31,58 +32,90 @@ final class SettingsViewModel: ObservableObject {
     }
 
     var hasOpenAIToken: Bool {
-        manageOpenAISettingsUseCase.hasAPIKey()
+        hasToken(for: .openAI)
     }
 
-    func currentAPIKey() -> String? {
-        manageOpenAISettingsUseCase.currentAPIKey()
+    var hasDeepSeekToken: Bool {
+        hasToken(for: .deepSeek)
     }
 
-    func validateAndSaveOpenAIToken(_ token: String) async {
+    func hasToken(for provider: AIProvider) -> Bool {
+        manageOpenAISettingsUseCase.hasAPIKey(for: provider)
+    }
+
+    func textAPIKey() -> String? {
+        manageOpenAISettingsUseCase.currentAPIKey(for: selectedTextProvider)
+    }
+
+    func textModelID() -> String? {
+        selectedTextModelID
+    }
+
+    func openAIAPIKey() -> String? {
+        manageOpenAISettingsUseCase.currentAPIKey(for: .openAI)
+    }
+
+    func openAIModelID() -> String? {
+        manageOpenAISettingsUseCase.selectedModelID(for: .openAI)
+    }
+
+    func validateAndSaveToken(_ token: String, for provider: AIProvider) async {
         switch manageOpenAISettingsUseCase.preflightValidateAndSaveAPIKey(token) {
         case .emptyToken:
-            publishStatus("Введите OpenAI token.")
+            publishStatus("Введите token \(provider.title).")
             return
         case let .ready(trimmedToken):
-            isLoadingOpenAIModels = true
-            defer { isLoadingOpenAIModels = false }
+            isLoadingModels = true
+            defer { isLoadingModels = false }
 
             do {
+                let currentModelID = provider == selectedTextProvider
+                    ? selectedTextModelID
+                    : manageOpenAISettingsUseCase.selectedModelID(for: provider)
                 let result = try await manageOpenAISettingsUseCase.performValidateAndSaveAPIKey(
                     trimmedToken: trimmedToken,
-                    currentSelectedModelID: selectedOpenAIModelID
+                    currentSelectedModelID: currentModelID,
+                    provider: provider
                 )
-                availableOpenAIModels = result.models
-                selectedOpenAIModelID = result.selectedModelID
-                publishStatus("Подключение к OpenAI успешно. Моделей: \(result.models.count).")
+                if provider == selectedTextProvider {
+                    availableTextModels = result.models
+                    selectedTextModelID = result.selectedModelID
+                }
+                publishStatus("Подключение к \(provider.title) успешно. Моделей: \(result.models.count).")
             } catch {
-                publishStatus("OpenAI: \(error.localizedDescription)")
+                publishStatus("\(provider.title): \(error.localizedDescription)")
             }
         }
     }
 
-    func refreshOpenAIModels() async {
-        switch manageOpenAISettingsUseCase.preflightRefreshModels() {
+    func refreshModels(for provider: AIProvider) async {
+        switch manageOpenAISettingsUseCase.preflightRefreshModels(for: provider) {
         case .missingAPIKey:
-            publishStatus("Сначала сохраните OpenAI token.")
+            publishStatus("Сначала сохраните token \(provider.title).")
         case let .ready(trimmedToken):
-            await validateAndSaveOpenAIToken(trimmedToken)
+            await validateAndSaveToken(trimmedToken, for: provider)
         }
     }
 
-    func deleteOpenAIToken() {
+    func deleteToken(for provider: AIProvider) {
         do {
-            try manageOpenAISettingsUseCase.deleteAPIKey()
-            publishStatus("Токен OpenAI удален.")
+            try manageOpenAISettingsUseCase.deleteAPIKey(for: provider)
+            publishStatus("Токен \(provider.title) удален.")
         } catch {
-            publishStatus("Не удалось удалить OpenAI token: \(error.localizedDescription)")
+            publishStatus("Не удалось удалить token \(provider.title): \(error.localizedDescription)")
         }
     }
 
-    func selectOpenAIModel(_ id: String?) {
-        selectedOpenAIModelID = manageOpenAISettingsUseCase.persistSelectedModelID(id)
+    func selectTextProvider(_ provider: AIProvider) {
+        selectedTextProvider = manageOpenAISettingsUseCase.persistSelectedTextProvider(provider)
+        applyModels(for: provider)
+        publishStatus("Провайдер текста: \(provider.title).")
+    }
+
+    func selectTextModel(_ id: String?) {
+        selectedTextModelID = manageOpenAISettingsUseCase.persistSelectedModelID(id, for: selectedTextProvider)
         if let id {
-            publishStatus("Выбрана модель OpenAI: \(id)")
+            publishStatus("Выбрана модель \(selectedTextProvider.title): \(id)")
         }
     }
 
@@ -129,12 +162,22 @@ final class SettingsViewModel: ObservableObject {
     }
 
     private func applySnapshot(_ snapshot: OpenAISettingsSnapshot) {
-        availableOpenAIModels = snapshot.cachedModels
-        selectedOpenAIModelID = snapshot.selectedModelID
+        selectedTextProvider = snapshot.selectedTextProvider
+        availableTextModels = snapshot.cachedModels
+        selectedTextModelID = snapshot.selectedModelID
         selectedOCREngine = snapshot.selectedOCREngine
         defaultNewProfileLearningLanguage = snapshot.defaultNewProfileLearningLanguage
         translationOverlayMinimumDuration = snapshot.translationOverlayMinimumDuration
         translationOverlaySecondsPerWord = snapshot.translationOverlaySecondsPerWord
+    }
+
+    private func applyModels(for provider: AIProvider) {
+        let models = manageOpenAISettingsUseCase.cachedModels(for: provider)
+        availableTextModels = models
+        selectedTextModelID = ManageOpenAISettingsUseCase.resolveSelectedModelID(
+            models: models,
+            currentSelectedModelID: manageOpenAISettingsUseCase.selectedModelID(for: provider)
+        )
     }
 
     private var shouldUseCompactOverlay: Bool {

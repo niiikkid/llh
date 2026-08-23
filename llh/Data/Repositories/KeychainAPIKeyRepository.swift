@@ -6,21 +6,45 @@
 import Foundation
 
 struct KeychainAPIKeyRepository: APIKeyRepository {
-    private let tokenStore: OpenAITokenStoring
+    private let stores: [AIProvider: any OpenAITokenStoring]
 
-    init(tokenStore: OpenAITokenStoring = KeychainOpenAITokenStore()) {
-        self.tokenStore = tokenStore
+    init(tokenStore: any OpenAITokenStoring) {
+        self.stores = [.openAI: tokenStore]
     }
 
-    func loadAPIKey() -> String? {
-        tokenStore.loadToken()
+    init(stores: [AIProvider: any OpenAITokenStoring]) {
+        self.stores = stores
     }
 
-    func saveAPIKey(_ key: String) throws {
-        try tokenStore.saveToken(key)
+    init() {
+        self.stores = [
+            .openAI: KeychainOpenAITokenStore(
+                service: AIProvider.openAI.keychainService,
+                account: AIProvider.openAI.keychainAccount
+            ),
+            .deepSeek: KeychainOpenAITokenStore(
+                service: AIProvider.deepSeek.keychainService,
+                account: AIProvider.deepSeek.keychainAccount
+            )
+        ]
     }
 
-    func deleteAPIKey() throws {
-        try tokenStore.deleteToken()
+    func loadAPIKey(for provider: AIProvider) -> String? {
+        stores[provider]?.loadToken()
+    }
+
+    func saveAPIKey(_ key: String, for provider: AIProvider) throws {
+        try store(for: provider).saveToken(key)
+    }
+
+    func deleteAPIKey(for provider: AIProvider) throws {
+        try store(for: provider).deleteToken()
+    }
+
+    private func store(for provider: AIProvider) -> any OpenAITokenStoring {
+        stores[provider] ?? KeychainOpenAITokenStore(
+            service: provider.keychainService,
+            account: provider.keychainAccount
+        )
     }
 }

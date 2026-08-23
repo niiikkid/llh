@@ -24,13 +24,14 @@ private final class GrammarStudyFakeOpenAIServing: OpenAIServing {
     var errorToThrow: Error?
     private(set) var buildGrammarCallCount = 0
 
-    func fetchModels(apiKey: String) async throws -> [OpenAIModel] { [] }
+    func fetchModels(provider: AIProvider, apiKey: String) async throws -> [OpenAIModel] { [] }
 
     func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> String {
         ""
     }
 
     func formatRecognizedText(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -40,6 +41,7 @@ private final class GrammarStudyFakeOpenAIServing: OpenAIServing {
     }
 
     func buildWordsStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -49,6 +51,7 @@ private final class GrammarStudyFakeOpenAIServing: OpenAIServing {
     }
 
     func buildGrammarStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,

@@ -7,14 +7,15 @@ alwaysApply: false
 # Security, Privacy, Permissions
 
 Security:
-- OpenAI API token хранится только в Keychain.
+- API token провайдеров (OpenAI и DeepSeek) хранятся только в Keychain.
 - Не храни secrets в UserDefaults, JSON, plain files, source code или git.
 - Не печатай secrets в logs, alerts, crash messages или debug output.
 - Не добавляй analytics/tracking SDK без явной просьбы пользователя.
 
 Privacy:
 - Screen captures, OCR text, translations, explanations и history являются sensitive user data.
-- Не отправляй данные в OpenAI, если это не требуется выбранной функцией или режимом.
+- Не отправляй данные в OpenAI или DeepSeek, если это не требуется выбранной функцией или режимом.
+- AI OCR (изображения) всегда идёт только в OpenAI. Текст перевода/учёбы может идти в выбранного провайдера.
 - Local OCR option должен сохраняться.
 - History остаётся local-only, пока пользователь явно не попросит sync/cloud.
 - Screenshots не сохраняются по умолчанию.

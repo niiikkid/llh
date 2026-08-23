@@ -9,8 +9,8 @@ import Foundation
 struct OpenAITranslationService: Sendable {
     private let chatClient: OpenAIChatCompletionClient
 
-    init(httpClient: OpenAIHTTPClient) {
-        self.chatClient = OpenAIChatCompletionClient(httpClient: httpClient)
+    init(httpClient: OpenAIHTTPClient, provider: AIProvider = .openAI) {
+        self.chatClient = OpenAIChatCompletionClient(httpClient: httpClient, provider: provider)
     }
 
     func formatRecognizedText(

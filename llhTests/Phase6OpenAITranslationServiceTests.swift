@@ -19,6 +19,8 @@ struct Phase6OpenAITranslationServiceTests {
         OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
             #expect(request.httpMethod == "POST")
             #expect(request.url?.absoluteString == "https://api.openai.com/v1/chat/completions")
+            let body = try OpenAIHTTPClientTestSupport.jsonBody(from: request)
+            #expect(body["thinking"] == nil)
             let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
             return (response, Data(responseJSON.utf8))
         }
@@ -33,6 +35,32 @@ struct Phase6OpenAITranslationServiceTests {
         #expect(formatted.cleanedText == "你好")
         #expect(formatted.pinyinText == "nǐ hǎo")
         #expect(formatted.russianTranslation == "привет")
+    }
+
+    @Test
+    func formatRecognizedText_deepSeekDisablesThinkingByDefault() async throws {
+        let client = OpenAIHTTPClientTestSupport.makeClient(baseURL: AIProvider.deepSeek.apiBaseURL)
+        let service = OpenAITranslationService(httpClient: client, provider: .deepSeek)
+        let responseJSON = """
+        {"choices":[{"message":{"content":"{\\"cleaned_text\\":\\"你好\\",\\"pinyin_text\\":\\"nǐ hǎo\\",\\"russian_translation\\":\\"привет\\"}"}}]}
+        """
+
+        OpenAIHTTPClientURLProtocolStub.requestHandler = { request in
+            let body = try OpenAIHTTPClientTestSupport.jsonBody(from: request)
+            let thinking = body["thinking"] as? [String: Any]
+            #expect(thinking?["type"] as? String == "disabled")
+            let response = OpenAIHTTPClientTestSupport.httpResponse(for: request, statusCode: 200)
+            return (response, Data(responseJSON.utf8))
+        }
+
+        let formatted = try await service.formatRecognizedText(
+            apiKey: "sk-test",
+            modelID: "deepseek-v4-pro",
+            targetLanguage: .chinese,
+            rawText: "你好"
+        )
+
+        #expect(formatted.cleanedText == "你好")
     }
 
     @Test

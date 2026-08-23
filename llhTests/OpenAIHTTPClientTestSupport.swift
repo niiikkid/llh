@@ -33,13 +33,57 @@ final class OpenAIHTTPClientURLProtocolStub: URLProtocol, @unchecked Sendable {
 }
 
 enum OpenAIHTTPClientTestSupport {
-    static func makeClient(requestTimeout: TimeInterval = OpenAIHTTPClient.defaultRequestTimeout) -> OpenAIHTTPClient {
+    static func makeClient(
+        baseURL: URL = AIProvider.openAI.apiBaseURL,
+        requestTimeout: TimeInterval = OpenAIHTTPClient.defaultRequestTimeout
+    ) -> OpenAIHTTPClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [OpenAIHTTPClientURLProtocolStub.self]
         return OpenAIHTTPClient(
             session: URLSession(configuration: configuration),
+            baseURL: baseURL,
             requestTimeout: requestTimeout
         )
+    }
+
+    static func makeSession() -> URLSession {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [OpenAIHTTPClientURLProtocolStub.self]
+        return URLSession(configuration: configuration)
+    }
+
+    static func jsonBody(from request: URLRequest) throws -> [String: Any] {
+        guard let data = bodyData(from: request) else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        return object
+    }
+
+    static func bodyData(from request: URLRequest) -> Data? {
+        if let body = request.httpBody {
+            return body
+        }
+        guard let stream = request.httpBodyStream else {
+            return nil
+        }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        let bufferSize = 1024
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+        while stream.hasBytesAvailable {
+            let readCount = stream.read(buffer, maxLength: bufferSize)
+            if readCount > 0 {
+                data.append(buffer, count: readCount)
+            } else {
+                break
+            }
+        }
+        return data
     }
 
     static func httpResponse(for request: URLRequest, statusCode: Int) -> HTTPURLResponse {

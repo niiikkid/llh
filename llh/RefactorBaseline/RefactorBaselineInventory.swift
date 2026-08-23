@@ -59,13 +59,14 @@ enum RefactorBaselineInventory {
 
   /// `@Published` properties on `SettingsViewModel` (Phase 4 settings extraction).
   static let settingsViewModelPublishedPropertyNames: [String] = [
-    "availableOpenAIModels",
-    "selectedOpenAIModelID",
+    "selectedTextProvider",
+    "availableTextModels",
+    "selectedTextModelID",
     "selectedOCREngine",
     "defaultNewProfileLearningLanguage",
     "translationOverlayMinimumDuration",
     "translationOverlaySecondsPerWord",
-    "isLoadingOpenAIModels",
+    "isLoadingModels",
     "statusMessage",
   ]
 
@@ -162,10 +163,11 @@ enum RefactorBaselineInventory {
 
   /// Public actions on `SettingsViewModel` (Phase 4).
   static let settingsViewModelPublicActions: [String] = [
-    "validateAndSaveOpenAIToken",
-    "refreshOpenAIModels",
-    "deleteOpenAIToken",
-    "selectOpenAIModel",
+    "validateAndSaveToken",
+    "refreshModels",
+    "deleteToken",
+    "selectTextProvider",
+    "selectTextModel",
     "selectOCREngine",
     "switchToNextOCREngine",
     "setDefaultNewProfileLearningLanguage",

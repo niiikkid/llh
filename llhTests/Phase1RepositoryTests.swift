@@ -56,6 +56,27 @@ struct Phase1RepositoryTests {
     }
 
     @Test
+    func keychainAPIKeyRepository_isolatesProviderTokens() throws {
+        let openAIStore = InMemoryOpenAITokenStore()
+        let deepSeekStore = InMemoryOpenAITokenStore()
+        let repository = KeychainAPIKeyRepository(stores: [
+            .openAI: openAIStore,
+            .deepSeek: deepSeekStore
+        ])
+
+        try repository.saveAPIKey("sk-openai", for: .openAI)
+        try repository.saveAPIKey("sk-deepseek", for: .deepSeek)
+
+        #expect(repository.loadAPIKey(for: .openAI) == "sk-openai")
+        #expect(repository.loadAPIKey(for: .deepSeek) == "sk-deepseek")
+
+        try repository.deleteAPIKey(for: .deepSeek)
+
+        #expect(repository.loadAPIKey(for: .openAI) == "sk-openai")
+        #expect(repository.loadAPIKey(for: .deepSeek) == nil)
+    }
+
+    @Test
     @MainActor
     func mainViewModel_acceptsInjectedRepositories() throws {
         let fileURL = FileManager.default.temporaryDirectory

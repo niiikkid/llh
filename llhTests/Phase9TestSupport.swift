@@ -112,8 +112,13 @@ final class Phase9IntegrationFakeOpenAIServing: OpenAIServing {
     private(set) var formatCallCount = 0
     private(set) var lastFormattedRawText: String?
 
-    func fetchModels(apiKey: String) async throws -> [OpenAIModel] {
-        [OpenAIModel(id: "gpt-4o-mini")]
+    func fetchModels(provider: AIProvider, apiKey: String) async throws -> [OpenAIModel] {
+        switch provider {
+        case .openAI:
+            [OpenAIModel(id: "gpt-4o-mini")]
+        case .deepSeek:
+            [OpenAIModel(id: "deepseek-chat")]
+        }
     }
 
     func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> String {
@@ -121,6 +126,7 @@ final class Phase9IntegrationFakeOpenAIServing: OpenAIServing {
     }
 
     func formatRecognizedText(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -132,6 +138,7 @@ final class Phase9IntegrationFakeOpenAIServing: OpenAIServing {
     }
 
     func buildWordsStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -141,6 +148,7 @@ final class Phase9IntegrationFakeOpenAIServing: OpenAIServing {
     }
 
     func buildGrammarStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -151,26 +159,29 @@ final class Phase9IntegrationFakeOpenAIServing: OpenAIServing {
 }
 
 final class Phase9InMemorySettingsRepository: SettingsRepository {
+    var selectedTextProviderRawValue = AIProvider.openAI.rawValue
     var selectedModelID: String? = "gpt-4o-mini"
     var selectedLearningLanguageRawValue = LearningLanguage.chinese.rawValue
     var cachedModels: [OpenAIModel] = [OpenAIModel(id: "gpt-4o-mini")]
+    var selectedDeepSeekModelID: String?
+    var cachedDeepSeekModels: [OpenAIModel] = []
     var selectedOCREngineRawValue = OCREngine.local.rawValue
     var translationOverlayMinimumDuration = 3.0
     var translationOverlaySecondsPerWord = 0.33
 }
 
 final class Phase9InMemoryAPIKeyRepository: APIKeyRepository {
-    var key: String? = "sk-test"
+    var keys: [AIProvider: String] = [.openAI: "sk-test"]
 
-    func loadAPIKey() -> String? {
-        key
+    func loadAPIKey(for provider: AIProvider) -> String? {
+        keys[provider]
     }
 
-    func saveAPIKey(_ key: String) throws {
-        self.key = key
+    func saveAPIKey(_ key: String, for provider: AIProvider) throws {
+        keys[provider] = key
     }
 
-    func deleteAPIKey() throws {
-        key = nil
+    func deleteAPIKey(for provider: AIProvider) throws {
+        keys[provider] = nil
     }
 }

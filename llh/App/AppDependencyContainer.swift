@@ -68,9 +68,14 @@ struct AppDependencyContainer {
         let regionSelectionService = RegionSelectionService()
         let screenshotService = ScreenCaptureKitCaptureService()
         let ocrService = VisionOCRService()
-        let httpClient = OpenAIHTTPClient()
-        let openAIOCRService = OpenAIOCRService(httpClient: httpClient)
-        let openAIService = OpenAIService(httpClient: httpClient, ocrService: openAIOCRService)
+        let openAIClient = OpenAIHTTPClient(baseURL: AIProvider.openAI.apiBaseURL)
+        let deepSeekClient = OpenAIHTTPClient(baseURL: AIProvider.deepSeek.apiBaseURL)
+        let openAIOCRService = OpenAIOCRService(httpClient: openAIClient)
+        let openAIService = OpenAIService(
+            openAIHTTPClient: openAIClient,
+            deepSeekHTTPClient: deepSeekClient,
+            ocrService: openAIOCRService
+        )
         let (recognizeTextUseCase, captureRegionUseCase) = makeCaptureUseCases(
             permissionService: permissionService,
             regionSelectionService: regionSelectionService,

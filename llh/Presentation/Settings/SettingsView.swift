@@ -12,7 +12,7 @@ struct SettingsView: View {
 
     private enum SettingsTab: Hashable {
         case general
-        case openAI
+        case intelligence
     }
 
     var body: some View {
@@ -23,11 +23,11 @@ struct SettingsView: View {
                 }
                 .tag(SettingsTab.general)
 
-            OpenAISettingsTab(viewModel: viewModel)
+            IntelligenceSettingsTab(viewModel: viewModel)
                 .tabItem {
-                    Label("OpenAI", systemImage: "brain.head.profile")
+                    Label("ИИ", systemImage: "brain.head.profile")
                 }
-                .tag(SettingsTab.openAI)
+                .tag(SettingsTab.intelligence)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -119,71 +119,109 @@ private struct GeneralSettingsTab: View {
     }
 }
 
-// MARK: - OpenAI
+// MARK: - Intelligence
 
-private struct OpenAISettingsTab: View {
+private struct IntelligenceSettingsTab: View {
     @ObservedObject var viewModel: SettingsViewModel
-    @State private var tokenInput = ""
+    @State private var openAITokenInput = ""
+    @State private var deepSeekTokenInput = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                GroupBox("Подключение") {
+                GroupBox("Провайдер текста") {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(
-                            "Вставьте API token, затем проверьте подключение. Токен сохраняется безопасно в Keychain."
+                            "Перевод, форматирование и учебные материалы идут через выбранного провайдера. Распознавание изображений (AI OCR) всегда использует OpenAI."
                         )
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                        if viewModel.hasOpenAIToken {
-                            HStack(spacing: 12) {
-                                Label("Токен подключен", systemImage: "checkmark.seal.fill")
-                                    .foregroundStyle(.green)
-                                Spacer()
-                                Button("Удалить") {
-                                    tokenInput = ""
-                                    viewModel.deleteOpenAIToken()
+                        SettingsLabeledControlRow(title: "Провайдер") {
+                            Picker(
+                                "Провайдер",
+                                selection: Binding(
+                                    get: { viewModel.selectedTextProvider },
+                                    set: { viewModel.selectTextProvider($0) }
+                                )
+                            ) {
+                                ForEach(AIProvider.allCases) { provider in
+                                    Text(provider.title).tag(provider)
                                 }
-                                .buttonStyle(.bordered)
                             }
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(.quaternary.opacity(0.5))
-                            )
-                        } else {
-                            SecureField("sk-...", text: $tokenInput)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(maxWidth: 480)
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: 320, alignment: .leading)
                         }
+                    }
+                }
+                .groupBoxStyle(PanelGroupBoxStyle())
 
-                        HStack(spacing: 10) {
-                            if !viewModel.hasOpenAIToken {
-                                Button("Подключить") {
-                                    Task {
-                                        await viewModel.validateAndSaveOpenAIToken(tokenInput)
-                                        tokenInput = ""
+                ProviderConnectionBox(
+                    provider: .openAI,
+                    caption: "Нужен для AI OCR и для текста, если выбран OpenAI. Токен хранится в Keychain.",
+                    hasToken: viewModel.hasOpenAIToken,
+                    tokenInput: $openAITokenInput,
+                    isLoading: viewModel.isLoadingModels,
+                    onConnect: {
+                        await viewModel.validateAndSaveToken(openAITokenInput, for: .openAI)
+                        openAITokenInput = ""
+                    },
+                    onRefresh: {
+                        await viewModel.refreshModels(for: .openAI)
+                    },
+                    onDelete: {
+                        openAITokenInput = ""
+                        viewModel.deleteToken(for: .openAI)
+                    }
+                )
+
+                ProviderConnectionBox(
+                    provider: .deepSeek,
+                    caption: "Нужен для перевода и учебных материалов, если выбран DeepSeek. Скриншоты в DeepSeek не отправляются.",
+                    hasToken: viewModel.hasDeepSeekToken,
+                    tokenInput: $deepSeekTokenInput,
+                    isLoading: viewModel.isLoadingModels,
+                    onConnect: {
+                        await viewModel.validateAndSaveToken(deepSeekTokenInput, for: .deepSeek)
+                        deepSeekTokenInput = ""
+                    },
+                    onRefresh: {
+                        await viewModel.refreshModels(for: .deepSeek)
+                    },
+                    onDelete: {
+                        deepSeekTokenInput = ""
+                        viewModel.deleteToken(for: .deepSeek)
+                    }
+                )
+
+                GroupBox("Модель") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SettingsLabeledControlRow(title: "Модель \(viewModel.selectedTextProvider.title)") {
+                            Picker(
+                                "Модель",
+                                selection: Binding(
+                                    get: { viewModel.selectedTextModelID },
+                                    set: { viewModel.selectTextModel($0) }
+                                )
+                            ) {
+                                if viewModel.availableTextModels.isEmpty {
+                                    Text("Список моделей пуст").tag(Optional<String>.none)
+                                } else {
+                                    ForEach(viewModel.availableTextModels) { model in
+                                        Text(model.id).tag(Optional(model.id))
                                     }
                                 }
-                                .disabled(
-                                    viewModel.isLoadingOpenAIModels
-                                        || tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                )
                             }
-
-                            Button("Обновить модели") {
-                                Task {
-                                    await viewModel.refreshOpenAIModels()
-                                }
-                            }
-                            .disabled(viewModel.isLoadingOpenAIModels || !viewModel.hasOpenAIToken)
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(maxWidth: 320, alignment: .leading)
+                            .disabled(viewModel.availableTextModels.isEmpty)
                         }
 
-                        if viewModel.isLoadingOpenAIModels {
-                            ProgressView("Проверка подключения к OpenAI...")
+                        if viewModel.isLoadingModels {
+                            ProgressView("Проверка подключения...")
                         }
 
                         if !viewModel.statusMessage.isEmpty {
@@ -195,39 +233,75 @@ private struct OpenAISettingsTab: View {
                     }
                 }
                 .groupBoxStyle(PanelGroupBoxStyle())
-
-                GroupBox("Модель") {
-                    SettingsLabeledControlRow(title: "Модель OpenAI") {
-                        Picker(
-                            "Модель OpenAI",
-                            selection: Binding(
-                                get: { viewModel.selectedOpenAIModelID },
-                                set: { viewModel.selectOpenAIModel($0) }
-                            )
-                        ) {
-                            if viewModel.availableOpenAIModels.isEmpty {
-                                Text("Список моделей пуст").tag(Optional<String>.none)
-                            } else {
-                                ForEach(viewModel.availableOpenAIModels) { model in
-                                    Text(model.id).tag(Optional(model.id))
-                                }
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .frame(maxWidth: 320, alignment: .leading)
-                        .disabled(viewModel.availableOpenAIModels.isEmpty)
-                    }
-                }
-                .groupBoxStyle(PanelGroupBoxStyle())
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
-            tokenInput = ""
+            openAITokenInput = ""
+            deepSeekTokenInput = ""
         }
+    }
+}
+
+private struct ProviderConnectionBox: View {
+    let provider: AIProvider
+    let caption: String
+    let hasToken: Bool
+    @Binding var tokenInput: String
+    let isLoading: Bool
+    let onConnect: () async -> Void
+    let onRefresh: () async -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        GroupBox(provider.title) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(caption)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if hasToken {
+                    HStack(spacing: 12) {
+                        Label("Токен подключен", systemImage: "checkmark.seal.fill")
+                            .foregroundStyle(.green)
+                        Spacer()
+                        Button("Удалить", action: onDelete)
+                            .buttonStyle(.bordered)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(.quaternary.opacity(0.5))
+                    )
+                } else {
+                    SecureField("sk-...", text: $tokenInput)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 480)
+                }
+
+                HStack(spacing: 10) {
+                    if !hasToken {
+                        Button("Подключить") {
+                            Task { await onConnect() }
+                        }
+                        .disabled(
+                            isLoading
+                                || tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        )
+                    }
+
+                    Button("Обновить модели") {
+                        Task { await onRefresh() }
+                    }
+                    .disabled(isLoading || !hasToken)
+                }
+            }
+        }
+        .groupBoxStyle(PanelGroupBoxStyle())
     }
 }
 

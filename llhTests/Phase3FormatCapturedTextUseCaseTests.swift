@@ -16,20 +16,23 @@ private final class ConfigurableFakeOpenAIServing: OpenAIServing {
     )
     var errorToThrow: Error?
     private(set) var formatCallCount = 0
+    private(set) var lastFormattedProvider: AIProvider?
 
-    func fetchModels(apiKey: String) async throws -> [OpenAIModel] { [] }
+    func fetchModels(provider: AIProvider, apiKey: String) async throws -> [OpenAIModel] { [] }
 
     func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> String {
         ""
     }
 
     func formatRecognizedText(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
         rawText: String
     ) async throws -> StructuredFormattedText {
         formatCallCount += 1
+        lastFormattedProvider = provider
         if let errorToThrow {
             throw errorToThrow
         }
@@ -41,6 +44,7 @@ private final class ConfigurableFakeOpenAIServing: OpenAIServing {
     }
 
     func buildWordsStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -50,6 +54,7 @@ private final class ConfigurableFakeOpenAIServing: OpenAIServing {
     }
 
     func buildGrammarStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -207,6 +212,25 @@ struct Phase3FormatCapturedTextUseCaseTests {
 
         #expect(formatted.cleanedText == "formatted")
         #expect(fake.formatCallCount == 1)
+        #expect(fake.lastFormattedProvider == .openAI)
+    }
+
+    @Test
+    @MainActor
+    func perform_forwardsDeepSeekProvider() async throws {
+        let fake = ConfigurableFakeOpenAIServing()
+        let useCase = FormatCapturedTextUseCase(openAIService: fake)
+
+        _ = try await useCase.perform(
+            request: makeRequest(),
+            configuration: FormatCapturedTextConfiguration(
+                provider: .deepSeek,
+                apiKey: "sk-test",
+                modelID: "deepseek-chat"
+            )
+        )
+
+        #expect(fake.lastFormattedProvider == .deepSeek)
     }
 
     @Test

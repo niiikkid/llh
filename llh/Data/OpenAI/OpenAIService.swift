@@ -6,16 +6,24 @@
 import CoreGraphics
 import Foundation
 
-/// Facade implementing `OpenAIServing` by delegating to focused Data/OpenAI services.
+/// Facade implementing `OpenAIServing`. Text calls are routed by provider; OCR stays on OpenAI.
 struct OpenAIService: OpenAIServing {
-    private let modelsService: OpenAIModelsService
+    private let openAIStack: ProviderStack
+    private let deepSeekStack: ProviderStack
     private let ocrService: OpenAIOCRService
-    private let translationService: OpenAITranslationService
-    private let studyService: OpenAIStudyService
 
     init(session: URLSession = .shared, requestTimeout: TimeInterval = OpenAIHTTPClient.defaultRequestTimeout) {
-        let httpClient = OpenAIHTTPClient(session: session, requestTimeout: requestTimeout)
-        self.init(httpClient: httpClient)
+        let openAIClient = OpenAIHTTPClient(
+            session: session,
+            baseURL: AIProvider.openAI.apiBaseURL,
+            requestTimeout: requestTimeout
+        )
+        let deepSeekClient = OpenAIHTTPClient(
+            session: session,
+            baseURL: AIProvider.deepSeek.apiBaseURL,
+            requestTimeout: requestTimeout
+        )
+        self.init(openAIHTTPClient: openAIClient, deepSeekHTTPClient: deepSeekClient)
     }
 
     init(
@@ -24,10 +32,31 @@ struct OpenAIService: OpenAIServing {
         translationService: OpenAITranslationService? = nil,
         studyService: OpenAIStudyService? = nil
     ) {
-        self.modelsService = OpenAIModelsService(httpClient: httpClient)
-        self.ocrService = ocrService ?? OpenAIOCRService(httpClient: httpClient)
-        self.translationService = translationService ?? OpenAITranslationService(httpClient: httpClient)
-        self.studyService = studyService ?? OpenAIStudyService(httpClient: httpClient)
+        let deepSeekClient = OpenAIHTTPClient(baseURL: AIProvider.deepSeek.apiBaseURL)
+        self.init(
+            openAIHTTPClient: httpClient,
+            deepSeekHTTPClient: deepSeekClient,
+            ocrService: ocrService,
+            openAITranslationService: translationService,
+            openAIStudyService: studyService
+        )
+    }
+
+    init(
+        openAIHTTPClient: OpenAIHTTPClient,
+        deepSeekHTTPClient: OpenAIHTTPClient,
+        ocrService: OpenAIOCRService? = nil,
+        openAITranslationService: OpenAITranslationService? = nil,
+        openAIStudyService: OpenAIStudyService? = nil
+    ) {
+        self.openAIStack = ProviderStack(
+            provider: .openAI,
+            httpClient: openAIHTTPClient,
+            translationService: openAITranslationService,
+            studyService: openAIStudyService
+        )
+        self.deepSeekStack = ProviderStack(provider: .deepSeek, httpClient: deepSeekHTTPClient)
+        self.ocrService = ocrService ?? OpenAIOCRService(httpClient: openAIHTTPClient)
     }
 
     func recognizeTextInImage(
@@ -43,17 +72,18 @@ struct OpenAIService: OpenAIServing {
         return result.text
     }
 
-    func fetchModels(apiKey: String) async throws -> [OpenAIModel] {
-        try await modelsService.fetchModels(apiKey: apiKey)
+    func fetchModels(provider: AIProvider, apiKey: String) async throws -> [OpenAIModel] {
+        try await stack(for: provider).modelsService.fetchModels(apiKey: apiKey)
     }
 
     func formatRecognizedText(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
         rawText: String
     ) async throws -> StructuredFormattedText {
-        try await translationService.formatRecognizedText(
+        try await stack(for: provider).translationService.formatRecognizedText(
             apiKey: apiKey,
             modelID: modelID,
             targetLanguage: targetLanguage,
@@ -62,12 +92,13 @@ struct OpenAIService: OpenAIServing {
     }
 
     func buildWordsStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
     ) async throws -> WordStudyPayload {
-        try await studyService.buildWordsStudyData(
+        try await stack(for: provider).studyService.buildWordsStudyData(
             apiKey: apiKey,
             modelID: modelID,
             targetLanguage: targetLanguage,
@@ -76,16 +107,47 @@ struct OpenAIService: OpenAIServing {
     }
 
     func buildGrammarStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
         formattedText: StructuredFormattedText
     ) async throws -> GrammarExplanationPayload {
-        try await studyService.buildGrammarStudyData(
+        try await stack(for: provider).studyService.buildGrammarStudyData(
             apiKey: apiKey,
             modelID: modelID,
             targetLanguage: targetLanguage,
             formattedText: formattedText
+        )
+    }
+
+    private func stack(for provider: AIProvider) -> ProviderStack {
+        switch provider {
+        case .openAI: openAIStack
+        case .deepSeek: deepSeekStack
+        }
+    }
+}
+
+private struct ProviderStack: Sendable {
+    let modelsService: OpenAIModelsService
+    let translationService: OpenAITranslationService
+    let studyService: OpenAIStudyService
+
+    init(
+        provider: AIProvider,
+        httpClient: OpenAIHTTPClient,
+        translationService: OpenAITranslationService? = nil,
+        studyService: OpenAIStudyService? = nil
+    ) {
+        self.modelsService = OpenAIModelsService(httpClient: httpClient)
+        self.translationService = translationService ?? OpenAITranslationService(
+            httpClient: httpClient,
+            provider: provider
+        )
+        self.studyService = studyService ?? OpenAIStudyService(
+            httpClient: httpClient,
+            provider: provider
         )
     }
 }

@@ -9,27 +9,30 @@ import Testing
 @testable import llh
 
 private final class InMemorySettingsRepository: SettingsRepository {
+    var selectedTextProviderRawValue = AIProvider.openAI.rawValue
     var selectedModelID: String?
     var selectedLearningLanguageRawValue = LearningLanguage.english.rawValue
     var cachedModels: [OpenAIModel] = []
+    var selectedDeepSeekModelID: String?
+    var cachedDeepSeekModels: [OpenAIModel] = []
     var selectedOCREngineRawValue = OCREngine.local.rawValue
     var translationOverlayMinimumDuration = 3.0
     var translationOverlaySecondsPerWord = 0.33
 }
 
 private final class InMemoryAPIKeyRepository: APIKeyRepository {
-    private var key: String?
+    private var keys: [AIProvider: String] = [:]
 
-    func loadAPIKey() -> String? {
-        key
+    func loadAPIKey(for provider: AIProvider) -> String? {
+        keys[provider]
     }
 
-    func saveAPIKey(_ key: String) throws {
-        self.key = key
+    func saveAPIKey(_ key: String, for provider: AIProvider) throws {
+        keys[provider] = key
     }
 
-    func deleteAPIKey() throws {
-        key = nil
+    func deleteAPIKey(for provider: AIProvider) throws {
+        keys[provider] = nil
     }
 }
 
@@ -38,17 +41,20 @@ private final class SettingsFakeOpenAIServing: OpenAIServing {
         OpenAIModel(id: "gpt-4o"),
         OpenAIModel(id: "gpt-4o-mini")
     ]
+    var modelsByProvider: [AIProvider: [OpenAIModel]] = [:]
     var errorToThrow: Error?
     private(set) var fetchModelsCallCount = 0
     private(set) var lastFetchedAPIKey: String?
+    private(set) var lastFetchedProvider: AIProvider?
 
-    func fetchModels(apiKey: String) async throws -> [OpenAIModel] {
+    func fetchModels(provider: AIProvider, apiKey: String) async throws -> [OpenAIModel] {
         fetchModelsCallCount += 1
         lastFetchedAPIKey = apiKey
+        lastFetchedProvider = provider
         if let errorToThrow {
             throw errorToThrow
         }
-        return modelsToReturn
+        return modelsByProvider[provider] ?? modelsToReturn
     }
 
     func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> String {
@@ -56,6 +62,7 @@ private final class SettingsFakeOpenAIServing: OpenAIServing {
     }
 
     func formatRecognizedText(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -65,6 +72,7 @@ private final class SettingsFakeOpenAIServing: OpenAIServing {
     }
 
     func buildWordsStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -74,6 +82,7 @@ private final class SettingsFakeOpenAIServing: OpenAIServing {
     }
 
     func buildGrammarStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -299,5 +308,81 @@ struct Phase3ManageOpenAISettingsUseCaseTests {
                 currentSelectedModelID: "missing"
             ) == "a"
         )
+    }
+
+    @Test
+    func persistSelectedTextProvider_isIsolatedFromOpenAIModel() {
+        let settingsRepo = InMemorySettingsRepository()
+        settingsRepo.selectedModelID = "gpt-4o"
+        let (useCase, _, _, _) = makeUseCase(settings: settingsRepo)
+
+        #expect(useCase.persistSelectedTextProvider(.deepSeek) == .deepSeek)
+        #expect(settingsRepo.selectedTextProviderRawValue == AIProvider.deepSeek.rawValue)
+        #expect(settingsRepo.selectedModelID == "gpt-4o")
+    }
+
+    @Test
+    func performValidateAndSaveAPIKey_deepSeekDoesNotOverwriteOpenAIState() async throws {
+        let settingsRepo = InMemorySettingsRepository()
+        settingsRepo.selectedModelID = "gpt-4o"
+        settingsRepo.cachedModels = [OpenAIModel(id: "gpt-4o")]
+        let apiKeysRepo = InMemoryAPIKeyRepository()
+        try apiKeysRepo.saveAPIKey("sk-openai", for: .openAI)
+        let openAIService = SettingsFakeOpenAIServing()
+        openAIService.modelsByProvider[.deepSeek] = [
+            OpenAIModel(id: "deepseek-chat"),
+            OpenAIModel(id: "deepseek-reasoner")
+        ]
+        let (useCase, _, _, _) = makeUseCase(
+            settings: settingsRepo,
+            apiKeys: apiKeysRepo,
+            openAI: openAIService
+        )
+
+        let result = try await useCase.performValidateAndSaveAPIKey(
+            trimmedToken: "sk-deepseek",
+            currentSelectedModelID: nil,
+            provider: .deepSeek
+        )
+
+        #expect(openAIService.lastFetchedProvider == .deepSeek)
+        #expect(openAIService.lastFetchedAPIKey == "sk-deepseek")
+        #expect(result.selectedModelID == "deepseek-chat")
+        #expect(apiKeysRepo.loadAPIKey(for: .openAI) == "sk-openai")
+        #expect(apiKeysRepo.loadAPIKey(for: .deepSeek) == "sk-deepseek")
+        #expect(settingsRepo.selectedModelID == "gpt-4o")
+        #expect(settingsRepo.cachedModels.map(\.id) == ["gpt-4o"])
+        #expect(settingsRepo.selectedDeepSeekModelID == "deepseek-chat")
+        #expect(settingsRepo.cachedDeepSeekModels.map(\.id) == ["deepseek-chat", "deepseek-reasoner"])
+    }
+
+    @Test
+    func loadSettingsSnapshot_usesDeepSeekCacheWhenProviderIsDeepSeek() {
+        let settings = InMemorySettingsRepository()
+        settings.selectedTextProviderRawValue = AIProvider.deepSeek.rawValue
+        settings.cachedModels = [OpenAIModel(id: "gpt-4o")]
+        settings.selectedModelID = "gpt-4o"
+        settings.cachedDeepSeekModels = [OpenAIModel(id: "deepseek-chat")]
+        settings.selectedDeepSeekModelID = "deepseek-chat"
+        let (useCase, _, _, _) = makeUseCase(settings: settings)
+
+        let snapshot = useCase.loadSettingsSnapshot()
+
+        #expect(snapshot.selectedTextProvider == .deepSeek)
+        #expect(snapshot.selectedModelID == "deepseek-chat")
+        #expect(snapshot.cachedModels.map(\.id) == ["deepseek-chat"])
+    }
+
+    @Test
+    func deleteAPIKey_forDeepSeekLeavesOpenAIKey() throws {
+        let apiKeys = InMemoryAPIKeyRepository()
+        try apiKeys.saveAPIKey("sk-openai", for: .openAI)
+        try apiKeys.saveAPIKey("sk-deepseek", for: .deepSeek)
+        let (useCase, _, _, _) = makeUseCase(apiKeys: apiKeys)
+
+        try useCase.deleteAPIKey(for: .deepSeek)
+
+        #expect(apiKeys.loadAPIKey(for: .deepSeek) == nil)
+        #expect(apiKeys.loadAPIKey(for: .openAI) == "sk-openai")
     }
 }

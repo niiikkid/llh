@@ -27,8 +27,16 @@ enum OpenAITokenStoreError: LocalizedError {
 }
 
 struct KeychainOpenAITokenStore: OpenAITokenStoring {
-    private let service = "local.llh.ocr.openai"
-    private let account = "openai-api-token"
+    private let service: String
+    private let account: String
+
+    init(
+        service: String = AIProvider.openAI.keychainService,
+        account: String = AIProvider.openAI.keychainAccount
+    ) {
+        self.service = service
+        self.account = account
+    }
 
     func loadToken() -> String? {
         let query: [String: Any] = [

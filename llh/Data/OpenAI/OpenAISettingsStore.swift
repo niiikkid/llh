@@ -11,29 +11,58 @@ protocol OpenAISettingsStoring {
 
 struct OpenAISettingsStore: OpenAISettingsStoring {
     private let userDefaults: UserDefaults
+    private let selectedTextProviderKey: String
     private let selectedModelKey: String
+    private let selectedDeepSeekModelKey: String
     private let selectedLearningLanguageKey: String
     private let cachedModelsKey: String
+    private let cachedDeepSeekModelsKey: String
     private let selectedOCREngineKey: String
     private let translationOverlayMinimumDurationKey: String
     private let translationOverlaySecondsPerWordKey: String
 
     init(
         userDefaults: UserDefaults = .standard,
+        selectedTextProviderKey: String = "ai.text.provider",
         selectedModelKey: String = "openai.selected.model.id",
+        selectedDeepSeekModelKey: String = "deepseek.selected.model.id",
         selectedLearningLanguageKey: String = "openai.selected.learning.language",
         cachedModelsKey: String = "openai.cached.model.ids",
+        cachedDeepSeekModelsKey: String = "deepseek.cached.model.ids",
         selectedOCREngineKey: String = "ocr.selected.engine",
         translationOverlayMinimumDurationKey: String = "overlay.translation.minimum.duration",
         translationOverlaySecondsPerWordKey: String = "overlay.translation.seconds.per.word"
     ) {
         self.userDefaults = userDefaults
+        self.selectedTextProviderKey = selectedTextProviderKey
         self.selectedModelKey = selectedModelKey
+        self.selectedDeepSeekModelKey = selectedDeepSeekModelKey
         self.selectedLearningLanguageKey = selectedLearningLanguageKey
         self.cachedModelsKey = cachedModelsKey
+        self.cachedDeepSeekModelsKey = cachedDeepSeekModelsKey
         self.selectedOCREngineKey = selectedOCREngineKey
         self.translationOverlayMinimumDurationKey = translationOverlayMinimumDurationKey
         self.translationOverlaySecondsPerWordKey = translationOverlaySecondsPerWordKey
+    }
+
+    var selectedTextProviderRawValue: String {
+        get { userDefaults.string(forKey: selectedTextProviderKey) ?? AIProvider.openAI.rawValue }
+        set { userDefaults.set(newValue, forKey: selectedTextProviderKey) }
+    }
+
+    var selectedDeepSeekModelID: String? {
+        get { userDefaults.string(forKey: selectedDeepSeekModelKey) }
+        set { userDefaults.set(newValue, forKey: selectedDeepSeekModelKey) }
+    }
+
+    var cachedDeepSeekModels: [OpenAIModel] {
+        get {
+            let ids = userDefaults.stringArray(forKey: cachedDeepSeekModelsKey) ?? []
+            return ids.map(OpenAIModel.init(id:))
+        }
+        set {
+            userDefaults.set(newValue.map(\.id), forKey: cachedDeepSeekModelsKey)
+        }
     }
 
     var selectedModelID: String? {

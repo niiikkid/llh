@@ -7,7 +7,7 @@ alwaysApply: false
 # Data и Persistence
 
 Текущие направления хранения:
-- Keychain для OpenAI API token;
+- Keychain для API token провайдеров (OpenAI и DeepSeek);
 - UserDefaults для небольших настроек;
 - история сейчас может быть JSON, но целевое направление — надёжная локальная база.
 

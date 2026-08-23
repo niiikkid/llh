@@ -66,13 +66,14 @@ private struct FakeOpenAIOCRServing: OpenAIOCRServing {
 private struct FakeOpenAIServing: OpenAIServing {
     var recognizedText: String
 
-    func fetchModels(apiKey: String) async throws -> [OpenAIModel] { [] }
+    func fetchModels(provider: AIProvider, apiKey: String) async throws -> [OpenAIModel] { [] }
 
     func recognizeTextInImage(apiKey: String, modelID: String, image: CGImage) async throws -> String {
         recognizedText
     }
 
     func formatRecognizedText(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -82,6 +83,7 @@ private struct FakeOpenAIServing: OpenAIServing {
     }
 
     func buildWordsStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,
@@ -91,6 +93,7 @@ private struct FakeOpenAIServing: OpenAIServing {
     }
 
     func buildGrammarStudyData(
+        provider: AIProvider,
         apiKey: String,
         modelID: String,
         targetLanguage: LearningLanguage,

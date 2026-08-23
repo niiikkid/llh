@@ -22,9 +22,9 @@ alwaysApply: true
 - перевод и объяснение текста;
 - генерация учебных материалов;
 - локальная история обучения;
-- настройки OpenAI и OCR-режима.
+- настройки ИИ (OpenAI / DeepSeek) и OCR-режима.
 
-Текущий стек: Swift, SwiftUI, AppKit, Vision, ScreenCaptureKit, Foundation, Security/Keychain, UserDefaults, локальное хранение, OpenAI API, KeyboardShortcuts через SPM.
+Текущий стек: Swift, SwiftUI, AppKit, Vision, ScreenCaptureKit, Foundation, Security/Keychain, UserDefaults, локальное хранение, OpenAI API, DeepSeek API, KeyboardShortcuts через SPM.
 
 Удалённая функциональность, которую нельзя возвращать без явной просьбы:
 - Apple Events browser automation;

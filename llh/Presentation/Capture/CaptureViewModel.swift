@@ -142,8 +142,8 @@ final class CaptureViewModel: ObservableObject {
 
         let configuration = CaptureRegionConfiguration(
             ocrEngine: settings.selectedOCREngine,
-            apiKey: settings.currentAPIKey(),
-            selectedModelID: settings.selectedOpenAIModelID
+            apiKey: settings.openAIAPIKey(),
+            selectedModelID: settings.openAIModelID()
         )
 
         do {

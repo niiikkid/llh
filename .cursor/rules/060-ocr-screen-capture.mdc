@@ -8,7 +8,7 @@ alwaysApply: false
 
 Приложение поддерживает два OCR-направления:
 - Local OCR через Apple Vision (`VNRecognizeTextRequest`), privacy-friendly.
-- AI OCR через OpenAI vision, только при выбранном AI mode и наличии API key/network.
+- AI OCR через OpenAI vision, только при выбранном AI mode и наличии OpenAI API key/network. Текстовый провайдер (OpenAI/DeepSeek) на OCR не влияет.
 
 OCR rules:
 - Держи OCR за `OCRService`.

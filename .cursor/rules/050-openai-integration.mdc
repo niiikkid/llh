@@ -4,9 +4,9 @@ globs: **/*.swift
 alwaysApply: false
 ---
 
-# OpenAI Integration
+# OpenAI / DeepSeek Integration
 
-OpenAI используется для AI OCR, перевода, форматирования, объяснений, учебных материалов и ответов по выбранным фрагментам.
+OpenAI используется для AI OCR (изображения всегда). Перевод, форматирование и учебные материалы идут через выбранного текстового провайдера: OpenAI или DeepSeek.
 
 Целевое направление:
 - изолировать OpenAI logic в Data/OpenAI и domain services;
@@ -28,7 +28,7 @@ OpenAI используется для AI OCR, перевода, формати�
 
 Privacy:
 - Screen captures, OCR text, translations и history считаются sensitive data.
-- Отправляй данные в OpenAI только для явно выбранных AI-powered операций.
+- Отправляй изображения только в OpenAI (AI OCR). Текст перевода/учёбы — только выбранному текстовому провайдеру.
 - Сохраняй и уважай local OCR mode.
 - Чётко разделяй local OCR и AI OCR flows.
 

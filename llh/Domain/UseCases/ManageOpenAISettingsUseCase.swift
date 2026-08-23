@@ -6,6 +6,7 @@
 import Foundation
 
 struct OpenAISettingsSnapshot: Sendable {
+    let selectedTextProvider: AIProvider
     let cachedModels: [OpenAIModel]
     let selectedModelID: String?
     let selectedOCREngine: OCREngine
@@ -46,13 +47,15 @@ final class ManageOpenAISettingsUseCase {
     }
 
     func loadSettingsSnapshot() -> OpenAISettingsSnapshot {
-        let cachedModels = settingsRepository.cachedModels
+        let provider = selectedTextProvider()
+        let cachedModels = cachedModels(for: provider)
         let selectedModelID = Self.resolveSelectedModelID(
             models: cachedModels,
-            currentSelectedModelID: settingsRepository.selectedModelID
+            currentSelectedModelID: selectedModelID(for: provider)
         )
 
         return OpenAISettingsSnapshot(
+            selectedTextProvider: provider,
             cachedModels: cachedModels,
             selectedModelID: selectedModelID,
             selectedOCREngine: OCREngine(rawValue: settingsRepository.selectedOCREngineRawValue) ?? .local,
@@ -64,12 +67,34 @@ final class ManageOpenAISettingsUseCase {
         )
     }
 
-    func hasAPIKey() -> Bool {
-        apiKeyRepository.loadAPIKey() != nil
+    func selectedTextProvider() -> AIProvider {
+        AIProvider(rawValue: settingsRepository.selectedTextProviderRawValue) ?? .openAI
     }
 
-    func currentAPIKey() -> String? {
-        apiKeyRepository.loadAPIKey()
+    func selectedModelID(for provider: AIProvider) -> String? {
+        switch provider {
+        case .openAI:
+            settingsRepository.selectedModelID
+        case .deepSeek:
+            settingsRepository.selectedDeepSeekModelID
+        }
+    }
+
+    func cachedModels(for provider: AIProvider) -> [OpenAIModel] {
+        switch provider {
+        case .openAI:
+            settingsRepository.cachedModels
+        case .deepSeek:
+            settingsRepository.cachedDeepSeekModels
+        }
+    }
+
+    func hasAPIKey(for provider: AIProvider = .openAI) -> Bool {
+        apiKeyRepository.loadAPIKey(for: provider) != nil
+    }
+
+    func currentAPIKey(for provider: AIProvider = .openAI) -> String? {
+        apiKeyRepository.loadAPIKey(for: provider)
     }
 
     func preflightValidateAndSaveAPIKey(_ token: String) -> ValidateAndSaveAPIKeyPreflight {
@@ -82,16 +107,18 @@ final class ManageOpenAISettingsUseCase {
 
     func performValidateAndSaveAPIKey(
         trimmedToken: String,
-        currentSelectedModelID: String?
+        currentSelectedModelID: String?,
+        provider: AIProvider = .openAI
     ) async throws -> FetchAndPersistModelsResult {
         try await fetchAndPersistModels(
+            provider: provider,
             apiKey: trimmedToken,
             currentSelectedModelID: currentSelectedModelID
         )
     }
 
-    func preflightRefreshModels() -> RefreshModelsPreflight {
-        guard let token = apiKeyRepository.loadAPIKey()?.trimmingCharacters(in: .whitespacesAndNewlines),
+    func preflightRefreshModels(for provider: AIProvider = .openAI) -> RefreshModelsPreflight {
+        guard let token = apiKeyRepository.loadAPIKey(for: provider)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !token.isEmpty else {
             return .missingAPIKey
         }
@@ -99,24 +126,37 @@ final class ManageOpenAISettingsUseCase {
     }
 
     func performRefreshModels(
-        currentSelectedModelID: String?
+        currentSelectedModelID: String?,
+        provider: AIProvider = .openAI
     ) async throws -> FetchAndPersistModelsResult {
-        guard case let .ready(trimmedToken) = preflightRefreshModels() else {
+        guard case let .ready(trimmedToken) = preflightRefreshModels(for: provider) else {
             throw OpenAIServiceError.invalidTokenFormat
         }
         return try await fetchAndPersistModels(
+            provider: provider,
             apiKey: trimmedToken,
             currentSelectedModelID: currentSelectedModelID
         )
     }
 
-    func deleteAPIKey() throws {
-        try apiKeyRepository.deleteAPIKey()
+    func deleteAPIKey(for provider: AIProvider = .openAI) throws {
+        try apiKeyRepository.deleteAPIKey(for: provider)
     }
 
     @discardableResult
-    func persistSelectedModelID(_ id: String?) -> String? {
-        settingsRepository.selectedModelID = id
+    func persistSelectedTextProvider(_ provider: AIProvider) -> AIProvider {
+        settingsRepository.selectedTextProviderRawValue = provider.rawValue
+        return provider
+    }
+
+    @discardableResult
+    func persistSelectedModelID(_ id: String?, for provider: AIProvider = .openAI) -> String? {
+        switch provider {
+        case .openAI:
+            settingsRepository.selectedModelID = id
+        case .deepSeek:
+            settingsRepository.selectedDeepSeekModelID = id
+        }
         return id
     }
 
@@ -158,22 +198,32 @@ final class ManageOpenAISettingsUseCase {
     }
 
     private func fetchAndPersistModels(
+        provider: AIProvider,
         apiKey: String,
         currentSelectedModelID: String?
     ) async throws -> FetchAndPersistModelsResult {
-        let models = try await openAIService.fetchModels(apiKey: apiKey)
-        try apiKeyRepository.saveAPIKey(apiKey)
-        settingsRepository.cachedModels = models
+        let models = try await openAIService.fetchModels(provider: provider, apiKey: apiKey)
+        try apiKeyRepository.saveAPIKey(apiKey, for: provider)
+        persistCachedModels(models, for: provider)
 
         let selectedModelID = Self.resolveSelectedModelID(
             models: models,
             currentSelectedModelID: currentSelectedModelID
         )
-        settingsRepository.selectedModelID = selectedModelID
+        persistSelectedModelID(selectedModelID, for: provider)
 
         return FetchAndPersistModelsResult(
             models: models,
             selectedModelID: selectedModelID
         )
+    }
+
+    private func persistCachedModels(_ models: [OpenAIModel], for provider: AIProvider) {
+        switch provider {
+        case .openAI:
+            settingsRepository.cachedModels = models
+        case .deepSeek:
+            settingsRepository.cachedDeepSeekModels = models
+        }
     }
 }

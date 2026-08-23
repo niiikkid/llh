@@ -15,8 +15,15 @@ struct LoadGrammarStudyRequest: Sendable {
 }
 
 struct LoadGrammarStudyConfiguration: Sendable {
+    let provider: AIProvider
     let apiKey: String?
     let modelID: String?
+
+    init(provider: AIProvider = .openAI, apiKey: String?, modelID: String?) {
+        self.provider = provider
+        self.apiKey = apiKey
+        self.modelID = modelID
+    }
 }
 
 enum LoadGrammarStudyPreflight: Sendable {
@@ -76,6 +83,7 @@ struct LoadGrammarStudyUseCase {
         }
 
         return try await openAIService.buildGrammarStudyData(
+            provider: configuration.provider,
             apiKey: apiKey,
             modelID: modelID,
             targetLanguage: request.targetLanguage,

@@ -375,9 +375,17 @@ struct llhTests {
             selectedModelKey: "selected.model.test"
         )
 
+        #expect(store.selectedTextProviderRawValue == AIProvider.openAI.rawValue)
+        store.selectedTextProviderRawValue = AIProvider.deepSeek.rawValue
+        #expect(store.selectedTextProviderRawValue == AIProvider.deepSeek.rawValue)
+
         #expect(store.selectedModelID == nil)
         store.selectedModelID = "gpt-4.1-mini"
         #expect(store.selectedModelID == "gpt-4.1-mini")
+
+        #expect(store.selectedDeepSeekModelID == nil)
+        store.selectedDeepSeekModelID = "deepseek-chat"
+        #expect(store.selectedDeepSeekModelID == "deepseek-chat")
 
         #expect(store.cachedModels.isEmpty)
         store.cachedModels = [
@@ -385,6 +393,10 @@ struct llhTests {
             OpenAIModel(id: "gpt-4.1")
         ]
         #expect(store.cachedModels.map(\.id) == ["gpt-4.1-mini", "gpt-4.1"])
+
+        #expect(store.cachedDeepSeekModels.isEmpty)
+        store.cachedDeepSeekModels = [OpenAIModel(id: "deepseek-chat")]
+        #expect(store.cachedDeepSeekModels.map(\.id) == ["deepseek-chat"])
 
         #expect(store.selectedLearningLanguageRawValue == LearningLanguage.english.rawValue)
         store.selectedLearningLanguageRawValue = LearningLanguage.chinese.rawValue

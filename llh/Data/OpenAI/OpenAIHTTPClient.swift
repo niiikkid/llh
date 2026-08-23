@@ -21,7 +21,7 @@ struct OpenAIHTTPClient: Sendable {
 
     init(
         session: URLSession = .shared,
-        baseURL: URL = URL(string: "https://api.openai.com/v1")!,
+        baseURL: URL = AIProvider.openAI.apiBaseURL,
         requestTimeout: TimeInterval = OpenAIHTTPClient.defaultRequestTimeout
     ) {
         self.session = session

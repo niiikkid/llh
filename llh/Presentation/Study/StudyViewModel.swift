@@ -169,16 +169,17 @@ final class StudyViewModel: ObservableObject {
             words: entry.studyMaterials.words
         )
         let configuration = LoadWordStudyConfiguration(
-            apiKey: settings.currentAPIKey(),
-            modelID: settings.selectedOpenAIModelID
+            provider: settings.selectedTextProvider,
+            apiKey: settings.textAPIKey(),
+            modelID: settings.textModelID()
         )
 
         switch loadWordStudyUseCase.preflight(request: request, configuration: configuration) {
         case .missingAPIKey:
-            publishStatus("Сначала сохраните OpenAI token.")
+            publishStatus("Сначала сохраните token \(settings.selectedTextProvider.title).")
             return
         case .missingModel:
-            publishStatus("Выберите модель OpenAI.")
+            publishStatus("Выберите модель \(settings.selectedTextProvider.title).")
             return
         case .skipped:
             overlayCoordinator?.refreshOverlayWordStudy(
@@ -227,16 +228,17 @@ final class StudyViewModel: ObservableObject {
             grammar: entry.studyMaterials.grammar
         )
         let configuration = LoadGrammarStudyConfiguration(
-            apiKey: settings.currentAPIKey(),
-            modelID: settings.selectedOpenAIModelID
+            provider: settings.selectedTextProvider,
+            apiKey: settings.textAPIKey(),
+            modelID: settings.textModelID()
         )
 
         switch loadGrammarStudyUseCase.preflight(request: request, configuration: configuration) {
         case .missingAPIKey:
-            publishStatus("Сначала сохраните OpenAI token.")
+            publishStatus("Сначала сохраните token \(settings.selectedTextProvider.title).")
             return
         case .missingModel:
-            publishStatus("Выберите модель OpenAI.")
+            publishStatus("Выберите модель \(settings.selectedTextProvider.title).")
             return
         case .skipped:
             return

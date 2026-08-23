@@ -5,12 +5,14 @@
 
 import Foundation
 
-/// Text Chat Completions (`POST /v1/chat/completions`) with JSON extracted from assistant content.
+/// Text Chat Completions (`POST /chat/completions`) with JSON extracted from assistant content.
 struct OpenAIChatCompletionClient: Sendable {
     private let httpClient: OpenAIHTTPClient
+    private let provider: AIProvider
 
-    init(httpClient: OpenAIHTTPClient) {
+    init(httpClient: OpenAIHTTPClient, provider: AIProvider = .openAI) {
         self.httpClient = httpClient
+        self.provider = provider
     }
 
     func completeText(
@@ -30,7 +32,8 @@ struct OpenAIChatCompletionClient: Sendable {
             messages: [
                 .init(role: "system", content: systemPrompt),
                 .init(role: "user", content: userPrompt)
-            ]
+            ],
+            thinking: thinkingConfig
         )
 
         let data = try await httpClient.post(
@@ -39,7 +42,7 @@ struct OpenAIChatCompletionClient: Sendable {
             body: requestBody
         )
         let decoded = try httpClient.decode(data, as: ChatCompletionsResponse.self)
-        return decoded.choices.first?.message.content
+        return decoded.choices.first?.message.content?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
@@ -72,12 +75,43 @@ struct OpenAIChatCompletionClient: Sendable {
               let end = content.lastIndex(of: "}") else { return nil }
         return String(content[start...end])
     }
+
+    /// DeepSeek V4 enables thinking by default (high effort on Pro). That makes a non-stream
+    /// translation look hung. OpenAI rejects unknown `thinking`, so it is omitted there.
+    private var thinkingConfig: ThinkingConfig? {
+        switch provider {
+        case .openAI:
+            nil
+        case .deepSeek:
+            ThinkingConfig(type: "disabled")
+        }
+    }
 }
 
 private struct ChatCompletionsRequest: Encodable {
     let model: String
     let temperature: Double
     let messages: [ChatMessage]
+    let thinking: ThinkingConfig?
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case temperature
+        case messages
+        case thinking
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(model, forKey: .model)
+        try container.encode(temperature, forKey: .temperature)
+        try container.encode(messages, forKey: .messages)
+        try container.encodeIfPresent(thinking, forKey: .thinking)
+    }
+}
+
+private struct ThinkingConfig: Encodable {
+    let type: String
 }
 
 private struct ChatMessage: Encodable {
@@ -94,5 +128,5 @@ private struct ChatChoice: Decodable {
 }
 
 private struct ChatCompletionMessage: Decodable {
-    let content: String
+    let content: String?
 }

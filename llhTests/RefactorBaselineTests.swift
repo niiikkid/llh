@@ -39,7 +39,7 @@ struct RefactorBaselineTests {
 
   @Test
   func inventory_settingsViewModelPublishedPropertyCount_isStable() {
-    #expect(RefactorBaselineInventory.settingsViewModelPublishedPropertyNames.count == 8)
+    #expect(RefactorBaselineInventory.settingsViewModelPublishedPropertyNames.count == 9)
   }
 
   @Test
@@ -270,7 +270,18 @@ struct RefactorBaselineTests {
     for error in samples {
       let description = error.localizedDescription
       #expect(!description.isEmpty)
-      #expect(description.contains("OpenAI") || description.contains("токен") || description.contains("Токен") || description.contains("изображение") || description.contains("сетев") || description.contains("DNS") || description.contains("распознан"))
+      #expect(
+        description.contains("OpenAI")
+          || description.contains("ИИ")
+          || description.contains("провайдер")
+          || description.contains("Провайдер")
+          || description.contains("токен")
+          || description.contains("Токен")
+          || description.contains("изображение")
+          || description.contains("сетев")
+          || description.contains("DNS")
+          || description.contains("распознан")
+      )
     }
   }
 }

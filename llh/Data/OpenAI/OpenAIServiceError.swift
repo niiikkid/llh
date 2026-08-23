@@ -26,31 +26,31 @@ enum OpenAIServiceError: LocalizedError, Equatable {
         case .invalidTokenFormat:
             return "Токен пустой или имеет неверный формат."
         case .unauthorized:
-            return "Не удалось авторизоваться в OpenAI. Проверьте API token."
+            return "Не удалось авторизоваться. Проверьте API-токен."
         case .rateLimited:
-            return "OpenAI временно ограничил число запросов. Подождите и повторите попытку."
+            return "Провайдер ИИ временно ограничил число запросов. Подождите и повторите попытку."
         case .unexpectedStatusCode(let code):
-            return "OpenAI вернул ошибку (\(code))."
+            return "Провайдер ИИ вернул ошибку (\(code))."
         case .invalidResponse:
-            return "Получен некорректный ответ от OpenAI."
+            return "Получен некорректный ответ от провайдера ИИ."
         case .noModelsFound:
-            return "OpenAI не вернул доступные модели."
+            return "Провайдер ИИ не вернул доступные модели."
         case .hostNotFound:
-            return "Не удается найти сервер OpenAI (DNS). Проверьте интернет, VPN/прокси и сетевые права приложения."
+            return "Не удается найти сервер ИИ (DNS). Проверьте интернет, VPN/прокси и сетевые права приложения."
         case .networkUnavailable:
             return "Нет сетевого подключения. Проверьте интернет и повторите попытку."
         case .emptyFormattedText:
-            return "OpenAI вернул пустой форматированный текст."
+            return "Провайдер ИИ вернул пустой форматированный текст."
         case .invalidStructuredResponse:
-            return "OpenAI вернул некорректную структуру форматированного текста."
+            return "Провайдер ИИ вернул некорректную структуру форматированного текста."
         case .invalidImageData:
             return "Не удалось подготовить изображение для распознавания."
         case .emptyRecognizedText:
             return "OpenAI не вернул распознанный текст."
         case .timeout:
-            return "Превышено время ожидания ответа от OpenAI. Проверьте сеть и повторите попытку."
+            return "Превышено время ожидания ответа от провайдера ИИ. Проверьте сеть и повторите попытку."
         case .cancelled:
-            return "Запрос к OpenAI был отменён."
+            return "Запрос к провайдеру ИИ был отменён."
         }
     }
 }

@@ -12,9 +12,19 @@ final class UserDefaultsSettingsRepository: SettingsRepository {
         self.store = store
     }
 
+    var selectedTextProviderRawValue: String {
+        get { store.selectedTextProviderRawValue }
+        set { store.selectedTextProviderRawValue = newValue }
+    }
+
     var selectedModelID: String? {
         get { store.selectedModelID }
         set { store.selectedModelID = newValue }
+    }
+
+    var selectedDeepSeekModelID: String? {
+        get { store.selectedDeepSeekModelID }
+        set { store.selectedDeepSeekModelID = newValue }
     }
 
     var selectedLearningLanguageRawValue: String {
@@ -25,6 +35,11 @@ final class UserDefaultsSettingsRepository: SettingsRepository {
     var cachedModels: [OpenAIModel] {
         get { store.cachedModels }
         set { store.cachedModels = newValue }
+    }
+
+    var cachedDeepSeekModels: [OpenAIModel] {
+        get { store.cachedDeepSeekModels }
+        set { store.cachedDeepSeekModels = newValue }
     }
 
     var selectedOCREngineRawValue: String {
