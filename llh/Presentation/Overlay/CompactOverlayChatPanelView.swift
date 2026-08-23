@@ -34,7 +34,7 @@ struct CompactOverlayChatPanelView: View {
                     .foregroundStyle(.secondary)
                     .padding(.trailing, 22)
 
-                if viewModel.isTranscribing && viewModel.messages.isEmpty && !viewModel.hasDraft {
+                if viewModel.isTranscribing && viewModel.messages.isEmpty {
                     HStack(spacing: 6) {
                         ProgressView()
                             .controlSize(.small)
@@ -63,8 +63,6 @@ struct CompactOverlayChatPanelView: View {
                     }
                     .frame(maxHeight: 240)
                 }
-
-                CompactOverlayDraftComposerView(viewModel: viewModel)
 
                 if let statusMessage = viewModel.statusMessage {
                     Text(statusMessage)
@@ -99,34 +97,6 @@ struct CompactOverlayChatPanelView: View {
 
     private var panelTitle: String {
         viewModel.messages.isEmpty ? CompactOverlayChatStrings.recognizedTitle : CompactOverlayChatStrings.chatTitle
-    }
-}
-
-private struct CompactOverlayDraftComposerView: View {
-    @ObservedObject var viewModel: CompactOverlayChatViewModel
-
-    var body: some View {
-        if viewModel.voicePhase == .draft || viewModel.hasDraft {
-            VStack(alignment: .leading, spacing: 8) {
-                TextField(
-                    CompactOverlayChatStrings.draftPlaceholder,
-                    text: $viewModel.draftText,
-                    axis: .vertical
-                )
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
-                .lineLimit(2...6)
-
-                HStack {
-                    Spacer()
-                    Button(CompactOverlayChatStrings.send, action: viewModel.sendDraft)
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                        .disabled(!viewModel.canSend)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 }
 

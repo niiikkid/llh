@@ -95,12 +95,8 @@ struct CompactOverlayChatViewModelTests {
         #expect(viewModel.isRecording)
 
         viewModel.handleMicTapped()
-        try await waitUntil { viewModel.voicePhase == .draft }
-        #expect(viewModel.draftText == "Что значит это слово?")
-        #expect(viewModel.isSidePanelVisible)
-
-        viewModel.sendDraft()
         try await waitUntil { viewModel.messages.contains(where: { $0.role == .assistant }) }
+        #expect(viewModel.isSidePanelVisible)
 
         #expect(viewModel.isChatPanelVisible)
         #expect(viewModel.messages.map(\.text) == ["Что значит это слово?", "Это приветствие."])
@@ -133,9 +129,7 @@ struct CompactOverlayChatViewModelTests {
         viewModel.handleMicTapped()
         try await waitUntil { viewModel.isRecording }
         viewModel.handleMicTapped()
-        try await waitUntil { viewModel.hasDraft }
-        viewModel.sendDraft()
-        try await waitUntil { viewModel.isChatPanelVisible }
+        try await waitUntil { viewModel.isChatPanelVisible && !viewModel.messages.isEmpty }
 
         viewModel.closeChatPanel()
 

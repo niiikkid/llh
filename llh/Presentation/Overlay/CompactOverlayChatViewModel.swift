@@ -38,13 +38,11 @@ enum CompactOverlayVoicePhase: Equatable {
     case idle
     case recording
     case transcribing
-    case draft
 }
 
 @MainActor
 final class CompactOverlayChatViewModel: ObservableObject {
     @Published private(set) var voicePhase: CompactOverlayVoicePhase = .idle
-    @Published var draftText = ""
     @Published private(set) var messages: [TranslationChatMessage] = []
     @Published private(set) var isChatPanelVisible = false
     @Published private(set) var isSending = false
@@ -84,20 +82,12 @@ final class CompactOverlayChatViewModel: ObservableObject {
         voicePhase == .transcribing
     }
 
-    var hasDraft: Bool {
-        !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    var canSend: Bool {
-        hasDraft && !isSending && !isRecording && !isTranscribing
-    }
-
     var isSidePanelVisible: Bool {
         isChatPanelVisible
     }
 
     var wantsKeyFocus: Bool {
-        isChatPanelVisible && (voicePhase == .draft || hasDraft || !messages.isEmpty)
+        false
     }
 
     func updateContext(_ context: TranslationChatContext) {
@@ -109,7 +99,6 @@ final class CompactOverlayChatViewModel: ObservableObject {
         recorder.cancelRecording()
         self.context = context
         voicePhase = .idle
-        draftText = ""
         messages = []
         isChatPanelVisible = false
         isSending = false
@@ -131,14 +120,14 @@ final class CompactOverlayChatViewModel: ObservableObject {
             stopRecordingAndTranscribe()
         case .transcribing:
             return
-        case .idle, .draft:
+        case .idle:
             guard !isStartingRecording else { return }
             startRecording()
         }
     }
 
-    func sendDraft() {
-        let text = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func sendRecognizedText(_ rawText: String) {
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isSending else { return }
 
         guard let context else {
@@ -174,7 +163,6 @@ final class CompactOverlayChatViewModel: ObservableObject {
 
         let history = messages
         messages.append(TranslationChatMessage(role: .user, text: text))
-        draftText = ""
         voicePhase = .idle
         isChatPanelVisible = true
         isSending = true
@@ -276,11 +264,8 @@ final class CompactOverlayChatViewModel: ObservableObject {
             do {
                 let text = try await self.transcribeUseCase.perform(apiKey: apiKey, audioData: audioData)
                 guard !Task.isCancelled else { return }
-                self.draftText = text
-                self.voicePhase = .draft
-                self.isChatPanelVisible = true
-                self.statusMessage = nil
-                self.notifyPresentationChange()
+                self.voicePhase = .idle
+                self.sendRecognizedText(text)
             } catch is CancellationError {
                 self.voicePhase = .idle
             } catch {
@@ -319,14 +304,12 @@ final class CompactOverlayChatViewModel: ObservableObject {
 enum CompactOverlayChatStrings {
     static let askByVoice = "Спросить голосом"
     static let stopRecording = "Остановить запись"
-    static let send = "Отправить"
     static let recording = "Идёт запись. Нажмите ещё раз, чтобы остановить."
     static let transcribing = "Распознаю речь…"
     static let sending = "Отвечаю…"
     static let chatTitle = "Чат"
     static let recognizedTitle = "Распознанный вопрос"
     static let closeChat = "Закрыть панель"
-    static let draftPlaceholder = "Распознанный вопрос"
     static let missingOpenAIAPIKey = "Для распознавания голоса нужен токен OpenAI."
     static let missingTextAPIKey = "Нет токена для выбранного текстового провайдера."
     static let missingTextModel = "Не выбрана текстовая модель."
