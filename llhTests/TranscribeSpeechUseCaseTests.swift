@@ -52,7 +52,7 @@ struct TranscribeSpeechUseCaseTests {
 
         #expect(text == "привет")
         #expect(service.lastModelID == SpeechTranscriptionModel.currentOpenAIModelID)
-        #expect(service.lastFilename == "speech.m4a")
+        #expect(service.lastFilename == "speech.wav")
     }
 
     @Test

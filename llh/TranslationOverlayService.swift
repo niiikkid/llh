@@ -60,12 +60,19 @@ final class TranslationOverlayService {
         defer: false
     )
     private let hostingView = NSHostingView(
-        rootView: CompactOverlayView(
+        rootView: CompactOverlayHost(
             content: .loading("Обрабатываю перевод..."),
             chatViewModel: nil,
             onClose: {}
         )
     )
+    private let chatPanel = OverlayPanel(
+        contentRect: .zero,
+        styleMask: [.borderless, .nonactivatingPanel],
+        backing: .buffered,
+        defer: false
+    )
+    private let chatHostingView = NSHostingView(rootView: CompactOverlayChatWindowRoot(viewModel: nil))
     private var dismissTask: Task<Void, Never>?
     private var escapeKeyMonitor: Any?
     private var currentContent: CompactOverlayContent = .loading("Обрабатываю перевод...")
@@ -73,16 +80,10 @@ final class TranslationOverlayService {
     private(set) var displayMode: DisplayMode?
 
     init() {
-        panel.isFloatingPanel = true
-        panel.level = .screenSaver
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = false
-        panel.hidesOnDeactivate = false
-        panel.ignoresMouseEvents = false
-        panel.becomesKeyOnlyIfNeeded = true
+        configureOverlayPanel(panel)
         panel.contentView = hostingView
+        configureOverlayPanel(chatPanel)
+        chatPanel.contentView = chatHostingView
     }
 
     func attachChatViewModel(_ viewModel: CompactOverlayChatViewModel) {
@@ -157,6 +158,7 @@ final class TranslationOverlayService {
         dismissTask = nil
         displayMode = nil
         removeEscapeKeyMonitor()
+        hideChatPanel()
         panel.orderOut(nil)
         chatViewModel?.reset(context: nil, announceChange: false)
     }
@@ -185,13 +187,11 @@ final class TranslationOverlayService {
         applyChatContext(from: content, preserveChat: preserveChat)
         applyHostedView(content: content)
 
-        let size = fittedPanelSize()
+        let size = fittedTranslationPanelSize()
         panel.setContentSize(size)
-        updatePanelFrame(size: size)
+        updateTranslationPanelFrame(size: size)
         panel.orderFrontRegardless()
-        if chatViewModel?.wantsKeyFocus == true {
-            panel.makeKey()
-        }
+        syncChatPanel()
         installEscapeKeyMonitor()
 
         guard TranslationOverlayDismissSchedule.shouldScheduleAutomaticDismiss(dismissAfter: dismissAfter) else {
@@ -225,7 +225,7 @@ final class TranslationOverlayService {
     }
 
     private func applyHostedView(content: CompactOverlayContent) {
-        hostingView.rootView = CompactOverlayView(
+        hostingView.rootView = CompactOverlayHost(
             content: content,
             chatViewModel: chatViewModel,
             onClose: { [weak self] in
@@ -237,13 +237,45 @@ final class TranslationOverlayService {
     private func handleChatPresentationChange() {
         guard panel.isVisible else { return }
         cancelAutomaticDismiss()
-        applyHostedView(content: currentContent)
-        let size = fittedPanelSize()
-        panel.setContentSize(size)
-        updatePanelFrame(size: size)
-        if chatViewModel?.wantsKeyFocus == true {
-            panel.makeKey()
+        syncChatPanel()
+    }
+
+    private func syncChatPanel() {
+        guard let chatViewModel, chatViewModel.isSidePanelVisible, panel.isVisible else {
+            hideChatPanel()
+            return
         }
+
+        chatHostingView.rootView = CompactOverlayChatWindowRoot(viewModel: chatViewModel)
+        let size = fittedChatPanelSize()
+        chatPanel.setContentSize(size)
+        let origin = CompactOverlayLayout.chatPanelOrigin(
+            translationFrame: panel.frame,
+            chatSize: size,
+            visibleScreen: preferredScreen()?.visibleFrame ?? panel.frame
+        )
+        chatPanel.setFrame(NSRect(origin: origin, size: size), display: true)
+        chatPanel.orderFrontRegardless()
+        if chatViewModel.wantsKeyFocus {
+            chatPanel.makeKey()
+        }
+    }
+
+    private func hideChatPanel() {
+        chatPanel.orderOut(nil)
+        chatHostingView.rootView = CompactOverlayChatWindowRoot(viewModel: nil)
+    }
+
+    private func configureOverlayPanel(_ overlayPanel: OverlayPanel) {
+        overlayPanel.isFloatingPanel = true
+        overlayPanel.level = .screenSaver
+        overlayPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+        overlayPanel.backgroundColor = .clear
+        overlayPanel.isOpaque = false
+        overlayPanel.hasShadow = false
+        overlayPanel.hidesOnDeactivate = false
+        overlayPanel.ignoresMouseEvents = false
+        overlayPanel.becomesKeyOnlyIfNeeded = true
     }
 
     private func cancelAutomaticDismiss() {
@@ -251,15 +283,24 @@ final class TranslationOverlayService {
         dismissTask = nil
     }
 
-    private func fittedPanelSize() -> NSSize {
+    private func fittedTranslationPanelSize() -> NSSize {
         hostingView.layoutSubtreeIfNeeded()
         let targetSize = hostingView.fittingSize
-        let maxWidth = chatViewModel?.isChatPanelVisible == true
-            ? CompactOverlayLayout.maxWidthWithChat
-            : CompactOverlayLayout.maxWidthWithoutChat
         return NSSize(
-            width: max(300, min(targetSize.width, maxWidth)),
+            width: max(300, min(targetSize.width, CompactOverlayLayout.maxWidthWithoutChat)),
             height: max(90, targetSize.height)
+        )
+    }
+
+    private func fittedChatPanelSize() -> NSSize {
+        chatHostingView.setFrameSize(
+            NSSize(width: CompactOverlayLayout.chatCardWidth, height: CompactOverlayLayout.chatMinimumHeight)
+        )
+        chatHostingView.layoutSubtreeIfNeeded()
+        let targetSize = chatHostingView.fittingSize
+        return NSSize(
+            width: CompactOverlayLayout.chatCardWidth,
+            height: max(CompactOverlayLayout.chatMinimumHeight, targetSize.height)
         )
     }
 
@@ -289,7 +330,7 @@ final class TranslationOverlayService {
         }
     }
 
-    private func updatePanelFrame(size: NSSize) {
+    private func updateTranslationPanelFrame(size: NSSize) {
         guard let screen = preferredScreen() else { return }
         let origin = CGPoint(
             x: screen.visibleFrame.midX - (size.width / 2),

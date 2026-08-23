@@ -15,7 +15,7 @@ enum MicrophoneRecordingError: LocalizedError, Equatable {
         case .permissionDenied:
             return "Нет доступа к микрофону. Разрешите его в системных настройках конфиденциальности."
         case .recordingFailed:
-            return "Не удалось начать запись голоса."
+            return "Не удалось начать запись голоса. Проверьте микрофон и разрешение в системных настройках."
         case .noAudioRecorded:
             return "Запись получилась пустой. Надиктуйте ещё раз."
         }

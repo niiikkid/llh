@@ -97,7 +97,7 @@ struct CompactOverlayChatViewModelTests {
         viewModel.handleMicTapped()
         try await waitUntil { viewModel.voicePhase == .draft }
         #expect(viewModel.draftText == "Что значит это слово?")
-        #expect(viewModel.isChatPanelVisible == false)
+        #expect(viewModel.isSidePanelVisible)
 
         viewModel.sendDraft()
         try await waitUntil { viewModel.messages.contains(where: { $0.role == .assistant }) }

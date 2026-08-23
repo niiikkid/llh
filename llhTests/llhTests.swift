@@ -461,6 +461,27 @@ struct llhTests {
     }
 
     @Test
+    func compactOverlayLayout_placesChatPanelToTheRightWhenItFits() {
+        let origin = CompactOverlayLayout.chatPanelOrigin(
+            translationFrame: CGRect(x: 200, y: 40, width: 360, height: 140),
+            chatSize: CGSize(width: 300, height: 180),
+            visibleScreen: CGRect(x: 0, y: 0, width: 1440, height: 900)
+        )
+        #expect(origin.x == 570)
+        #expect(origin.y == 40)
+    }
+
+    @Test
+    func compactOverlayLayout_placesChatPanelToTheLeftWhenRightDoesNotFit() {
+        let origin = CompactOverlayLayout.chatPanelOrigin(
+            translationFrame: CGRect(x: 1100, y: 40, width: 360, height: 140),
+            chatSize: CGSize(width: 300, height: 180),
+            visibleScreen: CGRect(x: 0, y: 0, width: 1440, height: 900)
+        )
+        #expect(origin.x == 790)
+    }
+
+    @Test
     func learningLanguage_dockBadgeLabel_usesFlagOrClearsForAuto() {
         #expect(LearningLanguage.auto.dockBadgeLabel == nil)
         #expect(LearningLanguage.english.dockBadgeLabel == "🇬🇧")

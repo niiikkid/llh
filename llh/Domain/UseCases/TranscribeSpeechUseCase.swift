@@ -43,8 +43,8 @@ struct TranscribeSpeechUseCase {
             apiKey: apiKey,
             modelID: SpeechTranscriptionModel.currentOpenAIModelID,
             audioData: audioData,
-            filename: "speech.m4a",
-            mimeType: "audio/mp4"
+            filename: "speech.wav",
+            mimeType: "audio/wav"
         )
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {

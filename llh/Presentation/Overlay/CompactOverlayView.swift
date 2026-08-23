@@ -27,10 +27,61 @@ enum CompactOverlayContentKind {
 
 enum CompactOverlayLayout {
     static let translationCardWidth: CGFloat = 360
-    static let chatCardWidth: CGFloat = 280
+    static let chatCardWidth: CGFloat = 300
     static let cardSpacing: CGFloat = 10
     static let maxWidthWithoutChat: CGFloat = 460
-    static let maxWidthWithChat: CGFloat = translationCardWidth + cardSpacing + chatCardWidth + 16
+    static let chatMinimumHeight: CGFloat = 160
+    static let screenMargin: CGFloat = 8
+
+    /// Places the chat window to the right of the translation overlay, or to the left if it does not fit.
+    static func chatPanelOrigin(
+        translationFrame: CGRect,
+        chatSize: CGSize,
+        visibleScreen: CGRect
+    ) -> CGPoint {
+        let preferredX = translationFrame.maxX + cardSpacing
+        let fitsOnRight = preferredX + chatSize.width <= visibleScreen.maxX - screenMargin
+        let x = fitsOnRight
+            ? preferredX
+            : translationFrame.minX - cardSpacing - chatSize.width
+        let clampedX = min(
+            max(x, visibleScreen.minX + screenMargin),
+            visibleScreen.maxX - chatSize.width - screenMargin
+        )
+        let clampedY = min(
+            max(translationFrame.minY, visibleScreen.minY + screenMargin),
+            visibleScreen.maxY - chatSize.height - screenMargin
+        )
+        return CGPoint(x: clampedX, y: clampedY)
+    }
+}
+
+struct CompactOverlayHost: View {
+    let content: CompactOverlayContent
+    let chatViewModel: CompactOverlayChatViewModel?
+    let onClose: () -> Void
+
+    var contentKind: CompactOverlayContentKind {
+        content.contentKind
+    }
+
+    var body: some View {
+        if let chatViewModel {
+            CompactOverlayObservedHost(content: content, chatViewModel: chatViewModel, onClose: onClose)
+        } else {
+            CompactOverlayView(content: content, chatViewModel: nil, onClose: onClose)
+        }
+    }
+}
+
+private struct CompactOverlayObservedHost: View {
+    let content: CompactOverlayContent
+    @ObservedObject var chatViewModel: CompactOverlayChatViewModel
+    let onClose: () -> Void
+
+    var body: some View {
+        CompactOverlayView(content: content, chatViewModel: chatViewModel, onClose: onClose)
+    }
 }
 
 struct CompactOverlayView: View {
@@ -43,16 +94,6 @@ struct CompactOverlayView: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: CompactOverlayLayout.cardSpacing) {
-            translationCard
-
-            if let chatViewModel, chatViewModel.isChatPanelVisible {
-                CompactOverlayChatPanelView(viewModel: chatViewModel)
-            }
-        }
-    }
-
-    private var translationCard: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 10) {
                 switch content {
@@ -103,7 +144,7 @@ struct CompactOverlayView: View {
             .help("Закрыть (Escape)")
         }
         .frame(width: CompactOverlayLayout.translationCardWidth)
-        .background(compactOverlayBackground)
+        .background(CompactOverlayCardBackground())
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -128,24 +169,23 @@ private struct CompactOverlayTranslationSectionView: View {
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.primary)
-            }
-
-            HStack(alignment: .top, spacing: 8) {
-                Text(secondaryText)
-                    .font(.system(size: 13))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
-
-                if let chatViewModel {
-                    CompactOverlayVoiceButton(viewModel: chatViewModel)
-                }
             }
+
+            Text(secondaryText)
+                .font(.system(size: 13))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
 
             if let chatViewModel {
-                CompactOverlayVoiceStatusView(viewModel: chatViewModel)
-                if !chatViewModel.isChatPanelVisible {
-                    CompactOverlayDraftComposerView(viewModel: chatViewModel)
+                CompactOverlayVoiceButton(viewModel: chatViewModel)
+
+                if let statusMessage = chatViewModel.statusMessage, !chatViewModel.isSidePanelVisible {
+                    Text(statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.center)
                 }
             }
 
@@ -158,167 +198,53 @@ private struct CompactOverlayTranslationSectionView: View {
 
 private struct CompactOverlayVoiceButton: View {
     @ObservedObject var viewModel: CompactOverlayChatViewModel
+    @State private var isPulsing = false
 
     var body: some View {
         Button(action: viewModel.handleMicTapped) {
-            Image(systemName: symbolName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(viewModel.isRecording ? Color.red : Color.accentColor)
-                .frame(width: 28, height: 28)
+            ZStack {
+                if viewModel.isRecording {
+                    Circle()
+                        .stroke(Color.red.opacity(0.55), lineWidth: 2)
+                        .frame(width: 34, height: 34)
+                        .scaleEffect(isPulsing ? 1.55 : 1)
+                        .opacity(isPulsing ? 0 : 0.9)
+                    Circle()
+                        .fill(Color.red.opacity(0.16))
+                        .frame(width: 34, height: 34)
+                }
+
+                Image(systemName: "mic.circle.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(viewModel.isRecording ? Color.red : Color.accentColor)
+                    .symbolEffect(.pulse, options: .repeating, isActive: viewModel.isRecording)
+                    .symbolEffect(.variableColor.iterative, options: .repeating, isActive: viewModel.isTranscribing)
+            }
+            .frame(width: 36, height: 36)
         }
         .buttonStyle(.plain)
         .disabled(viewModel.isTranscribing)
-        .help(viewModel.isRecording ? CompactOverlayChatStrings.stopRecording : CompactOverlayChatStrings.askByVoice)
+        .help(helpText)
+        .onChange(of: viewModel.isRecording) { _, isRecording in
+            if isRecording {
+                isPulsing = false
+                withAnimation(.easeOut(duration: 1.05).repeatForever(autoreverses: false)) {
+                    isPulsing = true
+                }
+            } else {
+                isPulsing = false
+            }
+        }
     }
 
-    private var symbolName: String {
+    private var helpText: String {
         if viewModel.isRecording {
-            return "stop.circle.fill"
+            return CompactOverlayChatStrings.stopRecording
         }
         if viewModel.isTranscribing {
-            return "waveform"
+            return CompactOverlayChatStrings.transcribing
         }
-        return "mic.circle.fill"
-    }
-}
-
-private struct CompactOverlayVoiceStatusView: View {
-    @ObservedObject var viewModel: CompactOverlayChatViewModel
-
-    var body: some View {
-        if viewModel.isRecording {
-            Text(CompactOverlayChatStrings.recording)
-                .font(.caption)
-                .foregroundStyle(.red)
-                .multilineTextAlignment(.center)
-        } else if viewModel.isTranscribing {
-            HStack(spacing: 6) {
-                ProgressView()
-                    .controlSize(.small)
-                Text(CompactOverlayChatStrings.transcribing)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        } else if let statusMessage = viewModel.statusMessage, !viewModel.isChatPanelVisible {
-            Text(statusMessage)
-                .font(.caption)
-                .foregroundStyle(.orange)
-                .multilineTextAlignment(.center)
-        }
-    }
-}
-
-private struct CompactOverlayDraftComposerView: View {
-    @ObservedObject var viewModel: CompactOverlayChatViewModel
-
-    var body: some View {
-        if viewModel.voicePhase == .draft || viewModel.hasDraft {
-            VStack(alignment: .leading, spacing: 8) {
-                TextField(
-                    CompactOverlayChatStrings.draftPlaceholder,
-                    text: $viewModel.draftText,
-                    axis: .vertical
-                )
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
-                .lineLimit(2...5)
-
-                Button(CompactOverlayChatStrings.send, action: viewModel.sendDraft)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .disabled(!viewModel.canSend)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-private struct CompactOverlayChatPanelView: View {
-    @ObservedObject var viewModel: CompactOverlayChatViewModel
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(CompactOverlayChatStrings.chatTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.trailing, 22)
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(viewModel.messages) { message in
-                            CompactOverlayChatBubbleView(message: message)
-                        }
-                        if viewModel.isSending {
-                            HStack(spacing: 6) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text(CompactOverlayChatStrings.sending)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                .frame(maxHeight: 240)
-
-                CompactOverlayDraftComposerView(viewModel: viewModel)
-
-                if let statusMessage = viewModel.statusMessage {
-                    Text(statusMessage)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 10)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 12)
-
-            Button(action: viewModel.closeChatPanel) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .padding(8)
-            .help(CompactOverlayChatStrings.closeChat)
-        }
-        .frame(width: CompactOverlayLayout.chatCardWidth)
-        .background(compactOverlayBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.22), radius: 18, y: 10)
-    }
-}
-
-private struct CompactOverlayChatBubbleView: View {
-    let message: TranslationChatMessage
-
-    var body: some View {
-        HStack {
-            if message.role == .user {
-                Spacer(minLength: 16)
-            }
-
-            Text(message.text)
-                .font(.system(size: 12))
-                .foregroundStyle(message.role == .user ? Color.white : Color.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(message.role == .user ? Color.accentColor.opacity(0.92) : Color.white.opacity(0.12))
-                )
-
-            if message.role == .assistant {
-                Spacer(minLength: 16)
-            }
-        }
+        return CompactOverlayChatStrings.askByVoice
     }
 }
 
@@ -394,11 +320,13 @@ private struct CompactOverlayWordEntryRowView: View {
     }
 }
 
-private var compactOverlayBackground: some View {
-    RoundedRectangle(cornerRadius: 22, style: .continuous)
-        .fill(.ultraThinMaterial)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.black.opacity(0.24))
-        )
+struct CompactOverlayCardBackground: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.black.opacity(0.24))
+            )
+    }
 }

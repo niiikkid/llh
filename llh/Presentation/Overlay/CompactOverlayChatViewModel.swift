@@ -92,8 +92,12 @@ final class CompactOverlayChatViewModel: ObservableObject {
         hasDraft && !isSending && !isRecording && !isTranscribing
     }
 
+    var isSidePanelVisible: Bool {
+        isChatPanelVisible
+    }
+
     var wantsKeyFocus: Bool {
-        isChatPanelVisible || voicePhase == .draft
+        isChatPanelVisible && (voicePhase == .draft || hasDraft || !messages.isEmpty)
     }
 
     func updateContext(_ context: TranslationChatContext) {
@@ -262,6 +266,7 @@ final class CompactOverlayChatViewModel: ObservableObject {
         }
 
         voicePhase = .transcribing
+        isChatPanelVisible = true
         statusMessage = nil
         notifyPresentationChange()
 
@@ -273,6 +278,7 @@ final class CompactOverlayChatViewModel: ObservableObject {
                 guard !Task.isCancelled else { return }
                 self.draftText = text
                 self.voicePhase = .draft
+                self.isChatPanelVisible = true
                 self.statusMessage = nil
                 self.notifyPresentationChange()
             } catch is CancellationError {
@@ -318,7 +324,8 @@ enum CompactOverlayChatStrings {
     static let transcribing = "Распознаю речь…"
     static let sending = "Отвечаю…"
     static let chatTitle = "Чат"
-    static let closeChat = "Закрыть чат"
+    static let recognizedTitle = "Распознанный вопрос"
+    static let closeChat = "Закрыть панель"
     static let draftPlaceholder = "Распознанный вопрос"
     static let missingOpenAIAPIKey = "Для распознавания голоса нужен токен OpenAI."
     static let missingTextAPIKey = "Нет токена для выбранного текстового провайдера."
